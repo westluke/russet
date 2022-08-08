@@ -7,5 +7,102 @@
  ˋ───ˊ     ˋ───ˊ      ∨
 
  ⎛⎞⎝⎠⎩⎭⎧⎫█=╭╮╯╰╱╲─│ˊˋˎˏ𝝣𝝣𝝣
-
  OH JUST CHANGE BACKGROUND COLOR. OK.
+
+╭────────────────────────────────────────╮
+│ ˏ─────ˎ   ˏ──────ˎ │╲      ╱│    ╱╲    │
+│(xxxxxxx╲ ⎛xxxxxxxx⎞│x╲    ╱x│   ╱xx╲   │
+│ ╲xxxxxxx⎞│xxxxxxxx││xx╰──╯xx│  ╱xxxx╲  │
+│  )xxxxxx⎠│xxxxxxxx││xxxxxxxx│ ╱xxxxxx╲ │
+│ ╱xxxxxx╱ │xxxxxxxx││xxxxxxxx│(xxxxxxxx)│
+│⎛xxxxxx(  │xxxxxxxx││xxxxxxxx│ ╲xxxxxx╱ │
+│⎝xxxxxxx╲ │xxxxxxxx││xx╭──╮xx│  ╲xxxx╱  │
+│ ╲xxxxxxx)⎝xxxxxxxx⎠│x╱    ╲x│   ╲xx╱   │
+│  ˋ─────ˊ  ˋ──────ˊ │╱      ╲│    ╲╱    │
+╰────────────────────────────────────────╯
+
+╭────────────────────────────────╮
+│ ˏ────ˎ  ˏ────ˎ │╲    ╱│   ╱╲   │
+│(xxxxxx⎞⎛xxxxxx⎞│x╰──╯x│  ╱xx╲  │
+│ ⎞xxxxx⎠│xxxxxx││xxxxxx│ ╱xxxx╲ │
+│ ╱xxxx╱ │xxxxxx││xxxxxx│(xxxxxx)│
+│⎛xxxxx⎝ │xxxxxx││xxxxxx│ ╲xxxx╱ │
+│⎝xxxxxx)⎝xxxxxx⎠│x╭──╮x│  ╲xx╱  │
+│ ˋ────ˊ  ˋ────ˊ │╱    ╲│   ╲╱   │
+╰────────────────────────────────╯
+
+╭────────────────────────────────╮
+│ ˏ────ˎ  ˏ────ˎ │╲    ╱│   ╱╲   │
+│(xxxxxx⎞⎛xxxxxx⎞│x╰──╯x│  ╱xx╲  │
+│ ⎞xxxxx⎠│xxxxxx││xxxxxx│ ╱xxxx╲ │
+│ ╱xxxx╱ │xxxxxx││xxxxxx│(xxxxxx)│
+│⎛xxxxx⎝ │xxxxxx││xxxxxx│ ╲xxxx╱ │
+│⎝xxxxxx)⎝xxxxxx⎠│x╭──╮x│  ╲xx╱  │
+│ ˋ────ˊ  ˋ────ˊ │╱    ╲│   ╲╱   │
+╰────────────────────────────────╯
+
+
+███
+
+▁▁▁
+▔▔▔
+▏▏▏
+▕▕▕
+▙▙▙
+▛▛▛
+▜▜▜
+▟▟▟
+
+   ▟▙
+  ▟xx▙
+ ▟xxxx▙
+▟xxxxxx▙
+▜xxxxxx▛
+ ▜xxxx▛
+  ▜xx▛
+   ▜▛
+
+▟▔▔▔▔▔▔▙
+▏xxxxxx▕
+▏xxxxxx▕
+▏xxxxxx▕
+▏xxxxxx▕
+▏xxxxxx▕
+▜▁▁▁▁▁▁▛
+
+▙▔▔▔▔▔▔▙
+ ▜xxxxx▜
+ ▕xxxxx▕
+ ▟xxxxx▛
+▟xxxxx▛
+▏xxxxx▏
+▙xxxxx▙
+▜▁▁▁▁▁▁▜
+
+  ▟▙
+ ▟xx▙
+▟xxxx▙
+▜xxxx▛
+ ▜xx▛
+  ▜▛
+
+▟▔▔▔▔▙
+▏xxxx▕
+▏xxxx▕
+▏xxxx▕
+▜▁▁▁▁▛
+
+▙▔▔▔▔▙
+ ▜xxx▕
+ ▟xxx▛
+▟xxx▛
+▏xxx▙
+▜▁▁▁▁▜
+╭─────────────────────────────╮
+│ ˏ───ˎ  ˏ───ˎ │╲   ╱│   ╱╲   │
+│(xxxxx⎞⎛xxxxx⎞│x╰─╯x│  ╱xx╲  │
+│ )xxxx⎠│xxxxx││xxxxx│ ╱xxxx╲ │
+│⎛xxxx( │xxxxx││xxxxx│ ╲xxxx╱ │
+│⎝xxxxx)⎝xxxxx⎠│x╭─╮x│  ╲xx╱  │
+│ ˋ───ˊ  ˋ───ˊ │╱   ╲│   ╲╱   │
+╰─────────────────────────────╯

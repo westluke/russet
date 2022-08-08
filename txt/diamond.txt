@@ -1,7 +1,8 @@
-   ∧
-  ╱x╲
- ╱xxx╲
-(xxxxx)
- ╲xxx╱
-  ╲x╱
-   ∨
+   ▟▙
+  ▟xx▙
+ ▟xxxx▙
+▟xxxxxx▙
+▜xxxxxx▛
+ ▜xxxx▛
+  ▜xx▛
+   ▜▛
