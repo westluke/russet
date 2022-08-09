@@ -1,68 +1,40 @@
-use termion::{color as tc, style as ts, clear as tcl}; //, screen, input, event, cursor, clear};
+use termion::{color as tc, style as ts, clear as tcl};
+use termion::screen::{self, AlternateScreen}; //, screen, input, event, cursor, clear};
 use std::{io, thread, time};
 use time::{Instant, Duration};
 use std::{vec::Vec, collections::HashSet, sync::mpsc};
 
 mod animation;
+mod printing;
 
-const RAW_GREEN: &dyn tc::Color = &tc::Green;
-const RAW_RED: &dyn tc::Color = &tc::Red;
-const RAW_PURPLE: &dyn tc::Color = &tc::Blue;
+// #[derive(Clone, Debug)]
+// struct GameState {
+//     deck: HashSet<Card>,
+//     in_play: HashSet<Card>
+// }
 
-const RAW_OVAL: &str = include_str!("../txt/oval.txt");
-const RAW_DIAMOND: &str = include_str!("../txt/diamond.txt");
-const RAW_SQUIGGLE: &str = include_str!("../txt/squiggle.txt");
+// impl GameState {
+//     fn take_3 (&mut self) {
+//     }
+// }
 
-const RAW_OVAL_SOLID: &str = include_str!("../txt/solids/oval_solid.txt");
-const RAW_DIAMOND_SOLID: &str = include_str!("../txt/solids/diamond_solid.txt");
-const RAW_SQUIGGLE_SOLID: &str = include_str!("../txt/solids/squiggle_solid.txt");
+// #[derive(Copy, Clone, Debug)]
+// enum CardSpot<'a> {
+//     Empty,
+//     Filled(&'a Card)
+// }
 
-const RAW_OUTLINE: &str = include_str!("../txt/outline.txt");
-const BG_CHARACTERS: &str = include_str!("../txt/bg_chars.txt");
+// #[derive(Copy, Clone, Debug)]
+// struct Layout<'a, 'b> {
+//     main: [[&'a CardSpot<'b>; 4]; 3],
+//     add0: [&'a CardSpot<'b>; 3],
+//     add1: [&'a CardSpot<'b>; 3]
+// }
 
-const SHAPE_HEIGHT: u16 = 8;
-const SHAPE_WIDTH: u16 = 8;
-const SHAPE_SPACING: u16 = 1;
-
-const CARD_HEIGHT: u16 = 10;
-const CARD_WIDTH: u16 = 31;
-const CARD_SPACING: u16 = 2;
-
-// Rows / Columns start at 1, from top left.
-fn get_card_xy(col:u16, row:u16) -> (u16, u16) {
-    let y = ((col - 1) * CARD_HEIGHT) + ((col - 1) * CARD_SPACING);
-    let x = ((row - 1) * CARD_WIDTH) + ((row - 1) * CARD_SPACING);
-    (y, x)
-}
-
-#[derive(Clone, Debug)]
-struct GameState {
-    deck: HashSet<Card>,
-    in_play: HashSet<Card>
-}
-
-impl GameState {
-    fn take_3 (&mut self) {
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-enum CardSpot<'a> {
-    Empty,
-    Filled(&'a Card)
-}
-
-#[derive(Copy, Clone, Debug)]
-struct Layout<'a, 'b> {
-    main: [[&'a CardSpot<'b>; 4]; 3],
-    add0: [&'a CardSpot<'b>; 3],
-    add1: [&'a CardSpot<'b>; 3]
-}
-
-impl<'a, 'b> Layout<'a, 'b> {
-    fn fill (self, game:&GameState){
-    }
-}
+// impl<'a, 'b> Layout<'a, 'b> {
+//     fn fill (self, game:&GameState){
+//     }
+// }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 enum CardColor {
@@ -89,53 +61,11 @@ enum CardFill {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
-struct Card {
+pub struct Card {
     color: CardColor,
     shape: CardShape,
     number: CardNumber,
     fill: CardFill
-}
-
-fn get_raw_color(c:Card) -> &'static dyn tc::Color {
-    match c.color {
-        CardColor::Green =>  RAW_GREEN,
-        CardColor::Red =>  RAW_RED,
-        CardColor::Purple =>  RAW_PURPLE,
-    }
-}
-
-fn get_raw_shape(c:Card) -> &'static str {
-    match c.shape {
-        CardShape::Oval => RAW_OVAL,
-        CardShape::Diamond => RAW_DIAMOND,
-        CardShape::Squiggle => RAW_SQUIGGLE
-    }
-}
-
-fn get_raw_fill(c:Card) -> char {
-    match c.fill {
-        CardFill::Solid => ' ',
-        CardFill::Striped => '─',
-        CardFill::Empty => ' '
-    }
-}
-
-// Returns styling string for foreground characters (characters whose background is always black.)
-fn get_raw_fg_style(c:Card) -> String {
-    let col = get_raw_color(c);
-    format!("{}{}", tc::Bg(tc::Black), tc::Fg(col))
-}
-
-// Returns styling string for background characters (characters that may receive a colored
-// background if their card is Solid)
-// This could be a character like a space, but it could also be an edge or 'x'
-fn get_raw_bg_style(c:Card) -> String {
-    let col = get_raw_color(c);
-    match c.fill {
-        CardFill::Solid => format!("{}{}", tc::Bg(col), tc::Fg(col)),
-        CardFill::Striped => format!("{}{}{}", tc::Bg(tc::Black), tc::Fg(col), ts::Underline),
-        CardFill::Empty => format!("{}{}", tc::Bg(tc::Black), tc::Fg(col))
-    }
 }
 
 fn is_a_set(c0:Card, c1:Card, c2:Card) -> bool {
@@ -158,161 +88,66 @@ fn is_a_set(c0:Card, c1:Card, c2:Card) -> bool {
     (fills.len() == 1 || fills.len() == 3)
 }
 
-fn mv_cursor(buf: &mut impl io::Write, x:u16, y:u16) -> io::Result<()> {
-    write!(*buf, "{}", termion::cursor::Goto(x, y))?;
-    Ok(())
-}
-
-fn print_shape(buf: &mut impl io::Write, x:u16, y:u16, shape:&str) -> io::Result<()> {
-    write!(buf, "{}{}", ts::Reset, tc::Fg(tc::White))?;
-
-    for (i, ln) in shape.lines().enumerate(){
-        for (j, ch) in ln.chars().enumerate() {
-            match ch {
-                ' '  => (),
-                _ => {
-                    mv_cursor(buf, x + j as u16, y + i as u16)?;
-                    write!(buf, "{}", ch)? }
-            };
-        };
-    };
-
-    Ok(())
-}
-
-// Refers to top left corner of card outline
-fn print_card(buf: &mut impl io::Write, x:u16, y:u16, card:Card) -> io::Result<()> {
-    if x == 0 || y == 0 {
-        panic!("Cursor positions start at 1, not 0.");
-    };
-    print_card_contents(buf, x+1, y+1, card)?;
-    print_card_outline(buf, x, y)?;
-    Ok(())
-}
-
-fn print_card_outline(buf: &mut impl io::Write, x:u16, y:u16) -> io::Result<()> {
-    print_shape(buf, x, y, RAW_OUTLINE)?;
-    Ok(())
-}
-
-fn is_bg_char(c:char) -> bool {
-    BG_CHARACTERS.contains(c)
-}
-
-fn print_card_contents (buf: &mut impl io::Write, x:u16, y:u16, card:Card) -> io::Result<()> {
-    if card.fill == CardFill::Solid { return print_card_contents_solid(buf, x, y, card) }
-
-    let shape = get_raw_shape(card);
-    // let mut bg = true;
-
-    write!(buf, "{}{}", ts::Reset, get_raw_fg_style(card))?;
-    let offset = (SHAPE_WIDTH * (3 - card.number as u16)) / 2;
-
-    for j in 0..(card.number as u16){
-        let shape_pos = j*SHAPE_WIDTH;
-        let spacing = (j+1) * SHAPE_SPACING;
-
-        for (i, ln) in shape.lines().enumerate(){
-            for (h, ch) in ln.chars().enumerate() {
-                mv_cursor(buf, x + offset + shape_pos + spacing + (h as u16), y + (i as u16))?;
-
-                // let restyle = is_bg_char(ch) != bg;
-                // bg = is_bg_char(ch);
-
-                // if restyle {
-                //     write!(buf, "{}{}", ts::Reset, if bg {
-                //         get_raw_bg_style(card) 
-                //     } else {
-                //         get_raw_fg_style(card)
-                //     })?;
-                // };
-
-                match ch {
-                    'x' => write!(buf, "{}", get_raw_fill(card))?,
-                    ' ' => (),
-                    _ =>   write!(buf, "{}", ch)?
-                };
-            };
-        };
-    };
-
-    Ok(())
-}
-
-fn print_card_contents_solid (buf: &mut impl io::Write, x:u16, y:u16, card:Card) -> io::Result<()> {
-    let shape = get_raw_shape(card);
-    let mut bg = true;
-
-    write!(buf, "{}", ts::Reset)?;
-    let offset = (SHAPE_WIDTH * (3 - card.number as u16)) / 2;
-
-    for j in 0..(card.number as u16){
-        let shape_pos = j*SHAPE_WIDTH;
-        let spacing = (j+1) * SHAPE_SPACING;
-
-        for (i, ln) in shape.lines().enumerate(){
-            for (h, ch) in ln.chars().enumerate() {
-                mv_cursor(buf, x + offset + shape_pos + spacing + (h as u16), y + (i as u16))?;
-
-                let restyle = is_bg_char(ch) != bg;
-                bg = is_bg_char(ch);
-
-                if restyle {
-                    write!(buf, "{}{}", ts::Reset, if bg {
-                        get_raw_bg_style(card) 
-                    } else {
-                        get_raw_fg_style(card)
-                    })?;
-                };
-
-                match ch {
-                    'x' => write!(buf, "{}", get_raw_fill(card))?,
-                    ' ' => (),
-                    _ =>   write!(buf, "{}", ch)?
-                };
-            };
-        };
-    };
-
-    Ok(())
-}
-
-// fn print_layout (buf: &mut impl io::Write, lay:Layout) {
-// }
-
 fn main() -> std::io::Result<()> {
-    let (tx, rx) = mpsc::channel::<fn(u32) -> String>();
+    // let (tx, rx) = mpsc::channel::<fn(u32) -> String>();
 
-    let handle = thread::spawn(|| {
-        use io::Write as _;
-        let mut buf = io::BufWriter::with_capacity(100_000, io::stdout());
-        let c0 = Card{color: CardColor::Green, shape: CardShape::Oval, number: CardNumber::Three, fill: CardFill::Solid};
+    use io::Write as _;
 
 
-        let (mut x, y) = (1, 1);
-        loop {
-            // go through list of animations, animate one frame of each.
-            // try receiving new animations into the list
-            // sleep until next frame
+    println!("{}", screen::ToAlternateScreen);
+    // printing::mv_cursor(&mut io::stdout(), 1, 1);
+    io::stdout().flush();
+    thread::sleep(Duration::new(4, 0));
+    io::stdout().flush();
+    // println!("{} Writing to main screen!", tcl::AfterCursor);
+    thread::sleep(Duration::new(4, 0));
+
+    // print!("{}", screen::ToAlternateScreen);
+    // println!("{}", tcl::All);
+    // print!("{}", screen::ToMainScreen);
+    // println!("{}", tcl::All);
+    // print!("{}", screen::ToAlternateScreen);
+    // print!("{}", screen::ToMainScreen);
+    // io::stdout().flush();
+
+
+    // println!("hello there");
+    // println!("visible?");
+    // println!("{}", screen::ToMainScreen);
+    Ok(())
+
+    // let handle = thread::spawn(|| {
+    //     use io::Write as _;
+    //     let mut buf = io::BufWriter::with_capacity(100_000, io::stdout());
+    //     let c0 = Card{color: CardColor::Green, shape: CardShape::Squiggle, number: CardNumber::Three, fill: CardFill::Striped};
+    //     write!(buf, "{}", screen::ToAlternateScreen);
+
+    //     let (mut x, y) = (1, 1);
+    //     loop {
+    //         // go through list of animations, animate one frame of each.
+    //         // try receiving new animations into the list
+    //         // sleep until next frame
             
-            write!(buf, "{}", tcl::All);
-            print_card(&mut buf, x, y, c0);
-            x += 1;
-            buf.flush();
-            io::stdout().flush();
+    //         // write!(buf, "{}", tcl::All);
+    //         printing::print_card_yx(&mut buf, y, x, c0);
+    //         x += 1;
+    //         buf.flush();
+    //         io::stdout().flush();
 
-            animation::sleep_until(Instant::now() + Duration::from_millis(10));
-        }
-    });
+    //         animation::sleep_until(Instant::now() + Duration::from_millis(500));
+    //         printing::print_card_yx(&mut buf, y, x, c0);
+    //         // panic!();
+    //     }
+    // });
 
 // animation::animate);
 
-    handle.join();
-    Ok(())
+    // handle.join();
+    // Ok(())
+    //
     // use io::Write as _;
     // let mut buf = io::BufWriter::with_capacity(100_000, io::stdout());
     // write!(buf, "{}", ts::Reset)?;
-
 
     // let colors = [CardColor::Green, CardColor::Red, CardColor::Purple];
     // let shapes = [CardShape::Oval, CardShape::Diamond, CardShape::Squiggle];

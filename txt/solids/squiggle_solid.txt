@@ -1,8 +1,8 @@
-xxxxxxx
- xxxxxxx
-  xxxxxx
- xxxxxxx
-xxxxxxx
-xxxxxx
-xxxxxxx
- xxxxxxx
+███████
+ █xxxxx█
+  █xxxx█
+ █xxxxx█
+█xxxxx█
+█xxxx█
+█xxxxx█
+ ███████

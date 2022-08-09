@@ -54,6 +54,78 @@
 ▏xxx▙
 ▜▁▁▁▁▜
 
+6x6 block:
+
+  ██
+ █xx█
+█xxxx█
+█xxxx█
+ █xx█
+  ██
+
+ ████
+█xxxx█
+█xxxx█
+█xxxx█
+ ████
+
+██████
+ █   █
+ █   █
+█   █
+█   █
+██████
+
+7x7 block:
+
+   █
+  █x█
+ █xxx█
+█xxxxx█
+ █xxx█
+  █x█
+   █
+
+ █████
+█xxxxx█
+█xxxxx█
+█xxxxx█
+ █████
+
+██████ 
+ █    █
+ █    █
+█    █
+█    █
+ ██████
+
+8x8 block:
+   ██
+  █xx█
+ █xxxx█
+█xxxxxx█
+█xxxxxx█
+ █xxxx█
+  █xx█
+   ██
+
+ ██████ 
+█xxxxxx█
+█xxxxxx█
+█xxxxxx█
+█xxxxxx█
+█xxxxxx█
+█xxxxxx█
+ ██████ 
+
+███████
+ █xxxxx█
+  █xxxx█
+ █xxxxx█
+█xxxxx█
+█xxxx█
+█xxxxx█
+ ███████
 ╭─────────────────────────────╮
 │    ▟▙    ▟▔▔▔▔▔▔▙ ▙▔▔▔▔▔▔▙  │
 │   ▟xx▙   ▏xxxxxx▕  ▜xxxxx▜  │
