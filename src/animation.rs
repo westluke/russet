@@ -1,6 +1,24 @@
-use termion::{style as ts, color as tc};
 use std::{thread, io, time};
+
 use time::{Instant, Duration};
+use std::{sync::mpsc};
+use io::Write as _;
+
+use termion::style;
+
+
+
+
+pub enum Msg {
+    Quit,
+    Select,
+    Deselect,
+    RevealSet,
+    FoundSet,
+    Take3,
+    Redistribute,
+    GameOver
+}
 
 
 // struct Animation {
@@ -20,11 +38,11 @@ pub fn sleep_until(i: Instant) {
     };
 }
 
-pub fn animate() -> io::Result<()> {
-    use io::Write as _;
+pub fn animate(buf: impl io::Write, rx: mpsc::Receiver<Msg>) -> io::Result<()> {
     let mut buf = io::BufWriter::with_capacity(100_000, io::stdout());
-    write!(buf, "asdlkfjahsdflkfjh{}", ts::Reset)?;
+    write!(buf, "asdlkfjahsdflkfjh{}", style::Reset)?;
     Ok(())
 
     // in a loop, run frame animation
+    // check terminal size with termion::terminal_size, compare to last known.
 }

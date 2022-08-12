@@ -1,4 +1,8 @@
-use super::*;
+use std::io;
+use super::game::*;
+
+use termion::{color, style, cursor};
+use color::Color;
 
 mod config;
 use config::*;
@@ -17,6 +21,7 @@ pub fn print_card_yx(buf: &mut impl io::Write, y:u16, x:u16, card:Card) -> io::R
     if x == 0 || y == 0 {
         panic!("Cursor positions start at 1, not 0.");
     };
+    if cfg!(feature="blocky"){ write!(buf, "{}", color::Bg(color::White))?; };
     print_card_outline(buf, y, x)?;
     print_card_contents(buf, y+1, x+1, card)?;
     Ok(())
@@ -24,13 +29,19 @@ pub fn print_card_yx(buf: &mut impl io::Write, y:u16, x:u16, card:Card) -> io::R
 
 // Print the edges of the card, in white
 fn print_card_outline(buf: &mut impl io::Write, y:u16, x:u16) -> io::Result<()> {
-    write!(buf, "{}{}{}", ts::Reset, tc::Bg(tc::Black), tc::Fg(tc::White))?;
+    write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(color::White))?;
+    print_literal(buf, y, x, RAW_OUTLINE)?;
+    Ok(())
+}
+
+// Print edges of card, in given highlight color
+fn print_card_outline_highlight(buf: &mut impl io::Write, y:u16, x:u16, hc: &dyn Color) -> io::Result<()> {
+    write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(hc))?;
     print_literal(buf, y, x, RAW_OUTLINE)?;
     Ok(())
 }
 
 // Just prints whatever is in lit with nothing fancy. Keeps previous styling.
-// Only trick is that spaces are skipped (this permits transparency)
 fn print_literal(buf: &mut impl io::Write, y:u16, x:u16, lit:&str) -> io::Result<()> {
     for (i, ln) in lit.lines().enumerate(){
         mv_cursor(buf, y + i as u16, x)?;
@@ -72,13 +83,13 @@ fn print_card_shape(buf: &mut impl io::Write, y: u16, x: u16, card: Card) -> io:
 
 // Style is reset at beginning of each line.
 fn print_card_shape_line(buf: &mut impl io::Write, y: u16, x: u16, ln:&str, card: Card) -> io::Result<()> {
-    write!(buf, "{}", ts::Reset)?;
+    write!(buf, "{}", style::Reset)?;
 
     if card.fill == CardFill::Solid {
         return print_card_shape_line_solid(buf, y, x, ln, card);
     }
     
-    let mut is_fill = false;
+    let mut is_fill = true;
 
     for (i, ch) in ln.chars().enumerate(){
         if ch == ' ' { continue; };
@@ -100,7 +111,7 @@ fn print_card_shape_line(buf: &mut impl io::Write, y: u16, x: u16, ln:&str, card
 }
 
 pub fn mv_cursor(buf: &mut impl io::Write, y:u16, x:u16) -> io::Result<()> {
-    write!(*buf, "{}", termion::cursor::Goto(x, y))?;
+    write!(*buf, "{}", cursor::Goto(x, y))?;
     Ok(())
 }
 
@@ -108,7 +119,7 @@ fn print_card_shape_line_solid(buf: &mut impl io::Write, y: u16, x: u16, ln:&str
     let core = ln.trim();
     let first = ln.find(|c:char| !c.is_whitespace() ).unwrap();
     mv_cursor(buf, y, x + (first as u16))?;
-    write!(buf, "{}{}{}", ts::Reset, get_raw_solid_style(card), core)?;
+    write!(buf, "{}{}{}", style::Reset, get_raw_solid_style(card), core)?;
     Ok(())
 }
 
@@ -118,10 +129,10 @@ fn print_card_shape_line_solid(buf: &mut impl io::Write, y: u16, x: u16, ln:&str
 fn get_raw_solid_style(c:Card) -> String {
     if c.fill != CardFill::Solid { panic!(); };
     let col = get_raw_color(c);
-    format!("{}{}", tc::Fg(col), tc::Bg(col))
+    format!("{}{}", color::Fg(col), color::Bg(col))
 }
 
-fn get_raw_color(c:Card) -> &'static dyn tc::Color {
+fn get_raw_color(c:Card) -> &'static dyn color::Color {
     match c.color {
         CardColor::Green =>  RAW_GREEN,
         CardColor::Red =>    RAW_RED,
@@ -147,9 +158,9 @@ fn get_raw_edge_style(c:Card) -> String {
     let solid_override = (c.fill == CardFill::Solid) || (cfg!(feature="blocky"));
 
     if solid_override {
-        format!("{}{}", tc::Bg(col), tc::Fg(col))
+        format!("{}{}", color::Bg(col), color::Fg(col))
     } else {
-        format!("{}{}", tc::Bg(tc::Black), tc::Fg(col))
+        format!("{}{}", color::Bg(color::Black), color::Fg(col))
     }
 }
 
@@ -157,16 +168,16 @@ fn get_raw_edge_style(c:Card) -> String {
 fn get_raw_fill_style(c:Card) -> String {
     let col = get_raw_color(c);
     match c.fill {
-        CardFill::Solid =>  format!("{}{}", tc::Bg(col), tc::Fg(col)),
-        _ =>                format!("{}{}", tc::Bg(tc::Black), tc::Fg(col)),
+        CardFill::Solid =>  format!("{}{}", color::Bg(col), color::Fg(col)),
+        _ =>                format!("{}{}", color::Bg(color::Black), color::Fg(col)),
     }
 }
 
 // Rows / Columns start at (0, 0), from top left.
 // Indexing is like with matrices, y-val (row) first.
 fn get_card_yx(row:u16, col:u16) -> (u16, u16) {
-    let y = (row * CARD_WIDTH) + (row * CARD_SPACING);
-    let x = (col * CARD_HEIGHT) + (col * CARD_SPACING);
+    let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT);
+    let x = (col * CARD_WIDTH)  + (col * CARD_SPACING_HORIZ);
     (y+1, x+1)
 }
 
