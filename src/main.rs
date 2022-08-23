@@ -16,20 +16,20 @@ use color::Color;
 mod animation;
 mod printing;
 mod game;
+mod config;
+
+pub mod pos;
 
 use game::*;
+use animation::*;
+
+// Maybe eventually have these, but they should be legit tuple structs,
+// with impls, and similarly for the SelectionState (although that should be enum with None, One,
+// Two most likely)
 
 
-enum Msg {
-    Quit,
-    Select,
-    Deselect,
-    RevealSet,
-    FoundSet,
-    Take3,
-    Redistribute,
-    GameOver
-}
+
+
 
 fn all_diff_or_all_same<T: Eq> (a:T, b:T, c:T) -> bool {
     ((a == b) && (b == c) && (a == c)) || 
@@ -61,46 +61,31 @@ fn find_set(lay:Layout) -> Option<[(usize, usize); 3]> {
 }
 
 fn main() -> std::io::Result<()> {
-
-    // let (tx, rx) = mpsc
-    
+    let (tx, rx) = mpsc::channel::<animation::Msg>();
     let stdin = io::stdin();
-    let handle = thread::spawn(|| {
-
-        // Perfect yes amazing showstopping incredible. In raw mode all input (including scrolls!) 
-        // are consumed by stdin. Interesting, that. The terminal must be reading mouse events from the host OS and
-        // re-interpreting them as escape codes? And sending those to child process.
-        let mut stdout = MouseTerminal::from(
-            io::stdout().into_raw_mode().unwrap()
-        );
-
-        let mut buf_stdout = BufWriter::with_capacity(100_000, stdout);
-        write!(buf_stdout, "{}{}{}q to exit. Click, click, click!", ToAlternateScreen, clear::All, cursor::Goto(1, 1)).unwrap();
-
-        let c0 = Card{color:CardColor::Green, fill:CardFill::Solid, number:CardNumber::Two, shape:CardShape::Squiggle};
-
-        // let (y, mut x) = (0, 0);
-
-        loop {
-            write!(buf_stdout, "{}{}", style::Reset, clear::All);
-            let gs = GameState::new();
-            // printing::print_card(&mut buf_stdout, y, x, c0);
-            // x += 1;
-            buf_stdout.flush().unwrap();
-            thread::sleep(Duration::from_millis(1000));
-        };
-        
-    });
-
-    handle.join().unwrap();
+    let handle = thread::spawn(animation::animate(rx));
 
     for c in stdin.events() {
         let evt = c.unwrap();
         match evt {
-            Event::Key(Key::Delete) => { write!(io::stdout(), "{}{}", clear::All, ToMainScreen)?; break},
+            Event::Key(Key::Delete) | 
+            Event::Key(Key::Backspace) | 
+            Event::Key(Key::Ctrl('c')) |
+            Event::Key(Key::Ctrl('z')) |
+            Event::Key(Key::Ctrl('\\')) => {
+                tx.send(Msg::Quit).unwrap();
+                handle.join().unwrap();
+                break;
+            },
+
+            Event::Key(Key::Char('q')) => {
+                tx.send(Msg::Select{row:0, col:0}).unwrap();
+            },
+
             _ => ()
         }
     }
+
 
     Ok(())
 

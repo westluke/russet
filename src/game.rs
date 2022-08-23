@@ -1,8 +1,10 @@
 use std::io;
-use std::ops::{Index, IndexMut};
-use super::printing;
+use crate::printing;
 
+use std::ops::{Index, IndexMut};
+// use crate::{CardPos, PixelPos};
 use rand::seq::SliceRandom as _;
+
 
 
 
@@ -85,7 +87,8 @@ impl Deck {
 pub struct GameState {
     pub deck: Deck,
     pub layout: Layout,
-    pub selected: [Option<(usize, usize)>; 3]
+    pub select0: Option<(u16, u16)>,
+    pub select1: Option<(u16, u16)>,
 }
 
 impl GameState {
@@ -99,9 +102,11 @@ impl GameState {
             }
         }
 
-        GameState{deck, layout: Layout{cards}, selected: [None; 3]}
+        GameState{deck, layout: Layout{cards}, select0: None, select1: None}
     }
 }
+
+// how to deal with seleciont logic here?
 
 
 

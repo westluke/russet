@@ -1,50 +1,47 @@
-use std::io;
+use std::{io, time};
 use super::game::*;
 
+use time::Instant;
 use termion::{color, style, cursor};
 use color::Color;
 
-mod config;
-use config::*;
+
+use crate::config::*;
+use crate::pos::TermPos;
+
+// Note that this module doesn't know about SetPos!! It expects everything to be converted to
+// TermPos beforehand. I think this kinda makes sense. This is just about displaying things, it
+// doesn't know how Set works.
 
 
 
 
-pub fn print_card(buf: &mut impl io::Write, row:u16, col:u16, card:Card) -> io::Result<()> {
-    let (y, x) = get_card_yx(row, col);
-    print_card_yx(buf, y, x, card)?;
+pub fn write_time(buf: &mut impl io::Write, start: Instant, pos:TermPos) -> io::Result<()>{
+    mv_cursor(buf, pos)?;
+    let elap = start.elapsed();
+    write!(buf, "{}{}{}", style::Reset, color::Fg(color::White), color::Bg(color::Black))?;
+    write!(buf, "{:02}:{:02}.{:03}", elap.as_secs() / 60, elap.as_secs() % 60, elap.subsec_millis())?;
     Ok(())
 }
 
-// (y, x) is positiin of to top left corner of card outline
-pub fn print_card_yx(buf: &mut impl io::Write, y:u16, x:u16, card:Card) -> io::Result<()> {
-    if x == 0 || y == 0 {
-        panic!("Cursor positions start at 1, not 0.");
-    };
+// pos is position of top left corner of card outline
+pub fn print_card(buf: &mut impl io::Write, pos:TermPos, card:Card) -> io::Result<()> {
     if cfg!(feature="blocky"){ write!(buf, "{}", color::Bg(color::White))?; };
-    print_card_outline(buf, y, x)?;
-    print_card_contents(buf, y+1, x+1, card)?;
+    print_card_outline(buf, pos, color::White)?;
+    print_card_contents(buf, pos + (1, 1), card)?;
     Ok(())
 }
 
-// Print the edges of the card, in white
-fn print_card_outline(buf: &mut impl io::Write, y:u16, x:u16) -> io::Result<()> {
-    write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(color::White))?;
-    print_literal(buf, y, x, RAW_OUTLINE)?;
-    Ok(())
-}
-
-// Print edges of card, in given highlight color
-fn print_card_outline_highlight(buf: &mut impl io::Write, y:u16, x:u16, hc: &dyn Color) -> io::Result<()> {
-    write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(hc))?;
-    print_literal(buf, y, x, RAW_OUTLINE)?;
+pub fn print_card_outline(buf: &mut impl io::Write, pos:TermPos, c: impl Color) -> io::Result<()> {
+    write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(c))?;
+    print_literal(buf, pos, RAW_OUTLINE)?;
     Ok(())
 }
 
 // Just prints whatever is in lit with nothing fancy. Keeps previous styling.
-fn print_literal(buf: &mut impl io::Write, y:u16, x:u16, lit:&str) -> io::Result<()> {
+fn print_literal(buf: &mut impl io::Write, pos:TermPos, lit:&str) -> io::Result<()> {
     for (i, ln) in lit.lines().enumerate(){
-        mv_cursor(buf, y + i as u16, x)?;
+        mv_cursor(buf, pos + (i as u16, 0))?;
         write!(buf, "{}", ln)?
     };
 
@@ -52,7 +49,7 @@ fn print_literal(buf: &mut impl io::Write, y:u16, x:u16, lit:&str) -> io::Result
 }
 
 // Prints the shapes inside the card (up to 3)
-fn print_card_contents (buf: &mut impl io::Write, y:u16, x:u16, card:Card) -> io::Result<()> {
+fn print_card_contents (buf: &mut impl io::Write, pos:TermPos, card:Card) -> io::Result<()> {
 
     // offset comes from the requirement that the shapes be centered, no matter how many there are
     let offset = (SHAPE_WIDTH * (3 - card.number as u16)) / 2;
@@ -66,34 +63,34 @@ fn print_card_contents (buf: &mut impl io::Write, y:u16, x:u16, card:Card) -> io
         // shapes and the card outline
         let spacing = (i+1) * SHAPE_SPACING;
 
-        print_card_shape(buf, y, x + offset + shape_pos + spacing, card)?;
+        print_card_shape(buf, pos + (0, offset + shape_pos + spacing), card)?;
     };
     Ok(())
 }
 
 // Print a single instance of one of this card's shapes in the specified position.
-fn print_card_shape(buf: &mut impl io::Write, y: u16, x: u16, card: Card) -> io::Result<()> {
+fn print_card_shape(buf: &mut impl io::Write, pos:TermPos, card: Card) -> io::Result<()> {
     let shape = get_raw_shape(card);
     for (i, ln) in shape.lines().enumerate(){
-        print_card_shape_line(buf, y+(i as u16), x, ln, card)?;
+        print_card_shape_line(buf, pos + (i as u16, 0), ln, card)?;
     };
     Ok(())
     
 }
 
 // Style is reset at beginning of each line.
-fn print_card_shape_line(buf: &mut impl io::Write, y: u16, x: u16, ln:&str, card: Card) -> io::Result<()> {
+fn print_card_shape_line(buf: &mut impl io::Write, pos:TermPos, ln:&str, card: Card) -> io::Result<()> {
     write!(buf, "{}", style::Reset)?;
 
     if card.fill == CardFill::Solid {
-        return print_card_shape_line_solid(buf, y, x, ln, card);
+        return print_card_shape_line_solid(buf, pos, ln, card);
     }
     
     let mut is_fill = true;
 
     for (i, ch) in ln.chars().enumerate(){
         if ch == ' ' { continue; };
-        mv_cursor(buf, y, x + (i as u16))?;
+        mv_cursor(buf, pos + (0, i as u16))?;
 
         let restyle = (ch == 'x') != is_fill;
         is_fill = ch == 'x';
@@ -110,15 +107,18 @@ fn print_card_shape_line(buf: &mut impl io::Write, y: u16, x: u16, ln:&str, card
     Ok(())
 }
 
-pub fn mv_cursor(buf: &mut impl io::Write, y:u16, x:u16) -> io::Result<()> {
-    write!(*buf, "{}", cursor::Goto(x, y))?;
+pub fn mv_cursor(buf: &mut impl io::Write, pos:TermPos) -> io::Result<()> {
+    if pos.x() == 0 || pos.y() == 0 {
+        panic!("Cursor positions start at 1, not 0.");
+    };
+    write!(*buf, "{}", cursor::Goto(pos.x(), pos.y()))?;
     Ok(())
 }
 
-fn print_card_shape_line_solid(buf: &mut impl io::Write, y: u16, x: u16, ln:&str, card: Card) -> io::Result<()> {
+fn print_card_shape_line_solid(buf: &mut impl io::Write, pos:TermPos, ln:&str, card: Card) -> io::Result<()> {
     let core = ln.trim();
     let first = ln.find(|c:char| !c.is_whitespace() ).unwrap();
-    mv_cursor(buf, y, x + (first as u16))?;
+    mv_cursor(buf, pos + (0, first as u16))?;
     write!(buf, "{}{}{}", style::Reset, get_raw_solid_style(card), core)?;
     Ok(())
 }
@@ -171,14 +171,6 @@ fn get_raw_fill_style(c:Card) -> String {
         CardFill::Solid =>  format!("{}{}", color::Bg(col), color::Fg(col)),
         _ =>                format!("{}{}", color::Bg(color::Black), color::Fg(col)),
     }
-}
-
-// Rows / Columns start at (0, 0), from top left.
-// Indexing is like with matrices, y-val (row) first.
-fn get_card_yx(row:u16, col:u16) -> (u16, u16) {
-    let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT);
-    let x = (col * CARD_WIDTH)  + (col * CARD_SPACING_HORIZ);
-    (y+1, x+1)
 }
 
 fn get_raw_fill(c:Card) -> char {
