@@ -8,12 +8,12 @@ use io::BufWriter;
 use termion::{style, clear, cursor, color};
 use termion::input::{TermRead, MouseTerminal};
 use termion::raw::IntoRawMode;
+use termion::color::Color;
 use termion::screen::{ToAlternateScreen, ToMainScreen};
 
 use super::game::*;
 use super::printing;
 use super::pos::*;
-
 
 
 
@@ -35,18 +35,94 @@ use super::pos::*;
 // a stopping time (optional) and conditions under which they are canceled.
 //
 // how does this module interact with animations?
+//
+// actually I do wanna limit the traffic across the channel, so main just sends the information
+// necessary to CONSTRUCT the animation.
+//
+// And how are animations cancelled?
+//
+// aaaagh should i send over the cards as well? Or just send a gamestate and have them reference
+// using the setpos? Now imi kinda feeling the latter, that seems like a more high-level approach
+// that maiin.rs should take. but then what about transitional gamestates? Agh butt thats full of
+// stuff that animation.rs doesn't and shouldn't keep track of
+//
+// Ah. I see. the messages should be much finer-grained. move this  card from here to here, for
+// instance.
+//
+// how to handle persistence?
+//
+// also cards should have white background
+
+
+// there CANT be any delay until you're allowed to select cards. So how do I design the animations
+// around that?
+//
+// For instance, say a card A is being moved from the top of a deck to a just-vacated space in the
+// layout (vacated by card B), which is currently marked by a static blank card
+//
+// And a user inputs a set that includes card A in that currently-blank space. Then what happens?
+//
+// option 1: Card A redirects mid-flight to discard pile. that kinda sounds like a nightmare to
+// implement, and would also be visually unclear.
+//
+// option 2: Card A teleports to the vacant space, then begins animation to disccard pile. I'd
+// prefer to avoid this, it ruins the whole continuous-movement thing.
+//
+// option 3: Card A finishes animation to vacant space, perhaps faster now, then immediately begnis
+// animation to discard pile. I think this is probably the best option.
+//
+// So that implies that previous animation BLOCKS must finish before a new block can start. More
+// precisely, I could make it so that any animation at a particular SetPos must finish before any
+// new animations AT THAT SETPOS can start.
+//
+// Except, this isn't the case for all animations!! Outlines shouldn't be dependent on other
+// animations, they can always play. They should happen instantly. no waiting.
+//
+// So its just staticcard and movecard that have waiting relations?
+// yup and they come in blocks so some single actions can have multiple animation responses.
+// also badoutlines are temporary, but they're the only temporary outline. hm.
+
+
+// other potential msgs: updatescore, resettime?
+
 pub enum Msg {
     Quit,
-    Base(GameState), // always rendered
-    Select(SetPos),               // Canceled by deselect at same loc
-    Deselect(SetPos),             // does not induce animation
-    // thats gross. time to do pixelpos/rowpos? yeah i think so.
-    RevealSet(SetPos, SetPos, SetPos),                      // Canceled by ANY subsequent messages
-    FoundSet,                       // Uncancellable finite-time animation
-    Take3,                          // Uncancellable finite-time animation
-    Redistribute,                   // Uncancellable finite-time animation
-    GameOver
+    Base(GameState),                // Canceled by later Base
+    Pending(SetPos),                // Canceled by ClearPending. A yellow striped background to the spot/card that indicates a partial set selection
+    ClearPending(SetPos),           // Canceled by itself!
+    Timed(Vec<TimedMsg>, Instant)   // These have to be separate cuz they all happen at the same time
 }
+
+pub enum TimedMsg {
+    StaticCard(SetPos, Option<Card>),                               // Placeholder for both ends during a MoveCard
+    MoveCard(SetPos, SetPos, Card, Option<&'static dyn Color>),     // Optional color to be used for the cards border as it moves.
+    BadOutline(SetPos),                                             // Red border that flashes when the user incorrectly tries to select a set
+}
+
+// ok, the question of what cancels what and what WAITS ON what are different questions. hmm.
+// Ok, there's a couple things to note. one, goodoutlines shouldn't appear aroun the card SPOT,
+// they should appear on the card itself. which will begin moving immediately. So that implieis
+// they can't be cancelled or anything.
+//
+// can i make the pending outline not 
+
+impl Msg {
+    fn to_string(&self, i: Instant) -> String {
+        String::new()
+    }
+
+    // TimedMsg's cannot be canceled.
+    // Quit cannot be canceled.
+    // Base is canceled by later base.
+    // PendingOutline is canceled by 
+    fn reduce(&self, later_msg: &Msg) -> Option<Msg> {
+        None
+    }
+}
+
+// how to convert block to animations that are easily presentable?
+// they should be in impl of animationmsgblock
+    
 
 // How do Ii specify iniitial state / card animations?
 // don't want to make it dependnet on referring back to the gamestate.
@@ -72,7 +148,9 @@ pub fn sleep_until(i: Instant) {
     };
 }
 
-pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> ()) {
+
+
+pub fn animate(rx: mpsc::Receiver<AnimationMsg>) -> impl (FnOnce() -> ()) {
     // let mut animations = vec![];
 
     move || {
@@ -92,7 +170,7 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> ()) {
         loop {
             // write!(buf_stdout, "{}{}", style::Reset, clear::All);
             let msg = rx.try_recv();
-            printing::write_time(&mut stdout, start, height, 1);
+            printing::write_time(&mut stdout, start, TermPos::new(height, 1));
 
             let gs = GameState::new();
             gs.layout.print(&mut stdout);

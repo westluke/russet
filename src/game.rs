@@ -87,8 +87,10 @@ impl Deck {
 pub struct GameState {
     pub deck: Deck,
     pub layout: Layout,
-    pub select0: Option<(u16, u16)>,
-    pub select1: Option<(u16, u16)>,
+    pub select0: Option<SetPos>,
+    pub select1: Option<SetPos>,
+    pub last_set_found: Option<(Card, Card, Card)>
+
 }
 
 impl GameState {
