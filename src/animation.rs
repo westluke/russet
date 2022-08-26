@@ -103,41 +103,53 @@ pub enum TimedMsg {
 // Ok, there's a couple things to note. one, goodoutlines shouldn't appear aroun the card SPOT,
 // they should appear on the card itself. which will begin moving immediately. So that implieis
 // they can't be cancelled or anything.
+// staticcard and badoutline also can't be cancelled. So that's good. 
+// Also, all three TimedMsgs should definiitely have to wait for prior timed blocks, right? I think
+// so.
 //
-// can i make the pending outline not 
 
 impl Msg {
-    fn to_string(&self, i: Instant) -> String {
-        String::new()
+    fn to_string(&self, i0: Instant) -> String {
+        match self {
+            Msg::Quit => String::new(),
+            Msg::Base(g) => None,
+            Msg::Pending(pos) => None,
+            Msg::ClearPending(pos) => String::new(),
+            Msg::Timed(t_msgs, i1) => {
+                None
+            }
+        }
     }
 
     // TimedMsg's cannot be canceled.
     // Quit cannot be canceled.
     // Base is canceled by later base.
-    // PendingOutline is canceled by 
-    fn reduce(&self, later_msg: &Msg) -> Option<Msg> {
-        None
+    // Pending is canceled by later ClearPending
+    // ClearPending is canceled by anything
+    fn canceled(&self, later_msg: &Msg) -> bool {
+        match self {
+            &Msg::Quit => false,
+            &Msg::Base(b0) => match later_msg {
+                &Msg::Base(_) => true,
+                _ => false
+            },
+            &Msg::Pending(pos0) => match later_msg {
+                &Msg::Pending(pos0) => true,
+                &Msg::ClearPending(pos0) => true,
+                _ => false,
+            },
+            &Msg::ClearPending(pos0) => true,
+            &x => false
+        }
+    }
+
+    fn timed_out(&self, i0: Instant) -> bool {
+        match self {
+            &Msg::Timed(_, i1) => i0 >= i1,
+            _ => false
+        }
     }
 }
-
-// how to convert block to animations that are easily presentable?
-// they should be in impl of animationmsgblock
-    
-
-// How do Ii specify iniitial state / card animations?
-// don't want to make it dependnet on referring back to the gamestate.
-// so it should be a card, plus two points, expressed in abstract (not pixel) notation.
-
-// and it should also be informed of changes to the underlying base game state.
-
-
-// struct Animation {
-// }
-
-// impl Animation {
-//     fn next(sz:u32) -> String {
-//     }
-// }
 
 pub fn sleep_until(i: Instant) {
     loop {
