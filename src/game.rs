@@ -1,9 +1,11 @@
 use std::io;
 use crate::printing;
+use super::pos::*;
 
 use std::ops::{Index, IndexMut};
 // use crate::{CardPos, PixelPos};
 use rand::seq::SliceRandom as _;
+use std::collections::HashSet;
 
 
 
@@ -87,10 +89,8 @@ impl Deck {
 pub struct GameState {
     pub deck: Deck,
     pub layout: Layout,
-    pub select0: Option<SetPos>,
-    pub select1: Option<SetPos>,
+    pub selects: HashSet<SetPos>,
     pub last_set_found: Option<(Card, Card, Card)>
-
 }
 
 impl GameState {
@@ -104,12 +104,9 @@ impl GameState {
             }
         }
 
-        GameState{deck, layout: Layout{cards}, select0: None, select1: None}
+        GameState{deck, layout: Layout{cards}, selects: HashSet::new(), last_set_found: None}
     }
 }
-
-// how to deal with seleciont logic here?
-
 
 
 
@@ -121,17 +118,32 @@ pub struct Layout {
     cards: [[Option<Card>; 6]; 3],
 }
 
-impl Index<(usize, usize)> for Layout {
+// make it use setpos instead
+impl Index<(u16, u16)> for Layout {
     type Output = Option<Card>;
     
-    fn index(&self, (i, j):(usize, usize)) -> &Self::Output {
-        &self.cards[i][j]
+    fn index(&self, (i, j):(u16, u16)) -> &Self::Output {
+        &self.cards[usize::from(i)][usize::from(j)]
     }
 }
 
-impl IndexMut<(usize, usize)> for Layout {
-    fn index_mut(&mut self, (i, j):(usize, usize)) -> &mut Self::Output {
-        &mut self.cards[i][j]
+impl IndexMut<(u16, u16)> for Layout {
+    fn index_mut(&mut self, (i, j):(u16, u16)) -> &mut Self::Output {
+        &mut self.cards[usize::from(i)][usize::from(j)]
+    }
+}
+
+impl Index<SetPos> for Layout {
+    type Output = Option<Card>;
+    
+    fn index(&self, pos:SetPos) -> &Self::Output {
+        &self.cards[usize::from(pos.row())][usize::from(pos.col())]
+    }
+}
+
+impl IndexMut<SetPos> for Layout {
+    fn index_mut(&mut self, pos:SetPos) -> &mut Self::Output {
+        &mut self.cards[usize::from(pos.row())][usize::from(pos.col())]
     }
 }
 
@@ -141,13 +153,13 @@ impl Layout {
         self.cards.iter().flatten()
     }
 
-    pub fn enumerate_2d (self) -> impl Iterator<Item=((usize, usize), Option<Card>)>{
+    pub fn enumerate_2d (self) -> impl Iterator<Item=(SetPos, Option<Card>)>{
         self.cards.into_iter()
             .enumerate()
             .map( move |(i, c_arr)|
                 c_arr.into_iter()
                     .enumerate()
-                    .map( move |(j, c)| ((i, j), c) )
+                    .map( move |(j, c)| (SetPos::new_dealt(i as u16, j as u16), c) )
             )
             .flatten()
     }
@@ -157,28 +169,20 @@ impl Layout {
             .count() as u16
     }
 
-    fn empties (&self) -> Vec<(usize, usize)> {
+    fn empties (&self) -> Vec<SetPos> {
         self.enumerate_2d()
-            .filter(|&((i, j), c)| c == None)
-            .map(|((i, j), c)| (i, j))
+            .filter(|&(pos, c)| c == None)
+            .map(|(pos, c)| pos)
             .collect()
     }
 
-    fn extras (&self) -> Vec<(usize, usize)> {
+    fn extras (&self) -> Vec<SetPos> {
         self.enumerate_2d()
-            .filter(|&((i, j), c)|
+            .filter(|&(pos, c)|
                 c != None &&
-                j >= 4 )
-            .map(|((i, j), c)| (i, j))
+                pos.col() >= 4 )
+            .map(|(pos, c)| pos)
             .collect()
-    }
-
-    pub fn print (&self, buf: &mut impl io::Write) {
-        for ((i, j), c_opt) in self.enumerate_2d(){
-            if let Some(c) = c_opt {
-                printing::print_card(buf, i as u16, j as u16, c);
-            }
-        }
     }
 
     // Tries to fill gaps in the main section using cards from the extra sections
@@ -186,11 +190,12 @@ impl Layout {
     // (main section cards are never moved)
     // Returns Vec of tuples (p0, p1, c) where c is moved card, p0 is c's initial location, and p1
     // is c's final location
-    fn redistribute(&mut self) -> Vec<((usize, usize), (usize, usize), Card)> {
-        let empties: Vec<(usize, usize)> = self.empties().
+    fn redistribute(&mut self) -> Vec<(SetPos, SetPos, Card)> {
+        let empties: Vec<SetPos> = self.empties().
             into_iter()
-            .filter(|&(i, j)| j <= 3)
+            .filter(|&pos| pos.col() <= 3)
             .collect();
+
         let extras = self.extras();
         let mut to_return = vec![];
 
@@ -222,5 +227,4 @@ impl Layout {
 
     //     true
     // }
-
 }

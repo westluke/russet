@@ -7,14 +7,49 @@ use color::Color;
 
 
 use crate::config::*;
-use crate::pos::TermPos;
+use crate::pos::{TermPos, SetPos};
 
 // Note that this module doesn't know about SetPos!! It expects everything to be converted to
 // TermPos beforehand. I think this kinda makes sense. This is just about displaying things, it
 // doesn't know how Set works.
 
+// need to be able to print card with given background
+// need striped background
+// need to be able to print layout
+// need to be able to print deck (
+//
+// how to display last found set??
+//
+// all this is getting ahead of myself. iimplement basic functionality first!
+//
+//
+//
+// how do i set background color to black after clearing screen? check truecolor.rs example for
+// possible way... cuz i do have to clear the screen every time, damn.
 
 
+
+
+pub fn print_gamestate (buf: &mut impl io::Write, g: GameState) -> io::Result<()> {
+    for (pos, c_opt) in g.layout.enumerate_2d(){
+        let filled = matches!(c_opt, Some(c));
+        let selected = g.selects.contains(&pos);
+
+        if filled && selected {
+            // print card with yellow background
+        } else if filled && !selected {
+            //print card normal
+        } else if selected {
+            // print yellow background
+        }
+    }
+
+    // if deck isn't empty, print card stack
+    // if there's a last set found, print it
+    // if there's a selection, print it
+
+    Ok(())
+}
 
 pub fn write_time(buf: &mut impl io::Write, start: Instant, pos:TermPos) -> io::Result<()>{
     mv_cursor(buf, pos)?;
@@ -25,18 +60,30 @@ pub fn write_time(buf: &mut impl io::Write, start: Instant, pos:TermPos) -> io::
 }
 
 // pos is position of top left corner of card outline
-pub fn print_card(buf: &mut impl io::Write, pos:TermPos, card:Card) -> io::Result<()> {
+pub fn print_card(  buf: &mut impl io::Write,
+                    pos: TermPos,
+                    card: Card,
+                    bg: Option<impl Color>,
+                    outline: Option<impl Color>) -> io::Result<()> {
+
     if cfg!(feature="blocky"){ write!(buf, "{}", color::Bg(color::White))?; };
     print_card_outline(buf, pos, color::White)?;
     print_card_contents(buf, pos + (1, 1), card)?;
     Ok(())
 }
 
-pub fn print_card_outline(buf: &mut impl io::Write, pos:TermPos, c: impl Color) -> io::Result<()> {
+pub fn print_card_outline(buf: &mut impl io::Write, pos:TermPos, c:Option<impl Color>) -> io::Result<()> {
     write!(buf, "{}{}{}", style::Reset, color::Bg(color::Black), color::Fg(c))?;
     print_literal(buf, pos, RAW_OUTLINE)?;
     Ok(())
 }
+
+
+
+
+////////////////////////
+/// Private!
+////////////////////////
 
 // Just prints whatever is in lit with nothing fancy. Keeps previous styling.
 fn print_literal(buf: &mut impl io::Write, pos:TermPos, lit:&str) -> io::Result<()> {
@@ -75,7 +122,6 @@ fn print_card_shape(buf: &mut impl io::Write, pos:TermPos, card: Card) -> io::Re
         print_card_shape_line(buf, pos + (i as u16, 0), ln, card)?;
     };
     Ok(())
-    
 }
 
 // Style is reset at beginning of each line.
@@ -107,7 +153,7 @@ fn print_card_shape_line(buf: &mut impl io::Write, pos:TermPos, ln:&str, card: C
     Ok(())
 }
 
-pub fn mv_cursor(buf: &mut impl io::Write, pos:TermPos) -> io::Result<()> {
+fn mv_cursor(buf: &mut impl io::Write, pos:TermPos) -> io::Result<()> {
     if pos.x() == 0 || pos.y() == 0 {
         panic!("Cursor positions start at 1, not 0.");
     };
@@ -125,6 +171,10 @@ fn print_card_shape_line_solid(buf: &mut impl io::Write, pos:TermPos, ln:&str, c
 
 
 
+
+//////////////////////////////
+/// Helpers
+//////////////////////////////
 
 fn get_raw_solid_style(c:Card) -> String {
     if c.fill != CardFill::Solid { panic!(); };
