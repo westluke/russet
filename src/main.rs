@@ -56,27 +56,27 @@ fn find_set(lay:Layout) -> Option<[SetPos; 3]> {
     None
 }
 
-fn key_to_SetPos(c: char) -> SetPos {
+fn key_to_SetPos(c: char) -> Option<SetPos> {
     match c {
-        'q' | 'Q' => SetPos::new_dealt(0, 0),
-        'w' | 'W' => SetPos::new_dealt(0, 1),
-        'e' | 'E' => SetPos::new_dealt(0, 2),
-        'r' | 'R' => SetPos::new_dealt(0, 3),
-        't' | 'T' => SetPos::new_dealt(0, 4),
-        'y' | 'Y' => SetPos::new_dealt(0, 5),
-        'a' | 'A' => SetPos::new_dealt(1, 0),
-        's' | 'S' => SetPos::new_dealt(1, 1),
-        'd' | 'D' => SetPos::new_dealt(1, 2),
-        'f' | 'F' => SetPos::new_dealt(1, 3),
-        'g' | 'G' => SetPos::new_dealt(1, 4),
-        'h' | 'H' => SetPos::new_dealt(1, 5),
-        'z' | 'Z' => SetPos::new_dealt(2, 0),
-        'x' | 'X' => SetPos::new_dealt(2, 1),
-        'c' | 'C' => SetPos::new_dealt(2, 2),
-        'v' | 'V' => SetPos::new_dealt(2, 3),
-        'b' | 'B' => SetPos::new_dealt(2, 4),
-        'n' | 'N' => SetPos::new_dealt(2, 5),
-        _ => panic!()
+        'q' | 'Q' => Some(SetPos::new_dealt(0, 0)),
+        'w' | 'W' => Some(SetPos::new_dealt(0, 1)),
+        'e' | 'E' => Some(SetPos::new_dealt(0, 2)),
+        'r' | 'R' => Some(SetPos::new_dealt(0, 3)),
+        't' | 'T' => Some(SetPos::new_dealt(0, 4)),
+        'y' | 'Y' => Some(SetPos::new_dealt(0, 5)),
+        'a' | 'A' => Some(SetPos::new_dealt(1, 0)),
+        's' | 'S' => Some(SetPos::new_dealt(1, 1)),
+        'd' | 'D' => Some(SetPos::new_dealt(1, 2)),
+        'f' | 'F' => Some(SetPos::new_dealt(1, 3)),
+        'g' | 'G' => Some(SetPos::new_dealt(1, 4)),
+        'h' | 'H' => Some(SetPos::new_dealt(1, 5)),
+        'z' | 'Z' => Some(SetPos::new_dealt(2, 0)),
+        'x' | 'X' => Some(SetPos::new_dealt(2, 1)),
+        'c' | 'C' => Some(SetPos::new_dealt(2, 2)),
+        'v' | 'V' => Some(SetPos::new_dealt(2, 3)),
+        'b' | 'B' => Some(SetPos::new_dealt(2, 4)),
+        'n' | 'N' => Some(SetPos::new_dealt(2, 5)),
+        _ => None
     }
 }
 
@@ -88,6 +88,9 @@ fn main() -> std::io::Result<()> {
     let mut state = GameState::new();
 
     tx.send(Msg::Base(Clone::clone(&state)));
+
+    // idea: to avoid excessive buffering on holding keydown, 
+    // impose time limit on pressing the same key twice.
 
     for c in stdin.events() {
         let evt = c.unwrap();
@@ -103,7 +106,10 @@ fn main() -> std::io::Result<()> {
             },
 
             Event::Key(Key::Char(c)) => {
-                let res = state.select(key_to_SetPos(c));
+                let pos = key_to_SetPos(c);
+                if pos.is_none() { continue; }
+
+                let res = state.select(pos.unwrap());
                 match res {
                     SelectResult::Pending | SelectResult::UnPending => tx.send(Msg::Base(Clone::clone(&state))).unwrap(),
                     SelectResult::BadSet(p0, p1, p2) => {

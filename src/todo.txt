@@ -1,0 +1,16 @@
+1. Error handling
+    - Make the error handling saner (messages, returning Results, fallbacks)
+    - In particular find a graceful way to inform user when they increase font size enough that printing goes out of bounds
+
+2. Score
+
+3. Animation
+idea: when new set slides in to replace old one, we pick random pixels from the old last found set and start resetting them, to achieve a disintegrating effect
+
+5. Configuration
+
+7. Menu
+
+8. Restarting
+
+9. Clicking

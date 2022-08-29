@@ -22,16 +22,16 @@ impl SetPos {
 
     pub fn to_TermPos(self) -> TermPos {
         let (width, height) = termion::terminal_size().unwrap();
-        let bottom = height - CARD_HEIGHT;
+        let bottom = (height - CARD_HEIGHT) + 1;
         let right = width - CARD_WIDTH;
 
         match self {
-            Self::Deck =>               TermPos::new(bottom, 1),
-            Self::LastFound0 =>         TermPos::new(bottom, right),
-            Self::LastFound1 =>         TermPos::new(bottom - 3, right - 3),
-            Self::LastFound2 =>         TermPos::new(bottom - 6, right - 6),
+            Self::Deck =>               TermPos::new(bottom-1, 2),
+            Self::LastFound0 =>         TermPos::new(bottom - 1, right - 48),
+            Self::LastFound1 =>         TermPos::new(bottom - 3, right - 24),
+            Self::LastFound2 =>         TermPos::new(bottom - 5, right),
             Self::Dealt{row, col}  =>   {
-                let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT) + 2;
+                let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT) + 1;
                 let x = (col * CARD_WIDTH)  + (col * CARD_SPACING_HORIZ) + 2;
                 TermPos::new(y, x)
             }

@@ -10,11 +10,59 @@ use crate::config::*;
 use crate::pos::{TermPos, SetPos};
 
 
-// ok so i should make separate functions to print just outline, and to print background as well
-// (which requires overwriting)
-// Note-I think cards should both have borders (box drawing) AND have rounded corners
 
+// change print_card_* to use enum to represent style
+// IDEA: deck is normally flat, but raises when cards are emitted
+// also, last set found should just be distinguished by diff colors, not outline
+//
+//
+// hmm. this is tricky.  how do i manage shadow? it has to preserve the background, but replace the
+// foreground character with the outline.
+// I could also, much more bluntly, just print a black bg offset.
 
+pub enum CardStyle {
+    Button,         // duplicate card bg in border to bottom and left
+    ShadowLeft,     // apply SHADOW_BG to bottom and right of card
+    ShadowRight,    // apply SHADOW_BG to bottom and right of card
+    Flat,           // normal
+    Pending         // Use PENDING_BG
+}
+
+pub fn print_card(  buf: &mut impl io::Write,
+                    pos: TermPos,
+                    card: Card,
+                    style: CardStyle) -> io::Result<()> {
+
+    let mut bg = CARD_BG;
+
+    match style {
+        CardStyle::Button => {
+            print_card_outline(buf, pos + (1, -1), &color::Reset, CARD_BG);
+        },
+        CardStyle::ShadowLeft => {
+            print_card_bg(buf, pos + (1, -1), SHADOW_BG);
+        },
+        CardStyle::Flat => {},
+        CardStyle::Pending => {
+            bg = PENDING_BG;
+        },
+        _ => unimplemented!()
+    };
+
+    print_card_bg(buf, pos, bg);
+    print_card_contents(buf, pos, card, bg)?;
+    Ok(())
+}
+
+fn print_deck(  buf: &mut impl io::Write,
+                    pos: TermPos,
+                    bg: &dyn Color) -> io::Result<()> {
+
+    print_card_outline(buf, pos + (1, -1), &color::Reset, bg);
+    print_card_bg(buf, pos, bg)?;
+    print_deck_contents(buf, pos, &color::Black)?;
+    Ok(())
+}
 
 pub fn print_gamestate( buf: &mut impl io::Write,
                         g: &GameState) -> io::Result<()> {
@@ -24,23 +72,21 @@ pub fn print_gamestate( buf: &mut impl io::Write,
         let selected = g.selects.contains(&pos);
 
         if filled && selected {
-            print_card(buf, pos.to_TermPos(), c_opt.unwrap(), &color::LightYellow)?;
+            print_card(buf, pos.to_TermPos() + (1, -1), c_opt.unwrap(), CardStyle::Flat)?;
         } else if filled && !selected {
-            print_card(buf, pos.to_TermPos(), c_opt.unwrap(), CARD_BG)?;
+            print_card(buf, pos.to_TermPos(), c_opt.unwrap(), CardStyle::Button)?;
         } else if selected {
-            print_card_bg(buf, pos.to_TermPos(), &color::LightYellow)?;
+            print_card_bg(buf, pos.to_TermPos(), PENDING_BG)?;
         }
     }
 
-    print_card_bg(buf, SetPos::Deck.to_TermPos(), CARD_BG)?;
-    // print_card_outline(buf, SetPos::Deck.to_TermPos() + (-1, 1), &color::Black, &color::White)?;
-    // print_card_outline(buf, SetPos::Deck.to_TermPos() + (-2, 2), &color::Black, &color::White)?;
+    print_deck(buf, SetPos::Deck.to_TermPos(), CARD_BG)?;
 
     if g.last_set_found.is_some() {
         let (c1, c2, c3) = g.last_set_found.unwrap();
-        print_card(buf, SetPos::LastFound0.to_TermPos(), c1, CARD_BG)?;
-        print_card(buf, SetPos::LastFound1.to_TermPos(), c2, CARD_BG)?;
-        print_card(buf, SetPos::LastFound2.to_TermPos(), c3, CARD_BG)?;
+        print_card(buf, SetPos::LastFound0.to_TermPos(), c1, CardStyle::ShadowLeft)?;
+        print_card(buf, SetPos::LastFound1.to_TermPos(), c2, CardStyle::ShadowLeft)?;
+        print_card(buf, SetPos::LastFound2.to_TermPos(), c3, CardStyle::ShadowLeft)?;
     }
 
     Ok(())
@@ -57,42 +103,44 @@ pub fn write_time(  buf: &mut impl io::Write,
     Ok(())
 }
 
-// pos is position of top left corner of card outline
-pub fn print_card(  buf: &mut impl io::Write,
+
+fn print_deck_contents( buf: &mut impl io::Write,
+                        pos: TermPos,
+                        bg: &dyn Color) -> io::Result<()> {
+
+    let num = 3;
+    let offset = (CARD_WIDTH - ((SHAPE_WIDTH * num) + (num + 1))) / 2;
+
+    write!(buf, "{}", color::Bg(bg));
+
+    for i in 0..(num as u16){
+
+        // x must be adjusted if e.g. this is the third shape in the row
+        let shape_pos = i*SHAPE_WIDTH;
+
+        // there is a small amount of minimum spacing between adjacent shapes, and between the
+        // shapes and the card outline
+        let spacing = (i+1) * SHAPE_SPACING;
+
+        print_question(buf, pos + (2_u16, offset + shape_pos + spacing), bg)?;
+    };
+    Ok(())
+}
+
+fn print_question(  buf: &mut impl io::Write,
                     pos: TermPos,
-                    card: Card,
                     bg: &dyn Color) -> io::Result<()> {
 
-    // if cfg!(feature="blocky"){ 
-    //     print_card_outline(buf, pos, outline, outline)?;
-    // } else {
-    //     print_card_outline(buf, pos, bg, outline)?;
-    // }
-
-    print_card_bg(buf, pos, bg)?;
-    print_card_contents(buf, pos, card, bg)?;
+    for (i, ln) in RAW_QUESTION.lines().enumerate(){
+        for (j, c) in ln.chars().enumerate() {
+            if c == ' ' { continue; }
+            mv_cursor(buf, pos + (i as u16, j as u16));
+            write!(buf, " ");
+        };
+    };
     Ok(())
 }
 
-pub fn print_card_outline(  buf: &mut impl io::Write,
-                            pos: TermPos,
-                            bg: &dyn Color,
-                            fg: &dyn Color) -> io::Result<()> {
-
-    write!(buf, "{}{}{}", style::Reset, color::Bg(bg), color::Fg(fg))?;
-    // print_literal(buf, pos, RAW_OUTLINE)?;
-    Ok(())
-}
-
-pub fn print_card_outline_over( buf: &mut impl io::Write,
-                                pos: TermPos,
-                                bg: &dyn Color,
-                                fg: &dyn Color) -> io::Result<()> {
-
-    write!(buf, "{}{}{}", style::Reset, color::Bg(bg), color::Fg(fg))?;
-    // print_literal_over(buf, pos, RAW_OUTLINE)?;
-    Ok(())
-}
 
 
 
@@ -101,31 +149,41 @@ pub fn print_card_outline_over( buf: &mut impl io::Write,
 /// Private!
 ////////////////////////
 
-// Just prints whatever is in lit with nothing fancy. Keeps previous styling. Also skips spaces (so
-// doesn't overwrite what's underneath)
-// fn print_literal(   buf: &mut impl io::Write,
-//                     pos:TermPos,
-//                     lit:&str) -> io::Result<()> {
-
-//     for (i, ln) in lit.lines().enumerate(){
-//         for (j, c) in ln.chars().enumerate() {
-//             if c != ' ' {
-//                 mv_cursor(buf, pos + (i as u16, j as u16))?;
-//                 write!(buf, "{}", c)?;
-//             };
-//         };
-//     };
-
-//     Ok(())
-// }
-
 fn print_card_bg(   buf: &mut impl io::Write,
                     pos: TermPos,
                     bg: &dyn Color) -> io::Result<()> {
-    for i in 0..CARD_HEIGHT {
+    mv_cursor(buf, pos+(0, 1));
+    write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH-2)))?;
+
+    for i in 1..(CARD_HEIGHT-1) {
         mv_cursor(buf, pos + (i, 0));
         write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH)))?;
     }
+
+    mv_cursor(buf, pos+(CARD_HEIGHT-1, 1));
+    write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH-2)))?;
+
+    Ok(())
+}
+
+fn print_card_outline( buf: &mut impl io::Write,
+                            pos: TermPos,
+                            bg: &dyn Color,
+                            fg: &dyn Color) -> io::Result<()> {
+    mv_cursor(buf, pos+(0, 1));
+    write!(buf, "{}{}{}{}{}", color::Bg(bg), color::Fg(fg), "┏", "━".repeat(usize::from(CARD_WIDTH-4)), "┓")?;
+    mv_cursor(buf, pos+(1, 0));
+    write!(buf, "{}{}{}",  "┏┛", " ".repeat(usize::from(CARD_WIDTH-4)), "┗┓")?;
+
+    for i in 2..(CARD_HEIGHT-2) {
+        mv_cursor(buf, pos + (i, 0));
+        write!(buf, "{}{}{}", "┃", " ".repeat(usize::from(CARD_WIDTH-2)), "┃")?;
+    }
+
+    mv_cursor(buf, pos+(CARD_HEIGHT-2, 0));
+    write!(buf, "{}{}{}",  "┗┓", " ".repeat(usize::from(CARD_WIDTH-4)), "┏┛")?;
+    mv_cursor(buf, pos+(CARD_HEIGHT-1, 1));
+    write!(buf, "{}{}{}", "┗", "━".repeat(usize::from(CARD_WIDTH-4)), "┛")?;
 
     Ok(())
 }
@@ -155,7 +213,7 @@ fn print_card_contents( buf: &mut impl io::Write,
         // shapes and the card outline
         let spacing = (i+1) * SHAPE_SPACING;
 
-        print_card_shape(buf, pos + (1_u16, offset + shape_pos + spacing), card, bg)?;
+        print_card_shape(buf, pos + (2_u16, offset + shape_pos + spacing), card, bg)?;
     };
     Ok(())
 }
@@ -173,7 +231,6 @@ fn print_card_shape(    buf: &mut impl io::Write,
     Ok(())
 }
 
-
 // Style is reset at beginning of each line.
 fn print_card_shape_line(   buf: &mut impl io::Write,
                             pos: TermPos, 
@@ -183,10 +240,6 @@ fn print_card_shape_line(   buf: &mut impl io::Write,
 
     write!(buf, "{}{}", style::Reset, color::Bg(bg))?;
 
-    if card.fill == CardFill::Solid {
-        return print_card_shape_line_solid(buf, pos, ln, card);
-    }
-    
     let mut is_fill = true;
 
     for (i, ch) in ln.chars().enumerate(){
@@ -197,16 +250,24 @@ fn print_card_shape_line(   buf: &mut impl io::Write,
         is_fill = ch == 'x';
 
         if is_fill  {
-            if restyle { write!(buf, "{}", get_raw_fill_style(card))?; };
+            if restyle { write!(buf, "{}", get_raw_fill_style(card, bg))?; };
             write!(buf, "{}", get_raw_fill(card))?
         } else { 
             if restyle { write!(buf, "{}", get_raw_edge_style(card))?; };
-            write!(buf, "{}", ch)?;
+            write!(buf, "{}", ' ')?;
         };
     };
 
     Ok(())
 }
+
+
+
+
+
+//////////////////////////////
+/// Helpers
+//////////////////////////////
 
 fn mv_cursor(   buf: &mut impl io::Write,
                 pos: TermPos) -> io::Result<()> {
@@ -218,30 +279,6 @@ fn mv_cursor(   buf: &mut impl io::Write,
     Ok(())
 }
 
-fn print_card_shape_line_solid( buf: &mut impl io::Write,
-                                pos: TermPos,
-                                ln: &str,
-                                card: Card) -> io::Result<()> {
-    let core = ln.trim();
-    let first = ln.find(|c:char| !c.is_whitespace() ).unwrap();
-    mv_cursor(buf, pos + (0, first as u16))?;
-    write!(buf, "{}{}{}", style::Reset, get_raw_solid_style(card), core)?;
-    Ok(())
-}
-
-
-
-
-//////////////////////////////
-/// Helpers
-//////////////////////////////
-
-fn get_raw_solid_style(c:Card) -> String {
-    if c.fill != CardFill::Solid { panic!(); };
-    let col = get_raw_color(c);
-    format!("{}{}", color::Fg(col), color::Bg(col))
-}
-
 fn get_raw_color(c:Card) -> &'static dyn color::Color {
     match c.color {
         CardColor::Green =>  RAW_GREEN,
@@ -251,35 +288,25 @@ fn get_raw_color(c:Card) -> &'static dyn color::Color {
 }
 
 fn get_raw_shape(c:Card) -> &'static str {
-    let solid_override = (c.fill == CardFill::Solid) || (cfg!(feature="blocky"));
-    match (solid_override, c.shape) {
-        (true, CardShape::Oval) => RAW_OVAL_SOLID,
-        (true, CardShape::Diamond) => RAW_DIAMOND_SOLID,
-        (true, CardShape::Squiggle) => RAW_SQUIGGLE_SOLID,
-        (_,    CardShape::Oval) => RAW_OVAL,
-        (_,    CardShape::Diamond) => RAW_DIAMOND,
-        (_,    CardShape::Squiggle) => RAW_SQUIGGLE
+    match c.shape {
+        CardShape::Oval => RAW_OVAL,
+        CardShape::Diamond => RAW_DIAMOND,
+        CardShape::Squiggle => RAW_SQUIGGLE
     }
 }
 
 // Returns styling string for characters at the edge of a shape
 fn get_raw_edge_style(c:Card) -> String {
     let col = get_raw_color(c);
-    let solid_override = (c.fill == CardFill::Solid) || (cfg!(feature="blocky"));
-
-    if solid_override {
-        format!("{}{}", color::Bg(col), color::Fg(col))
-    } else {
-        format!("{}", color::Fg(col))
-    }
+    format!("{}{}", color::Bg(col), color::Fg(col))
 }
 
 // Returns styling string for fill ('x') characters. block compilation isn't relevant here.
-fn get_raw_fill_style(c:Card) -> String {
+fn get_raw_fill_style(c:Card, bg: &dyn Color) -> String {
     let col = get_raw_color(c);
     match c.fill {
         CardFill::Solid =>  format!("{}{}", color::Bg(col), color::Fg(col)),
-        _ =>                format!("{}", color::Fg(col)),
+        _ =>                format!("{}{}", color::Bg(bg), color::Fg(col)),
     }
 }
 
@@ -290,4 +317,3 @@ fn get_raw_fill(c:Card) -> char {
         CardFill::Empty => ' '
     }
 }
-

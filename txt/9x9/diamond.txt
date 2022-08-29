@@ -1,13 +1,3 @@
-   ▟ ▙
-  ▟xxx▙
- ▟xxxxx▙
-▟xxxxxxx▙
-▌xxxxxxx▐
-▜xxxxxxx▛
- ▜xxxxx▛
-  ▜xxx▛
-   ▜ ▛
-
     █
    █x█
   █xxx█
