@@ -1,0 +1,19 @@
+   ▟ ▙
+  ▟xxx▙
+ ▟xxxxx▙
+▟xxxxxxx▙
+▌xxxxxxx▐
+▜xxxxxxx▛
+ ▜xxxxx▛
+  ▜xxx▛
+   ▜ ▛
+
+    █
+   █x█
+  █xxx█
+ █xxxxx█
+█xxxxxxx█
+ █xxxxx█
+  █xxx█
+   █x█
+    █

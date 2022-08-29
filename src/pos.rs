@@ -4,6 +4,7 @@ use std::ops::Add;
 
 
 #[derive(PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug)]
 pub enum SetPos {
     Deck,
     LastFound0,
@@ -30,8 +31,8 @@ impl SetPos {
             Self::LastFound1 =>         TermPos::new(bottom - 3, right - 3),
             Self::LastFound2 =>         TermPos::new(bottom - 6, right - 6),
             Self::Dealt{row, col}  =>   {
-                let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT);
-                let x = (col * CARD_WIDTH)  + (col * CARD_SPACING_HORIZ);
+                let y = (row * CARD_HEIGHT) + (row * CARD_SPACING_VERT) + 2;
+                let x = (col * CARD_WIDTH)  + (col * CARD_SPACING_HORIZ) + 2;
                 TermPos::new(y, x)
             }
         }
@@ -52,6 +53,8 @@ impl SetPos {
     }
 }
 
+#[derive(PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug)]
 pub struct TermPos {
     y: u16,
     x: u16
@@ -61,7 +64,7 @@ impl TermPos {
     pub fn new(y:u16, x:u16) -> Self {
         let (width, height) = termion::terminal_size().unwrap();
         debug_assert!(1 <= y && y <= height);
-        debug_assert!(0 <= x && x <= width);
+        debug_assert!(1 <= x && x <= width);
         Self{y, x}
     }
 
@@ -84,8 +87,18 @@ impl TermPos {
 
 impl Add<(u16, u16)> for TermPos {
     type Output = Self;
-    fn add(self, (y, x):(u16, u16)) -> Self{
+    fn add(self, (y, x):(u16, u16)) -> Self {
         TermPos::new(self.y + y, self.x + x)
+    }
+}
+
+impl Add<(i32, i32)> for TermPos {
+    type Output = Self;
+    fn add(self, (y, x):(i32, i32)) -> Self {
+        let new_y = i32::from(self.y) + y;
+        let new_x = i32::from(self.x) + x;
+        debug_assert!(new_y > 0 && new_x > 0);
+        TermPos::new(new_y as u16, new_x as u16)
     }
 }
 

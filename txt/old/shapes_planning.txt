@@ -67,6 +67,7 @@
 █xxxx█
 █xxxx█
 █xxxx█
+█xxxx█
  ████
 
 ██████
@@ -90,13 +91,16 @@
 █xxxxx█
 █xxxxx█
 █xxxxx█
+█xxxxx█
+█xxxxx█
  █████
 
 ██████ 
- █    █
- █    █
-█    █
-█    █
+ █xxxx█
+  █xxx█
+ █xxx█
+█xxx█
+█xxxx█
  ██████
 
 8x8 block:
@@ -126,13 +130,73 @@
 █xxxx█
 █xxxxx█
  ███████
-╭─────────────────────────────╮
-│    ▟▙    ▟▔▔▔▔▔▔▙ ▙▔▔▔▔▔▔▙  │
-│   ▟xx▙   ▏xxxxxx▕  ▜xxxxx▜  │
-│  ▟xxxx▙  ▏xxxxxx▕  ▕xxxxx▕  │
-│ ▟xxxxxx▙ ▏xxxxxx▕  ▟xxxxx▛  │
-│ ▜xxxxxx▛ ▏xxxxxx▕ ▟xxxxx▛   │
-│  ▜xxxx▛  ▏xxxxxx▕ ▏xxxxx▏   │
-│   ▜xx▛   ▏xxxxxx▕ ▙xxxxx▙   │
-│    ▜▛    ▜▁▁▁▁▁▁▛ ▜▁▁▁▁▁▁▜  │
-╰─────────────────────────────╯
+
+
+9x9 block:
+    █
+   █x█
+  █xxx█
+ █xxxxx█
+█xxxxxxx█
+ █xxxxx█
+  █xxx█
+   █x█
+    █
+
+ ███████ 
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+ ███████ 
+
+████████
+ █xxxxxx█
+  █xxxxx█
+  █xxxxx█
+ █xxxxx█
+█xxxxx█
+█xxxxx█
+█xxxxxx█
+ ████████
+
+     █
+   ██x██
+ ██xxxxx██
+█xxxxxxxxx█
+ ██xxxxx██
+   ██x██
+     █
+
+ ███████ 
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+█xxxxxxx█
+ ███████ 
+
+████████
+ █xxxxxx█
+  █xxxxx█
+  █xxxxx█
+ █xxxxx█
+█xxxxx█
+█xxxxx█
+█xxxxxx█
+ ████████
+
+
+++++++++++++++++++++++++++++++
++   ▟▙    ▟▔▔▔▔▔▔▙ ▙▔▔▔▔▔▔▙  +
++  ▟xx▙   ▏xxxxxx▕  ▜xxxxx▜  +
++ ▟xxxx▙  ▏xxxxxx▕  ▕xxxxx▕  +
++▟xxxxxx▙ ▏xxxxxx▕  ▟xxxxx▛  +
++▜xxxxxx▛ ▏xxxxxx▕ ▟xxxxx▛   +
++ ▜xxxx▛  ▏xxxxxx▕ ▏xxxxx▏   +
++  ▜xx▛   ▏xxxxxx▕ ▙xxxxx▙   +
++   ▜▛    ▜▁▁▁▁▁▁▛ ▜▁▁▁▁▁▁▜  +
+++++++++++++++++++++++++++++++

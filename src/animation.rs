@@ -16,6 +16,18 @@ use super::printing;
 use super::pos::*;
 
 
+
+// better idea: make the game background-agnostic.
+// ok no, cuz i think i need to denote the cards using a white background anyways.
+// otherwise itll look weird.
+// ok so it's not background-agnostic, it just has to contrast with white.
+// incorrect sets flash red (ENTIRE CARD flashes red)
+// correct sets flash green, then move
+// pending sets? idk yet. Maybe pending spot flashes yellow, and gets halo of card-colored pluses?
+// text gets printed in white, on black background (customizable eventually)
+//
+
+
 pub enum Msg {
     Quit,
     Base(GameState),                // Canceled by later Base
@@ -28,48 +40,11 @@ pub enum Msg {
 
 pub enum TimedMsg {
     StaticCard(SetPos, Option<Card>),                               // Placeholder for both ends during a MoveCard
-    MoveCard(SetPos, SetPos, Card, Option<&'static dyn Color>),     // Optional color to be used for the cards border as it moves.
+    MoveCard(SetPos, SetPos, Card, &'static (dyn Color + Sync)),     // Optional color to be used for the cards border as it moves.
     BadOutline(SetPos),                                             // Red border that flashes when the user incorrectly tries to select a set
 }
 
 impl Msg {
-    fn print(&self, buf: &mut impl io::Write, i0: Instant) -> io::Result<()> {
-        match self {
-            &Msg::Quit => panic!(),     // Something's wrong if we're trying to print a Quit message.
-            &Msg::Base(g) => printing::print_gamestate(buf, g),
-            &Msg::Timed(t_msgs, i1) => {
-                for msg in t_msgs {
-                    match msg {
-                        TimedMsg::StaticCard
-                        TimedMsg::MoveCard
-                        TimedMsg::BadOutline
-                    }
-                };
-            
-            }
-        }
-    }
-
-    // // TimedMsg's cannot be canceled.
-    // // Quit cannot be canceled.
-    // // Base is canceled by later base.
-    // fn canceled(&self, later_msg: &Msg) -> bool {
-    //     match self {
-    //         &Msg::Quit => false,
-    //         &Msg::Base(b0) => match later_msg {
-    //             &Msg::Base(_) => true,
-    //             _ => false
-    //         },
-    //         &Msg::Pending(pos0) => match later_msg {
-    //             &Msg::Pending(pos0) => true,
-    //             &Msg::ClearPending(pos0) => true,
-    //             _ => false,
-    //         },
-    //         &Msg::ClearPending(pos0) => true,
-    //         &x => false
-    //     }
-    // }
-
     fn timed_out(&self, i0: Instant) -> bool {
         match self {
             &Msg::Timed(_, i1) => i0 >= i1,
@@ -89,7 +64,7 @@ pub fn sleep_until(i: Instant) {
 
 
 
-pub fn animate(rx: mpsc::Receiver<AnimationMsg>) -> impl (FnOnce() -> ()) {
+pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> ()) {
     // let mut animations = vec![];
 
     move || {
@@ -99,20 +74,14 @@ pub fn animate(rx: mpsc::Receiver<AnimationMsg>) -> impl (FnOnce() -> ()) {
         write!(stdout, "{}{}{}", ToAlternateScreen, clear::All, cursor::Hide).unwrap();
 
         let mut start = Instant::now();
+        let mut state: Option<GameState> = None;
 
 
-        // in a loop, run frame animation
-        // check terminal size with termion::terminal_size, compare to last known.
-        // if there are no new events and no animations in the buffer, don't clear screen (no
-        // point)
-        // could also maybe specify which animations require clearing screen?
         loop {
-            // write!(buf_stdout, "{}{}", style::Reset, clear::All);
+            write!(stdout, "{}{}{}", style::Reset, color::Fg(color::Yellow), clear::All);
+
             let msg = rx.try_recv();
             printing::write_time(&mut stdout, start, TermPos::new(height, 1));
-
-            let gs = GameState::new();
-            gs.layout.print(&mut stdout);
 
             if let Ok(m) = msg {
                 match m {
@@ -122,17 +91,17 @@ pub fn animate(rx: mpsc::Receiver<AnimationMsg>) -> impl (FnOnce() -> ()) {
                         stdout.flush();
                         return ();
                     },
-                    Msg::Select{row, col} => {
-                        printing::print_card_outline(&mut stdout, row, col, color::Yellow);
-                        
-                    },
-                    _ => ()
-                }
+                    Msg::Base(g) => state = Some(g),
+                    Msg::Timed(_, _) => ()
+                };
+            };
+
+            if state.is_some() {
+                printing::print_gamestate(&mut stdout, state.as_ref().unwrap());
             }
 
-            // x += 1;
             stdout.flush().unwrap();
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_millis(100));
         };
     }
 }

@@ -81,20 +81,45 @@ impl Deck {
     fn is_empty(&self) -> bool {
         return self.cards.is_empty();
     }
+
+    fn peek_n(&self, n:usize) -> &[Card] {
+        let len = self.cards.len();
+        if n >= len { panic!(); };
+        let ret = self.cards.get(len-3..len);
+        match ret {
+            None => panic!(),
+            Some(x) => x
+        }
+    }
 }
 
 
 
 
+#[derive(Copy, Clone, Debug)]
+pub enum SelectResult {
+    Invalid,
+    Pending,
+    UnPending,
+    BadSet(SetPos, SetPos, SetPos),
+    GoodSet(SetPos, SetPos, SetPos)
+}
+
+
+
+
+#[derive(Clone, Debug)]
 pub struct GameState {
     pub deck: Deck,
     pub layout: Layout,
-    pub selects: HashSet<SetPos>,
+    pub selects: Vec<SetPos>,
     pub last_set_found: Option<(Card, Card, Card)>
 }
 
+// make layout.fill(vec<cards>) func? that tries to drain vec into layout?
+
 impl GameState {
-    pub fn new () -> Self {
+    pub fn new() -> Self {
         let mut deck = Deck::new();
         let mut cards = [[None; 6]; 3];
 
@@ -104,7 +129,41 @@ impl GameState {
             }
         }
 
-        GameState{deck, layout: Layout{cards}, selects: HashSet::new(), last_set_found: None}
+        GameState{deck, layout: Layout{cards}, selects: Vec::new(), last_set_found: None}
+    }
+
+    pub fn select(&mut self, pos: SetPos) -> SelectResult{
+        if self.selects.contains(&pos) {
+            self.selects.retain(|&x| x != pos);
+            return SelectResult::UnPending;
+        } else if self.layout[pos].is_none() {
+            return SelectResult::Invalid;
+        } else if self.selects.len() <= 1 {
+            self.selects.push(pos);
+            return SelectResult::Pending;
+        } else if self.selects.len() == 2 {
+            self.selects.push(pos);
+            let (p0, p1, p2) = (self.selects.pop().unwrap(), self.selects.pop().unwrap(), self.selects.pop().unwrap());
+            if super::is_a_set(self.layout[p0].unwrap(), self.layout[p1].unwrap(), self.layout[p2].unwrap()) {
+                self.selects.clear();
+                eprintln!("{:?}{:?}{:?}", p0, p1, p2);
+                eprintln!("{:?}", self.layout);
+                self.last_set_found = Some((
+                    self.layout.remove(p0),
+                    self.layout.remove(p1),
+                    self.layout.remove(p2)));
+                return SelectResult::GoodSet(p0, p1, p2);
+            } else {
+                self.selects.clear();
+                self.layout.remove(p0);
+                self.layout.remove(p1);
+                self.layout.remove(p2);
+                return SelectResult::BadSet(p0, p1, p2);
+            }
+            
+        } else {
+            panic!()
+        }
     }
 }
 
@@ -162,6 +221,16 @@ impl Layout {
                     .map( move |(j, c)| (SetPos::new_dealt(i as u16, j as u16), c) )
             )
             .flatten()
+    }
+
+    pub fn remove(&mut self, p: SetPos) -> Card {
+        let spot = self[p];
+        self[p] = None;
+
+        match spot {
+            None => panic!(),
+            Some(c) => c
+        }
     }
 
     fn count (&self) -> u16 {
