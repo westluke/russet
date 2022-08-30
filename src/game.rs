@@ -1,11 +1,6 @@
-use std::io;
-use crate::printing;
-use super::pos::*;
-
+use crate::pos::*;
 use std::ops::{Index, IndexMut};
-// use crate::{CardPos, PixelPos};
 use rand::seq::SliceRandom as _;
-use std::collections::HashSet;
 
 
 
@@ -101,8 +96,8 @@ pub enum SelectResult {
     Invalid,
     Pending,
     UnPending,
-    BadSet(SetPos, SetPos, SetPos),
-    GoodSet(SetPos, SetPos, SetPos)
+    BadSet(LayoutPos, LayoutPos, LayoutPos),
+    GoodSet(LayoutPos, LayoutPos, LayoutPos)
 }
 
 
@@ -112,7 +107,7 @@ pub enum SelectResult {
 pub struct GameState {
     pub deck: Deck,
     pub layout: Layout,
-    pub selects: Vec<SetPos>,
+    pub selects: Vec<LayoutPos>,
     pub last_set_found: Option<(Card, Card, Card)>
 }
 
@@ -132,27 +127,42 @@ impl GameState {
         GameState{deck, layout: Layout{cards}, selects: Vec::new(), last_set_found: None}
     }
 
-    pub fn select(&mut self, pos: SetPos) -> SelectResult{
+    pub fn select(&mut self, pos: LayoutPos) -> SelectResult {
         if self.selects.contains(&pos) {
             self.selects.retain(|&x| x != pos);
             return SelectResult::UnPending;
+
         } else if self.layout[pos].is_none() {
             return SelectResult::Invalid;
+
         } else if self.selects.len() <= 1 {
             self.selects.push(pos);
             return SelectResult::Pending;
+
         } else if self.selects.len() == 2 {
             self.selects.push(pos);
-            let (p0, p1, p2) = (self.selects.pop().unwrap(), self.selects.pop().unwrap(), self.selects.pop().unwrap());
-            if super::is_a_set(self.layout[p0].unwrap(), self.layout[p1].unwrap(), self.layout[p2].unwrap()) {
+            let err = "selects should have exactly 3 elements here";
+
+            // Should be fine since theoretically none of these pops can fail
+            let (p0, p1, p2) = (
+                self.selects.pop().expect(err),
+                self.selects.pop().expect(err),
+                self.selects.pop().expect(err),
+            );
+
+            let err = "these positions in layout should be filled if this line is reached";
+
+            if super::is_a_set( self.layout[p0].expect(err),
+                                self.layout[p1].expect(err),
+                                self.layout[p2].expect(err)) {
+
                 self.selects.clear();
-                eprintln!("{:?}{:?}{:?}", p0, p1, p2);
-                eprintln!("{:?}", self.layout);
                 self.last_set_found = Some((
-                    self.layout.remove(p0),
-                    self.layout.remove(p1),
-                    self.layout.remove(p2)));
+                    self.layout.remove(p0).unwrap(),
+                    self.layout.remove(p1).unwrap(),
+                    self.layout.remove(p2).unwrap()));
                 return SelectResult::GoodSet(p0, p1, p2);
+
             } else {
                 self.selects.clear();
                 self.layout.remove(p0);
@@ -162,7 +172,7 @@ impl GameState {
             }
             
         } else {
-            panic!()
+            panic!("self.selects should never have more than 3 elements");
         }
     }
 }
@@ -192,16 +202,16 @@ impl IndexMut<(u16, u16)> for Layout {
     }
 }
 
-impl Index<SetPos> for Layout {
+impl Index<LayoutPos> for Layout {
     type Output = Option<Card>;
     
-    fn index(&self, pos:SetPos) -> &Self::Output {
+    fn index(&self, pos:LayoutPos) -> &Self::Output {
         &self.cards[usize::from(pos.row())][usize::from(pos.col())]
     }
 }
 
-impl IndexMut<SetPos> for Layout {
-    fn index_mut(&mut self, pos:SetPos) -> &mut Self::Output {
+impl IndexMut<LayoutPos> for Layout {
+    fn index_mut(&mut self, pos:LayoutPos) -> &mut Self::Output {
         &mut self.cards[usize::from(pos.row())][usize::from(pos.col())]
     }
 }
@@ -212,25 +222,21 @@ impl Layout {
         self.cards.iter().flatten()
     }
 
-    pub fn enumerate_2d (self) -> impl Iterator<Item=(SetPos, Option<Card>)>{
+    pub fn enumerate_2d (self) -> impl Iterator<Item=(LayoutPos, Option<Card>)>{
         self.cards.into_iter()
             .enumerate()
             .map( move |(i, c_arr)|
                 c_arr.into_iter()
                     .enumerate()
-                    .map( move |(j, c)| (SetPos::new_dealt(i as u16, j as u16), c) )
+                    .map( move |(j, c)| (LayoutPos::new(i as u16, j as u16).unwrap(), c) )
             )
             .flatten()
     }
 
-    pub fn remove(&mut self, p: SetPos) -> Card {
+    pub fn remove(&mut self, p: LayoutPos) -> Option<Card> {
         let spot = self[p];
         self[p] = None;
-
-        match spot {
-            None => panic!(),
-            Some(c) => c
-        }
+        spot
     }
 
     fn count (&self) -> u16 {
@@ -238,14 +244,14 @@ impl Layout {
             .count() as u16
     }
 
-    fn empties (&self) -> Vec<SetPos> {
+    fn empties (&self) -> Vec<LayoutPos> {
         self.enumerate_2d()
             .filter(|&(pos, c)| c == None)
             .map(|(pos, c)| pos)
             .collect()
     }
 
-    fn extras (&self) -> Vec<SetPos> {
+    fn extras (&self) -> Vec<LayoutPos> {
         self.enumerate_2d()
             .filter(|&(pos, c)|
                 c != None &&
@@ -259,8 +265,8 @@ impl Layout {
     // (main section cards are never moved)
     // Returns Vec of tuples (p0, p1, c) where c is moved card, p0 is c's initial location, and p1
     // is c's final location
-    fn redistribute(&mut self) -> Vec<(SetPos, SetPos, Card)> {
-        let empties: Vec<SetPos> = self.empties().
+    fn redistribute(&mut self) -> Vec<(LayoutPos, LayoutPos, Card)> {
+        let empties: Vec<LayoutPos> = self.empties().
             into_iter()
             .filter(|&pos| pos.col() <= 3)
             .collect();
@@ -269,31 +275,18 @@ impl Layout {
         let mut to_return = vec![];
 
         let to_fill = std::cmp::min(empties.len(), extras.len());
+        let err = "extras should not contain any nones";
+
         for i in 0..to_fill {
-            to_return.push((extras[i], empties[i], self[extras[i]].unwrap()));
+            to_return.push((
+                extras[i], 
+                empties[i],
+                self[extras[i]].expect(err)));
+
             self[empties[i]] = self[extras[i]];
             self[extras[i]] = None;
         }
 
         to_return
     }
-        
-    // // Fills the first 3 empty spots found
-    // // Returns true if change was made
-    // fn take3 (&mut self, d:Deck) -> bool{
-    //     let empties = self.empties();
-    //     if empties.is_empty() { return false; };
-    //     debug_assert!(empties.len() % 3 == 0);
-
-    //     if d.is_empty() || empties.is_empty() {
-    //         return false;
-    //     }
-
-    //     for e in empties {
-    //         self[e] = d.
-            
-    //     }
-
-    //     true
-    // }
 }

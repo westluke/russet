@@ -8,15 +8,15 @@ pub const RAW_RED: &dyn Color = &color::Red;
 pub const RAW_PURPLE: &dyn Color = &color::Blue;
 
 pub const CARD_BG: &dyn Color = &color::White;
-pub const CARD_BORDER: &dyn Color = &color::Reset;
-pub const QUESTION_BG: &dyn Color = &color::Reset;
+// pub const CARD_BORDER: &dyn Color = &color::Reset;
+// pub const QUESTION_BG: &dyn Color = &color::Reset;
 pub const PENDING_BG: &dyn Color = &color::LightYellow;
 pub const SHADOW_BG: &dyn Color = &color::Reset;
-pub const GOOD_SET: &dyn Color = &color::Green;
-pub const BAD_SET: &dyn Color = &color::Red;
+// pub const GOOD_SET: &dyn Color = &color::Green;
+// pub const BAD_SET: &dyn Color = &color::Red;
 
-pub const TEXT_BG: &dyn Color = &color::Black;
-pub const TEXT_FG: &dyn Color = &color::White;
+// pub const TEXT_BG: &dyn Color = &color::Black;
+// pub const TEXT_FG: &dyn Color = &color::White;
 
 // NOTE: shape_width must be odd!! otherwise duos can't be centered properly, think about it
 // not unless you use even spacing, and any spacing more than 1 looks weird

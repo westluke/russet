@@ -1,24 +1,17 @@
 use std::{io, time};
-use super::game::*;
+use crate::game::*;
 
 use time::Instant;
 use termion::{color, style, cursor};
 use color::Color;
 
-
 use crate::config::*;
 use crate::pos::{TermPos, SetPos};
+use crate::SetError as SE;
 
 
 
-// change print_card_* to use enum to represent style
 // IDEA: deck is normally flat, but raises when cards are emitted
-// also, last set found should just be distinguished by diff colors, not outline
-//
-//
-// hmm. this is tricky.  how do i manage shadow? it has to preserve the background, but replace the
-// foreground character with the outline.
-// I could also, much more bluntly, just print a black bg offset.
 
 pub enum CardStyle {
     Button,         // duplicate card bg in border to bottom and left
@@ -31,18 +24,17 @@ pub enum CardStyle {
 pub fn print_card(  buf: &mut impl io::Write,
                     pos: TermPos,
                     card: Card,
-                    style: CardStyle) -> io::Result<()> {
+                    style: CardStyle) -> Result<(), SE> {
 
     let mut bg = CARD_BG;
 
     match style {
         CardStyle::Button => {
-            print_card_outline(buf, pos + (1, -1), &color::Reset, CARD_BG);
+            print_card_outline(buf, pos.add(1, -1)?, &color::Reset, CARD_BG);
         },
         CardStyle::ShadowLeft => {
-            print_card_bg(buf, pos + (1, -1), SHADOW_BG);
+            print_card_bg(buf, pos.add(1, -1)?, SHADOW_BG);
         },
-        CardStyle::Flat => {},
         CardStyle::Pending => {
             bg = PENDING_BG;
         },
@@ -56,37 +48,37 @@ pub fn print_card(  buf: &mut impl io::Write,
 
 fn print_deck(  buf: &mut impl io::Write,
                     pos: TermPos,
-                    bg: &dyn Color) -> io::Result<()> {
+                    bg: &dyn Color) -> Result<(), SE> {
 
-    print_card_outline(buf, pos + (1, -1), &color::Reset, bg);
+    print_card_outline(buf, pos.add(1, -1)?, &color::Reset, bg);
     print_card_bg(buf, pos, bg)?;
     print_deck_contents(buf, pos, &color::Black)?;
     Ok(())
 }
 
 pub fn print_gamestate( buf: &mut impl io::Write,
-                        g: &GameState) -> io::Result<()> {
+                        g: &GameState) -> Result<(), SE> {
 
     for (pos, c_opt) in g.layout.enumerate_2d(){
         let filled = c_opt.is_some();
         let selected = g.selects.contains(&pos);
 
         if filled && selected {
-            print_card(buf, pos.to_TermPos() + (1, -1), c_opt.unwrap(), CardStyle::Flat)?;
+            print_card(buf, pos.to_TermPos()?.add(1, -1)?, c_opt.unwrap(), CardStyle::Pending)?;
         } else if filled && !selected {
-            print_card(buf, pos.to_TermPos(), c_opt.unwrap(), CardStyle::Button)?;
+            print_card(buf, pos.to_TermPos()?, c_opt.unwrap(), CardStyle::Button)?;
         } else if selected {
-            print_card_bg(buf, pos.to_TermPos(), PENDING_BG)?;
+            print_card_bg(buf, pos.to_TermPos()?, PENDING_BG)?;
         }
     }
 
-    print_deck(buf, SetPos::Deck.to_TermPos(), CARD_BG)?;
+    print_deck(buf, SetPos::Deck.to_TermPos()?, CARD_BG)?;
 
     if g.last_set_found.is_some() {
         let (c1, c2, c3) = g.last_set_found.unwrap();
-        print_card(buf, SetPos::LastFound0.to_TermPos(), c1, CardStyle::ShadowLeft)?;
-        print_card(buf, SetPos::LastFound1.to_TermPos(), c2, CardStyle::ShadowLeft)?;
-        print_card(buf, SetPos::LastFound2.to_TermPos(), c3, CardStyle::ShadowLeft)?;
+        print_card(buf, SetPos::LastFound0.to_TermPos()?, c1, CardStyle::ShadowLeft)?;
+        print_card(buf, SetPos::LastFound1.to_TermPos()?, c2, CardStyle::ShadowLeft)?;
+        print_card(buf, SetPos::LastFound2.to_TermPos()?, c3, CardStyle::ShadowLeft)?;
     }
 
     Ok(())
@@ -94,7 +86,7 @@ pub fn print_gamestate( buf: &mut impl io::Write,
 
 pub fn write_time(  buf: &mut impl io::Write,
                     start: Instant,
-                    pos:TermPos) -> io::Result<()>{
+                    pos:TermPos) -> Result<(), SE> {
 
     mv_cursor(buf, pos)?;
     let elap = start.elapsed();
@@ -106,7 +98,7 @@ pub fn write_time(  buf: &mut impl io::Write,
 
 fn print_deck_contents( buf: &mut impl io::Write,
                         pos: TermPos,
-                        bg: &dyn Color) -> io::Result<()> {
+                        bg: &dyn Color) -> Result<(), SE> {
 
     let num = 3;
     let offset = (CARD_WIDTH - ((SHAPE_WIDTH * num) + (num + 1))) / 2;
@@ -122,19 +114,19 @@ fn print_deck_contents( buf: &mut impl io::Write,
         // shapes and the card outline
         let spacing = (i+1) * SHAPE_SPACING;
 
-        print_question(buf, pos + (2_u16, offset + shape_pos + spacing), bg)?;
+        print_question(buf, pos.add(2, (offset + shape_pos + spacing) as i32)?, bg)?;
     };
     Ok(())
 }
 
 fn print_question(  buf: &mut impl io::Write,
                     pos: TermPos,
-                    bg: &dyn Color) -> io::Result<()> {
+                    bg: &dyn Color) -> Result<(), SE> {
 
     for (i, ln) in RAW_QUESTION.lines().enumerate(){
         for (j, c) in ln.chars().enumerate() {
             if c == ' ' { continue; }
-            mv_cursor(buf, pos + (i as u16, j as u16));
+            mv_cursor(buf, pos.add(i as i32, j as i32)?);
             write!(buf, " ");
         };
     };
@@ -151,16 +143,16 @@ fn print_question(  buf: &mut impl io::Write,
 
 fn print_card_bg(   buf: &mut impl io::Write,
                     pos: TermPos,
-                    bg: &dyn Color) -> io::Result<()> {
-    mv_cursor(buf, pos+(0, 1));
+                    bg: &dyn Color) -> Result<(), SE> {
+    mv_cursor(buf, pos.add(0, 1)?);
     write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH-2)))?;
 
     for i in 1..(CARD_HEIGHT-1) {
-        mv_cursor(buf, pos + (i, 0));
+        mv_cursor(buf, pos.add(i as i32, 0)?);
         write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH)))?;
     }
 
-    mv_cursor(buf, pos+(CARD_HEIGHT-1, 1));
+    mv_cursor(buf, pos.add(CARD_HEIGHT as i32 - 1, 1)?);
     write!(buf, "{}{}", color::Bg(bg), " ".repeat(usize::from(CARD_WIDTH-2)))?;
 
     Ok(())
@@ -169,20 +161,21 @@ fn print_card_bg(   buf: &mut impl io::Write,
 fn print_card_outline( buf: &mut impl io::Write,
                             pos: TermPos,
                             bg: &dyn Color,
-                            fg: &dyn Color) -> io::Result<()> {
-    mv_cursor(buf, pos+(0, 1));
+                            fg: &dyn Color) -> Result<(), SE> {
+
+    mv_cursor(buf, pos.add(0, 1)?);
     write!(buf, "{}{}{}{}{}", color::Bg(bg), color::Fg(fg), "┏", "━".repeat(usize::from(CARD_WIDTH-4)), "┓")?;
-    mv_cursor(buf, pos+(1, 0));
+    mv_cursor(buf, pos.add(1, 0)?);
     write!(buf, "{}{}{}",  "┏┛", " ".repeat(usize::from(CARD_WIDTH-4)), "┗┓")?;
 
     for i in 2..(CARD_HEIGHT-2) {
-        mv_cursor(buf, pos + (i, 0));
+        mv_cursor(buf, pos.add(i as i32, 0)?);
         write!(buf, "{}{}{}", "┃", " ".repeat(usize::from(CARD_WIDTH-2)), "┃")?;
     }
 
-    mv_cursor(buf, pos+(CARD_HEIGHT-2, 0));
+    mv_cursor(buf, pos.add(CARD_HEIGHT as i32 - 2, 0)?);
     write!(buf, "{}{}{}",  "┗┓", " ".repeat(usize::from(CARD_WIDTH-4)), "┏┛")?;
-    mv_cursor(buf, pos+(CARD_HEIGHT-1, 1));
+    mv_cursor(buf, pos.add(CARD_HEIGHT as i32 - 1, 1)?);
     write!(buf, "{}{}{}", "┗", "━".repeat(usize::from(CARD_WIDTH-4)), "┛")?;
 
     Ok(())
@@ -193,7 +186,7 @@ fn print_card_outline( buf: &mut impl io::Write,
 fn print_card_contents( buf: &mut impl io::Write,
                         pos: TermPos,
                         card: Card,
-                        bg: &dyn Color) -> io::Result<()> {
+                        bg: &dyn Color) -> Result<(), SE> {
 
     // offset comes from the requirement that the shapes be centered, no matter how many there are
     // when there are 3 shapes, the middle one is separated from the left border by SHAPE_WIDTH + 2
@@ -213,7 +206,7 @@ fn print_card_contents( buf: &mut impl io::Write,
         // shapes and the card outline
         let spacing = (i+1) * SHAPE_SPACING;
 
-        print_card_shape(buf, pos + (2_u16, offset + shape_pos + spacing), card, bg)?;
+        print_card_shape(buf, pos.add(2, (offset + shape_pos + spacing) as i32)?, card, bg)?;
     };
     Ok(())
 }
@@ -222,11 +215,11 @@ fn print_card_contents( buf: &mut impl io::Write,
 fn print_card_shape(    buf: &mut impl io::Write,
                         pos: TermPos,
                         card: Card,
-                        bg: &dyn Color) -> io::Result<()> {
+                        bg: &dyn Color) -> Result<(), SE> {
 
     let shape = get_raw_shape(card);
     for (i, ln) in shape.lines().enumerate(){
-        print_card_shape_line(buf, pos + (i as u16, 0), ln, card, bg)?;
+        print_card_shape_line(buf, pos.add(i as i32, 0)?, ln, card, bg)?;
     };
     Ok(())
 }
@@ -236,7 +229,7 @@ fn print_card_shape_line(   buf: &mut impl io::Write,
                             pos: TermPos, 
                             ln: &str,
                             card: Card,
-                            bg: &dyn Color) -> io::Result<()> {
+                            bg: &dyn Color) -> Result<(), SE> {
 
     write!(buf, "{}{}", style::Reset, color::Bg(bg))?;
 
@@ -244,7 +237,7 @@ fn print_card_shape_line(   buf: &mut impl io::Write,
 
     for (i, ch) in ln.chars().enumerate(){
         if ch == ' ' { continue; };
-        mv_cursor(buf, pos + (0, i as u16))?;
+        mv_cursor(buf, pos.add(0, i as i32)?)?;
 
         let restyle = (ch == 'x') != is_fill;
         is_fill = ch == 'x';
@@ -270,7 +263,7 @@ fn print_card_shape_line(   buf: &mut impl io::Write,
 //////////////////////////////
 
 fn mv_cursor(   buf: &mut impl io::Write,
-                pos: TermPos) -> io::Result<()> {
+                pos: TermPos) -> Result<(), SE> {
 
     if pos.x() == 0 || pos.y() == 0 {
         panic!("Cursor positions start at 1, not 0.");

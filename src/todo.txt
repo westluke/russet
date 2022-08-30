@@ -14,3 +14,7 @@ idea: when new set slides in to replace old one, we pick random pixels from the 
 8. Restarting
 
 9. Clicking
+
+
+
+I'm using sane error handling TOO much now. if the error is unrecoverable, I SHOULD panic
