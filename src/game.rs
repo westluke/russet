@@ -69,6 +69,10 @@ impl Deck {
         Deck{cards}
     }
 
+    fn len(&self) -> usize {
+        self.cards.len()
+    }
+
     fn pop(&mut self) -> Option<Card> {
         self.cards.pop()
     }
@@ -86,18 +90,26 @@ impl Deck {
             Some(x) => x
         }
     }
+
+    fn take3(&mut self) -> Option<(Card, Card, Card)> {
+        if self.cards.len() >= 3 {
+            Some((self.pop().unwrap(), self.pop().unwrap(), self.pop().unwrap()))
+        } else {
+            None
+        }
+    }
 }
 
 
 
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 pub enum SelectResult {
     Invalid,
     Pending,
     UnPending,
     BadSet(LayoutPos, LayoutPos, LayoutPos),
-    GoodSet(LayoutPos, LayoutPos, LayoutPos)
+    GoodSet(LayoutPos, LayoutPos, LayoutPos, Vec<(SetPos, SetPos, Card)>)
 }
 
 
@@ -105,13 +117,14 @@ pub enum SelectResult {
 
 #[derive(Clone, Debug)]
 pub struct GameState {
-    pub deck: Deck,
-    pub layout: Layout,
-    pub selects: Vec<LayoutPos>,
-    pub last_set_found: Option<(Card, Card, Card)>
+    deck: Deck,
+    layout: Layout,
+    selects: Vec<LayoutPos>,
+    last_set_found: Option<(Card, Card, Card)>
 }
 
-// make layout.fill(vec<cards>) func? that tries to drain vec into layout?
+
+
 
 impl GameState {
     pub fn new() -> Self {
@@ -127,6 +140,10 @@ impl GameState {
         GameState{deck, layout: Layout{cards}, selects: Vec::new(), last_set_found: None}
     }
 
+    // What do I need to know from this? In the event of a good set?
+    // maybe, instead of these kind aawkward return signatures, GameState should just keep an
+    // internal record of all changes made, that can be popped from / cleared. That might make more
+    // sense. But it's also kinda overdesigning at this point isn't it....
     pub fn select(&mut self, pos: LayoutPos) -> SelectResult {
         if self.selects.contains(&pos) {
             self.selects.retain(|&x| x != pos);
@@ -161,7 +178,10 @@ impl GameState {
                     self.layout.remove(p0).unwrap(),
                     self.layout.remove(p1).unwrap(),
                     self.layout.remove(p2).unwrap()));
-                return SelectResult::GoodSet(p0, p1, p2);
+
+                let mut moves = self.layout.redistribute();
+                moves.append(&mut self.layout.refill(&mut self.deck));
+                return SelectResult::GoodSet(p0, p1, p2, moves);
 
             } else {
                 self.selects.clear();
@@ -174,6 +194,18 @@ impl GameState {
         } else {
             panic!("self.selects should never have more than 3 elements");
         }
+    }
+
+    pub fn enumerate_cards(&self) -> impl Iterator<Item=(LayoutPos, Option<Card>)> {
+        self.layout.enumerate_2d()
+    }
+
+    pub fn selected(&self, pos: LayoutPos) -> bool {
+        self.selects.contains(&pos)
+    }
+
+    pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
+        self.last_set_found
     }
 }
 
@@ -216,8 +248,10 @@ impl IndexMut<LayoutPos> for Layout {
     }
 }
 
-impl Layout {
 
+
+
+impl Layout {
     fn iter (&self) -> impl Iterator<Item=&Option<Card>> {
         self.cards.iter().flatten()
     }
@@ -265,7 +299,7 @@ impl Layout {
     // (main section cards are never moved)
     // Returns Vec of tuples (p0, p1, c) where c is moved card, p0 is c's initial location, and p1
     // is c's final location
-    fn redistribute(&mut self) -> Vec<(LayoutPos, LayoutPos, Card)> {
+    fn redistribute(&mut self) -> Vec<(SetPos, SetPos, Card)> {
         let empties: Vec<LayoutPos> = self.empties().
             into_iter()
             .filter(|&pos| pos.col() <= 3)
@@ -279,12 +313,47 @@ impl Layout {
 
         for i in 0..to_fill {
             to_return.push((
-                extras[i], 
-                empties[i],
+                SetPos::from(extras[i]), 
+                SetPos::from(empties[i]),
                 self[extras[i]].expect(err)));
 
             self[empties[i]] = self[extras[i]];
             self[extras[i]] = None;
+        }
+
+        to_return
+    }
+
+    fn refill(&mut self, deck: &mut Deck) -> Vec<(SetPos, SetPos, Card)> {
+        let empties: Vec<LayoutPos> = self.empties().
+            into_iter()
+            .filter(|&pos| pos.col() <= 3)
+            .collect();
+
+        let to_fill = std::cmp::min(empties.len(), deck.len());
+        let mut to_return = vec![];
+
+        for i in 0..to_fill {
+            let c = deck.pop().unwrap();
+            to_return.push((SetPos::Deck, SetPos::from(empties[i]), c));
+            self[empties[i]] = Some(c);
+        }
+
+        to_return
+        
+    }
+
+    fn extra3(&mut self, deck: &mut Deck) -> Vec<(SetPos, SetPos, Card)> {
+        let empties = self.empties();
+        debug_assert!(empties.len() <= 6 && empties.len() >= 3);
+
+        let to_fill = std::cmp::min(3, deck.len());
+        let mut to_return = vec![];
+
+        for i in 0..to_fill {
+            let c = deck.pop().unwrap();
+            to_return.push((SetPos::Deck, SetPos::from(empties[i]), c));
+            self[empties[i]] = Some(c);
         }
 
         to_return

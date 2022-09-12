@@ -59,9 +59,9 @@ fn print_deck(  buf: &mut impl io::Write,
 pub fn print_gamestate( buf: &mut impl io::Write,
                         g: &GameState) -> Result<(), SE> {
 
-    for (pos, c_opt) in g.layout.enumerate_2d(){
+    for (pos, c_opt) in g.enumerate_cards(){
         let filled = c_opt.is_some();
-        let selected = g.selects.contains(&pos);
+        let selected = g.selected(pos);
 
         if filled && selected {
             print_card(buf, pos.to_TermPos()?.add(1, -1)?, c_opt.unwrap(), CardStyle::Pending)?;
@@ -74,8 +74,8 @@ pub fn print_gamestate( buf: &mut impl io::Write,
 
     print_deck(buf, SetPos::Deck.to_TermPos()?, CARD_BG)?;
 
-    if g.last_set_found.is_some() {
-        let (c1, c2, c3) = g.last_set_found.unwrap();
+    if g.last_set_found().is_some() {
+        let (c1, c2, c3) = g.last_set_found().unwrap();
         print_card(buf, SetPos::LastFound0.to_TermPos()?, c1, CardStyle::ShadowLeft)?;
         print_card(buf, SetPos::LastFound1.to_TermPos()?, c2, CardStyle::ShadowLeft)?;
         print_card(buf, SetPos::LastFound2.to_TermPos()?, c3, CardStyle::ShadowLeft)?;

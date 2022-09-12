@@ -60,6 +60,11 @@ impl SetPos {
     }
 }
 
+impl From<LayoutPos> for SetPos {
+    fn from(pos: LayoutPos) -> Self {
+        Self::Dealt(pos)
+    }
+}
 
 #[derive(PartialEq, Eq, Hash)]
 #[derive(Copy, Clone, Debug)]

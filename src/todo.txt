@@ -1,6 +1,4 @@
-1. Error handling
-    - Make the error handling saner (messages, returning Results, fallbacks)
-    - In particular find a graceful way to inform user when they increase font size enough that printing goes out of bounds
+1. In particular find a graceful way to inform user when they increase font size enough that printing goes out of bounds
 
 2. Score
 
@@ -13,8 +11,18 @@ idea: when new set slides in to replace old one, we pick random pixels from the 
 
 8. Restarting
 
-9. Clicking
 
 
+GameState is doing way too much and its signatures aren't unified. fix it. How? internal recordinig mechanism?
+printing that fast is causing blackscreen issues. how could i deal with that?
+maybe sleep a minimum amount after each print? but I'm already doing that... its probably my basttery level rn.
 
-I'm using sane error handling TOO much now. if the error is unrecoverable, I SHOULD panic
+gettting around slow screen update - the impl Write argument should be my custom buffer, that records where things have been written.
+"clear" doesn't actually clear it?
+
+it records changes, and only prints when necessary:
+
+wait im not using a buf right now lol. ok try taht first
+well that helps a lot, but it doesn't fix everything
+
+errors definitely not being handled properly when they propagate back up

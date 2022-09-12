@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 clap = "3.2.16"
+crossterm = "0.25.0"
+once_cell = "1.14.0"
 rand = "0.8.5"
 termion = "1.5.6"
 

@@ -1,4 +1,5 @@
 use std::{io, thread, time};
+use std::fmt::Write as _;
 
 use std::sync::mpsc;
 use time::{Instant, Duration};
@@ -12,6 +13,7 @@ mod game;
 mod config;
 
 pub mod pos;
+pub mod smartbuf;
 
 use game::*;
 use animation::*;
@@ -20,12 +22,29 @@ use pos::*;
 const threaderr: &str = "thread communication should never fail";
 
 
+pub type Result<T> = std::result::Result<T, SetError>;
+
+pub fn color_to_fg_str(c: &dyn termion::color::Color) -> Result<String> {
+    let fg = String::new();
+    write!(fg, "{}", termion::color::Fg(c))?;
+    Ok(fg)
+}
+
+pub fn color_to_bg_str(c: &dyn termion::color::Color) -> Result<String> {
+    let fg = String::new();
+    write!(fg, "{}", termion::color::Bg(c))?;
+    Ok(fg)
+}
+
+// const test: Result<(), ()> = Ok(());
 
 #[derive(Debug)]
 pub enum SetErrorKind {
     Io(io::Error),
+    TryFromInt(std::num::TryFromIntError),
+    Fmt,
     SmallScreen,
-    LayoutOob
+    LayoutOob,
 }
 
 #[derive(Debug)]
@@ -43,6 +62,18 @@ impl SetError {
 impl From<io::Error> for SetError {
     fn from(err: io::Error) -> Self {
         Self::new(SetErrorKind::Io(err), "io error detected")
+    }
+}
+
+impl From<std::num::TryFromIntError> for SetError {
+    fn from(err: std::num::TryFromIntError) -> Self {
+        Self::new(SetErrorKind::TryFromInt(err), "tryfromint error detected")
+    }
+}
+
+impl From<std::fmt::Error> for SetError {
+    fn from(err: std::fmt::Error) -> Self {
+        Self::new(SetErrorKind::Fmt, "fmt error detected")
     }
 }
 
@@ -128,7 +159,8 @@ fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) 
             ).expect(threaderr);
         },
 
-        SelectResult::GoodSet(p0, p1, p2) => {
+        SelectResult::GoodSet(p0, p1, p2, _) => {
+            // let 
             tx.send(
                 Msg::Base(
                     Clone::clone(
@@ -141,7 +173,7 @@ fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) 
     };
 }
 
-fn main() -> Result<(), SetError> {
+fn main() -> Result<()> {
     let (tx, rx) = mpsc::channel::<animation::Msg>();
     let stdin = io::stdin();
     let handle = thread::spawn(animation::animate(rx));

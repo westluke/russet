@@ -21,6 +21,9 @@ pub const SHADOW_BG: &dyn Color = &color::Reset;
 // NOTE: shape_width must be odd!! otherwise duos can't be centered properly, think about it
 // not unless you use even spacing, and any spacing more than 1 looks weird
 
+
+
+
 pub const RAW_OVAL: &str = include_str!("../txt/9x9/oval.txt");
 pub const RAW_DIAMOND: &str = include_str!("../txt/9x9/diamond.txt");
 pub const RAW_SQUIGGLE: &str = include_str!("../txt/9x9/squiggle.txt");
@@ -29,6 +32,19 @@ pub const RAW_QUESTION: &str = include_str!("../txt/9x9/question.txt");
 pub const SHAPE_HEIGHT: u16 = 9;
 pub const SHAPE_WIDTH: u16 = 9;
 pub const SHAPE_SPACING: u16 = 1;
+
+// pub const RAW_OVAL: &str = include_str!("../txt/7x7/oval.txt");
+// pub const RAW_DIAMOND: &str = include_str!("../txt/7x7/diamond.txt");
+// pub const RAW_SQUIGGLE: &str = include_str!("../txt/7x7/squiggle.txt");
+// pub const RAW_QUESTION: &str = include_str!("../txt/7x7/question.txt");
+
+// pub const SHAPE_HEIGHT: u16 = 7;
+// pub const SHAPE_WIDTH: u16 = 7;
+// pub const SHAPE_SPACING: u16 = 1;
+
+
+
+
 
 pub const CARD_HEIGHT: u16 = SHAPE_HEIGHT + 4;
 pub const CARD_WIDTH: u16 = (SHAPE_WIDTH * 3) + (4 * SHAPE_SPACING);

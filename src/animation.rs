@@ -2,7 +2,7 @@ use std::{thread, io, time};
 
 use time::{Instant, Duration};
 use std::{sync::mpsc};
-use io::Write as _;
+use io::{BufWriter, Write as _};
 
 use termion::{style, clear, cursor, color};
 use termion::input::{TermRead, MouseTerminal};
@@ -52,24 +52,25 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> Result<(), SE>) {
 
         // lock standard out to avoid lock thrashing, then convert it to a MouseTerminal and set it
         // to raw mode. Don't think order matters for mouse/raw
-        let mut stdout = MouseTerminal::from(io::stdout().lock())
+        let mut mterm = MouseTerminal::from(io::stdout().lock())
                             .into_raw_mode()?;
+        let mut buf = BufWriter::with_capacity(100_000, mterm); 
 
         // mut cuz we need to adapt to size changes
         let (mut width, mut height) = termion::terminal_size()?;
 
         // Swap to alternate screen, clear it (this might just be a scrolled-down version of the
         // main screen, but it's fine bc scroll is disabled in raw mode)
-        write!(stdout, "{}{}{}", ToAlternateScreen, clear::All, cursor::Hide)?;
+        write!(buf, "{}{}{}", ToAlternateScreen, clear::All, cursor::Hide)?;
 
         let mut start = Instant::now();
         let mut state: Option<GameState> = None;
 
         loop {
-            write!(stdout, "{}{}{}", style::Reset, color::Fg(color::Yellow), clear::All)?;
+            write!(buf, "{}{}{}", style::Reset, color::Fg(color::Yellow), clear::All)?;
 
             let msg = rx.try_recv();
-            printing::write_time(&mut stdout, start, TermPos::new(height, 1)?)?;
+            printing::write_time(&mut buf, start, TermPos::new(height, 1)?)?;
 
             if let Ok(m) = msg {
                 match m {
@@ -81,18 +82,18 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> Result<(), SE>) {
 
             if state.is_some() {
                 printing::print_gamestate(
-                    &mut stdout,
+                    &mut buf,
                     state.as_ref().unwrap()
                 )?;
             }
 
-            stdout.flush()?;
-            thread::sleep(Duration::from_millis(100));
+            buf.flush()?;
+            thread::sleep(Duration::from_millis(50));
         };
 
-        write!(stdout, "{}{}{}", clear::All, cursor::Show, ToMainScreen)?;
-        stdout.suspend_raw_mode()?;
-        stdout.flush()?;
+        write!(buf, "{}{}{}", clear::All, cursor::Show, ToMainScreen)?;
+        buf.flush()?;
+        buf.get_mut().suspend_raw_mode()?;
 
         Ok(())
     }
