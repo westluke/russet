@@ -4,8 +4,7 @@ use std::fmt::Write as _;
 use std::sync::mpsc;
 use time::{Instant, Duration};
 
-use termion::input::TermRead;
-use termion::event::{Key, Event, MouseButton, MouseEvent};
+use crossterm::event::{read, Event, KeyEvent, KeyCode, MouseEvent, MouseEventKind, MouseButton};
 
 mod animation;
 mod printing;
@@ -25,14 +24,16 @@ const threaderr: &str = "thread communication should never fail";
 pub type Result<T> = std::result::Result<T, SetError>;
 
 pub fn color_to_fg_str(c: &dyn termion::color::Color) -> Result<String> {
-    let fg = String::new();
+    let mut fg = String::new();
     write!(fg, "{}", termion::color::Fg(c))?;
+    fg.shrink_to_fit();
     Ok(fg)
 }
 
 pub fn color_to_bg_str(c: &dyn termion::color::Color) -> Result<String> {
-    let fg = String::new();
+    let mut fg = String::new();
     write!(fg, "{}", termion::color::Bg(c))?;
+    fg.shrink_to_fit();
     Ok(fg)
 }
 
@@ -173,6 +174,15 @@ fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) 
     };
 }
 
+        // Event::Key(Key::Delete) | 
+        // Event::Key(Key::Backspace) | 
+        // Event::Key(Key::Ctrl('c')) |
+        // Event::Key(Key::Ctrl('z')) |
+        // Event::Key(Key::Ctrl('\\')) => break,
+
+        // Event::Key(Key::Char(c)) => {
+        // },
+
 fn main() -> Result<()> {
     let (tx, rx) = mpsc::channel::<animation::Msg>();
     let stdin = io::stdin();
@@ -181,38 +191,40 @@ fn main() -> Result<()> {
     let mut state = GameState::new();
     tx.send(Msg::Base(Clone::clone(&state))).expect(threaderr);
 
-    let mut last_mouse_pressed: Option<MouseButton> = None;
+    // let mut last_mouse_pressed: Option<MouseButton> = None;
 
     // idea: to avoid excessive buffering on holding keydown, 
     // impose time limit on pressing the same key twice.
 
-    for c in stdin.events() {
-        let evt = c.unwrap();
+    loop {
+        match read() {
 
-        match evt {
-            Event::Key(Key::Delete) | 
-            Event::Key(Key::Backspace) | 
-            Event::Key(Key::Ctrl('c')) |
-            Event::Key(Key::Ctrl('z')) |
-            Event::Key(Key::Ctrl('\\')) => break,
+            Event::Key(
+                KeyEvent{ code, .. }
+            ) => match code {
+                KeyCode::Delete |
+                KeyCode::Backspace => break,
 
-            Event::Key(Key::Char(c)) => {
-                let pos_r = key_to_LayoutPos(c);
-                if let Some(pos) = pos_r {
-                    let res = state.select(pos);
-                    handle_result(res, &tx, &state);
+                KeyCode::Char(c) => {
+                    let pos_r = key_to_LayoutPos(c);
+                    if let Some(pos) = pos_r {
+                        let res = state.select(pos);
+                        handle_result(res, &tx, &state);
+                    }
                 }
             },
 
-            Event::Mouse(MouseEvent::Press(MouseButton::Left, x, y))  => {
-                // eprintln!("coords: {}, {}", y, x);
-                // panic!();
+            Event::Mouse(
+                MouseEvent{
+                    kind:MouseEventKind::Down(MouseButton::Left),
+                    column:x, row:y, ..
+                }
+            ) => {
                 let pos_r = TermPos::new(y, x).unwrap().to_LayoutPos();
                 if let Some(pos) = pos_r {
                     let res = state.select(pos);
                     handle_result(res, &tx, &state);
                 }
-                
             },
             _ => (),
         };

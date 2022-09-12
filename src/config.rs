@@ -1,17 +1,14 @@
-use termion::color::{self, Color};
-
-
 // USE REFCELL INSTEAD
 
-pub const RAW_GREEN: &dyn Color = &color::Green;
-pub const RAW_RED: &dyn Color = &color::Red;
-pub const RAW_PURPLE: &dyn Color = &color::Blue;
+// pub const RAW_GREEN: &dyn Color = &color::Green;
+// pub const RAW_RED: &dyn Color = &color::Red;
+// pub const RAW_PURPLE: &dyn Color = &color::Blue;
 
-pub const CARD_BG: &dyn Color = &color::White;
+// pub const CARD_BG: &dyn Color = &color::White;
 // pub const CARD_BORDER: &dyn Color = &color::Reset;
 // pub const QUESTION_BG: &dyn Color = &color::Reset;
-pub const PENDING_BG: &dyn Color = &color::LightYellow;
-pub const SHADOW_BG: &dyn Color = &color::Reset;
+// pub const PENDING_BG: &dyn Color = &color::LightYellow;
+// pub const SHADOW_BG: &dyn Color = &color::Reset;
 // pub const GOOD_SET: &dyn Color = &color::Green;
 // pub const BAD_SET: &dyn Color = &color::Red;
 

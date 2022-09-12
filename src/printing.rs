@@ -2,8 +2,6 @@ use std::{io, time};
 use crate::game::*;
 
 use time::Instant;
-use termion::{color, style, cursor};
-use color::Color;
 
 use crate::config::*;
 use crate::pos::{TermPos, SetPos};
@@ -21,7 +19,7 @@ pub enum CardStyle {
     Pending         // Use PENDING_BG
 }
 
-pub fn print_card(  buf: &mut impl io::Write,
+pub fn print_card(  buf: &mut SmartBuf,
                     pos: TermPos,
                     card: Card,
                     style: CardStyle) -> Result<(), SE> {

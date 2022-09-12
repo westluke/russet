@@ -4,11 +4,7 @@ use time::{Instant, Duration};
 use std::{sync::mpsc};
 use io::{BufWriter, Write as _};
 
-use termion::{style, clear, cursor, color};
-use termion::input::{TermRead, MouseTerminal};
-use termion::raw::IntoRawMode;
-use termion::color::Color;
-use termion::screen::{ToAlternateScreen, ToMainScreen};
+use crossterm::{style::Color, terminal, execute};
 
 use crate::game::*;
 use crate::printing;
@@ -25,7 +21,7 @@ pub enum Msg {
 
 pub enum TimedMsg {
     StaticCard(SetPos, Option<Card>),                               // Placeholder for both ends during a MoveCard
-    MoveCard(SetPos, SetPos, Card, &'static (dyn Color + Sync)),     // Optional color to be used for the cards border as it moves.
+    MoveCard(SetPos, SetPos, Card, Color),     // Optional color to be used for the cards border as it moves.
     BadOutline(LayoutPos),                                             // Red border that flashes when the user incorrectly tries to select a set
 }
 
@@ -52,25 +48,33 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> Result<(), SE>) {
 
         // lock standard out to avoid lock thrashing, then convert it to a MouseTerminal and set it
         // to raw mode. Don't think order matters for mouse/raw
-        let mut mterm = MouseTerminal::from(io::stdout().lock())
-                            .into_raw_mode()?;
-        let mut buf = BufWriter::with_capacity(100_000, mterm); 
-
-        // mut cuz we need to adapt to size changes
-        let (mut width, mut height) = termion::terminal_size()?;
+        let mut stdout = io::stdout().lock();
 
         // Swap to alternate screen, clear it (this might just be a scrolled-down version of the
         // main screen, but it's fine bc scroll is disabled in raw mode)
-        write!(buf, "{}{}{}", ToAlternateScreen, clear::All, cursor::Hide)?;
+        execute!(
+            stdout,
+            terminal::EnterAlternateScreen,
+            terminal::Clear,
+            terminal::SetSize(1, 1),
+            terminal::SetTitle("Set!")
+        );
+
+        terminal::enable_raw_mode()?;
+
+        // mut cuz we need to adapt to size changes
+        let (mut width, mut height) = terminal::size()?;
 
         let mut start = Instant::now();
         let mut state: Option<GameState> = None;
 
-        loop {
-            write!(buf, "{}{}{}", style::Reset, color::Fg(color::Yellow), clear::All)?;
+        // Wrap stdout in a buf that only writes characters when necessary
+        // Note: SmartBuf is NOT Write. Which means we can't execute! on it directly.
+        let mut buf = SmartBuf::new(stdout); 
 
+        loop {
             let msg = rx.try_recv();
-            printing::write_time(&mut buf, start, TermPos::new(height, 1)?)?;
+            printing::write_time(&mut buf, start, TermPos::new(height-1, 0)?)?;
 
             if let Ok(m) = msg {
                 match m {
@@ -91,9 +95,17 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> impl (FnOnce() -> Result<(), SE>) {
             thread::sleep(Duration::from_millis(50));
         };
 
-        write!(buf, "{}{}{}", clear::All, cursor::Show, ToMainScreen)?;
         buf.flush()?;
-        buf.get_mut().suspend_raw_mode()?;
+
+        // Create a new instance, let original stdout get dropped (and therefore unlocked)
+        // thanks to Non-Lexical Lifetimes
+        let stdout2 = io::stdout().lock();
+
+        execute!(
+            stdout2,
+            terminal::Clear,
+            terminal::LeaveAlternateScreen,
+        );
 
         Ok(())
     }
