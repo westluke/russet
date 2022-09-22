@@ -2,7 +2,7 @@ use std::io::{Write};
 use std::ops::{Index, IndexMut};
 
 use crossterm::style::{self, Color, Stylize as _};
-use crossterm::{queue, execute, cursor, QueueableCommand};
+use crossterm::{queue, cursor};
 
 use crate::pos::*;
 use crate::Result;
@@ -132,6 +132,15 @@ impl TermChar {
             Self::Printable{fg, bg, ..} => style::Colors{foreground: Some(*fg), background: Some(*bg)}
         }
     }
+
+    fn matches(&self, fg0: Color, bg0: Color) -> bool {
+        match self {
+            TermChar::Space{bg} =>
+                bg0 == *bg,
+            TermChar::Printable{c:_, fg, bg} =>
+                (fg0 == *fg) && (bg0 == *bg)
+        }
+    }
 }
 
 
@@ -142,7 +151,8 @@ pub struct SmartBuf<T: Write> {
     under: T,
     counter: u32,
     cache: Grid<(u32, TermChar)>,
-    prev: Grid<(u32, TermChar)>
+    prev: Grid<(u32, TermChar)>,
+    write_flag: false   // set after a write so flush knows to run a check
 }
 
 impl<T: Write> SmartBuf<T> {
@@ -189,14 +199,6 @@ impl<T: Write> SmartBuf<T> {
     // requires splitting string again
     // still, this should be working
     pub fn flush(mut self) -> Result<Self> {
-        fn matches(fg0: Option<Color>, bg0: Color, tc: TermChar) -> bool {
-            match tc {
-                TermChar::Space{bg} =>
-                    bg0 == bg,
-                TermChar::Printable{c:_, fg, bg} =>
-                    (fg0.unwrap_or(fg) == fg) && (bg0 == bg)
-            }
-        }
 
 
         // Ok, here's a question. what was the last character written here?
@@ -212,19 +214,80 @@ impl<T: Write> SmartBuf<T> {
         // last seen new char. record all chars from start, and cut it down to end at last before
         // printing. and I still need to intercept color changes. But actually that's much easier
         // if I just intercept the commands and take their string values instead...
+        // I could also try printing the entire screen all at once... but then what's the point of
+        // all this?
+
+        if !self.write_flag { return Ok(()); };
+        // bruh what
+        
+        let (mut fg0, mut bg0) = (Color::Reset, Color::Reset);
+        queue! (
+            self.under,
+            style::SetColors(style::Colors{foreground: fg0, background: bg0})
+        );
         
         for i in 0..self.cache.height {
-            let (mut fg0, mut bg0) = (Color::Reset, Color::Reset);
             let mut s = String::new();
             let mut s_start: u16 = 0;
+            let mut s_end: u16 = 0;
+            let mut init = true;
 
+            // Ugh I should still use the command api.
             for j in 0..self.cache.width {
                 let mut chr = Self::norm(self.counter, self.cache[(i, j)]);
                 let mut pchr = Self::norm(self.counter, self.prev[(i, j)]); 
 
-                // printing must begin here
-                if chr != pchr {
+                let (fresh, matches) = (chr != pchr, chr.matches(fg0, bg0));
+
+                match (true, true, true) {
+
+                    // FUCK this is complicated.
+                    // fresh char, so we gotta bump the end of the printed section of string
+                    (!init, fresh, matches) => s_end = u16::try_from(i)?,
+
+                    // we have to push it, since we might find another fresh one later
+                    (!init, !fresh, matches) => s.push(chr.get_c()),
+
+                    (!init, _, !matches) => {
+                            (fg0, bg0) = chr.get_fg_bg();
+                            queue!(
+                                self.under,
+                                cursor::MoveTo(s_start, i),
+                                style::PrintStyledContent(s.with(fg_to_write).on(bg0))
+                                style::SetColors(chr.style_cmd())
+                            );
+                        }
+                    }
+
+                    // not a fresh char, but we have to add it anyways, to avoid extra print calls
+                    // } (true, false) => {
+                        s.push(chr.get_c());
+
+                        if !chr.matches(fg0, bg0){
+                            (fg0, bg0) = chr.get_fg_bg();
+                            queue!(
+                                self.under,
+                                style::SetColors(chr.style_cmd())
+                            );
+                        }
+                    }
+
+                    (true, true) _ => continue
                     
+                
+                }
+
+
+                if chr != pchr {
+
+                    // in case this is the last fresh char we see
+
+                    // printing must begin here
+                    if !init {
+                        s_start = u16::try_from(j)?;
+                        init = true;
+
+                    }
                 }
 
                 let (i, j) = (u16::try_from(i)?, u16::try_from(j)?);
