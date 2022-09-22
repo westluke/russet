@@ -1,5 +1,10 @@
+use std::convert::From;
+use std::ops::Add;
+
 use crate::config::*;
-use crate::{SetError as SE, SetErrorKind as SEK};
+use crate::{SetError as SE, SetErrorKind as SEK, Result};
+
+use crossterm::terminal;
 
 
 #[derive(PartialEq, Eq, Hash)]
@@ -10,7 +15,7 @@ pub struct LayoutPos {
 }
 
 impl LayoutPos {
-    pub fn new(row: u16, col: u16) -> Result<Self, SE> {
+    pub fn new(row: u16, col: u16) -> Result<Self> {
         if row <= 2 && col <= 5 {
             Ok(Self{row, col})
         } else {
@@ -20,13 +25,13 @@ impl LayoutPos {
 
     pub fn row(&self) -> u16 { self.row }
     pub fn col(&self) -> u16 { self.col }
-    pub fn set_row(&self, row: u16) -> Result<Self, SE> { Self::new(row, self.col) }
-    pub fn set_col(&self, col: u16) -> Result<Self, SE> { Self::new(self.row, col) }
+    pub fn set_row(&self, row: u16) -> Result<Self> { Self::new(row, self.col) }
+    pub fn set_col(&self, col: u16) -> Result<Self> { Self::new(self.row, col) }
 
-    pub fn to_TermPos(self) -> Result<TermPos, SE> {
+    pub fn to_TermPos(self) -> Result<TermPos> {
         let y = (self.row * CARD_HEIGHT) + (self.row * CARD_SPACING_VERT) + 1;
         let x = (self.col * CARD_WIDTH)  + (self.col * CARD_SPACING_HORIZ) + 2;
-        TermPos::new(y, x)
+        TermPos::try_from((y, x))
     }
 }
 
@@ -41,20 +46,20 @@ pub enum SetPos {
 }
 
 impl SetPos {
-    pub fn new_dealt(row:u16, col:u16) -> Result<Self, SE> {
+    pub fn new_dealt(row:u16, col:u16) -> Result<Self> {
         Ok(Self::Dealt(LayoutPos::new(row, col)?))
     }
 
-    pub fn to_TermPos(self) -> Result<TermPos, SE> {
-        let (width, height) = termion::terminal_size().unwrap();
-        let bottom = (height - CARD_HEIGHT) + 1;
+    pub fn to_TermPos(self) -> Result<TermPos> {
+        let (width, height) = terminal::size()?;
+        let bottom = (height - CARD_HEIGHT);
         let right = width - CARD_WIDTH;
 
         match self {
-            Self::Deck =>           TermPos::new(bottom - 1, 2),
-            Self::LastFound0 =>     TermPos::new(bottom - 1, right - 48),
-            Self::LastFound1 =>     TermPos::new(bottom - 3, right - 24),
-            Self::LastFound2 =>     TermPos::new(bottom - 5, right),
+            Self::Deck =>           TermPos::try_from((bottom - 3, 2)),
+            Self::LastFound0 =>     TermPos::try_from((bottom - 1, right - 48)),
+            Self::LastFound1 =>     TermPos::try_from((bottom - 3, right - 24)),
+            Self::LastFound2 =>     TermPos::try_from((bottom - 5, right)),
             Self::Dealt(pos)  =>    pos.to_TermPos()
         }
     }
@@ -66,6 +71,9 @@ impl From<LayoutPos> for SetPos {
     }
 }
 
+
+
+
 #[derive(PartialEq, Eq, Hash)]
 #[derive(Copy, Clone, Debug)]
 pub struct TermPos {
@@ -73,11 +81,42 @@ pub struct TermPos {
     x: u16
 }
 
-impl TermPos {
-    pub fn new(y:u16, x:u16) -> Result<Self, SE> {
-        let (width, height) = termion::terminal_size().expect("this program should be run from a compliant terminal");
+impl TryFrom<(usize, usize)> for TermPos {
+    type Error = SE;
 
-        if 1 <= y && y <= height && 1 <= x && x <= width {
+    fn try_from((y, x): (usize, usize)) -> Result<Self> {
+        let (y, x) = (u16::try_from(y)?, u16::try_from(x)?);
+        TermPos::try_from((y, x))
+    }
+}
+
+// honestly, this is the perfect use case for macros. Macro to expand to from implementations for
+// all integer types
+impl TryFrom<(isize, isize)> for TermPos {
+    type Error = SE;
+
+    fn try_from((y, x): (isize, isize)) -> Result<Self> {
+        let (y, x) = (u16::try_from(y)?, u16::try_from(x)?);
+        TermPos::try_from((y, x))
+    }
+}
+
+impl TryFrom<(i32, i32)> for TermPos {
+    type Error = SE;
+
+    fn try_from((y, x): (i32, i32)) -> Result<Self> {
+        let (y, x) = (u16::try_from(y)?, u16::try_from(x)?);
+        TermPos::try_from((y, x))
+    }
+}
+
+impl TryFrom<(u16, u16)> for TermPos {
+    type Error = SE;
+
+    fn try_from((y, x): (u16, u16)) -> Result<Self> {
+        let (width, height) = terminal::size()?;
+
+        if y <= height-1 && x <= width-1 {
             Ok(Self{y, x})
         } else {
             Err(SE::new(
@@ -86,13 +125,48 @@ impl TermPos {
                 or decrease your font size, before the game can display properly"))
         }
     }
+}
 
-    pub fn set_x(&self, x:u16) -> Result<Self, SE> {
-        Self::new(self.y, x)
+impl From<TermPos> for (u16, u16) {
+    fn from(pos: TermPos) -> Self {
+        (pos.y(), pos.x())
+    }
+}
+
+impl From<TermPos> for (usize, usize) {
+    fn from(pos: TermPos) -> Self {
+        (usize::from(pos.y()), usize::from(pos.x()))
+    }
+}
+
+impl Add<(usize, usize)> for TermPos {
+    type Output = Result<Self>;
+
+    fn add(self, (y, x): (usize, usize)) -> Self::Output {
+        let (y, x) = (u16::try_from(y)?, u16::try_from(x)?);
+        Self::try_from((self.y() + y, self.x() + x))
+    }
+}
+
+impl Add<(isize, isize)> for TermPos {
+    type Output = Result<Self>;
+
+    fn add(self, (y, x): (isize, isize)) -> Self::Output {
+        let (y, x) = (u16::try_from(y)?, u16::try_from(x)?);
+        Self::try_from((self.y() + y, self.x() + x))
+    }
+}
+
+
+
+
+impl TermPos {
+    pub fn set_x(&self, x:u16) -> Result<Self> {
+        Self::try_from((self.y, x))
     }
 
-    pub fn set_y(&self, y:u16) -> Result<Self, SE> {
-        Self::new(y, self.x)
+    pub fn set_y(&self, y:u16) -> Result<Self> {
+        Self::try_from((y, self.x))
     }
 
     pub fn x(&self) -> u16 {
@@ -101,12 +175,6 @@ impl TermPos {
 
     pub fn y(&self) -> u16 {
         self.y
-    }
-
-    pub fn add (&self, y: i32, x: i32) -> Result<Self, SE> {
-        let new_y: i32 = self.y as i32 + y;
-        let new_x: i32 = self.x as i32 + x;
-        TermPos::new(new_y as u16, new_x as u16)
     }
 
     pub fn to_LayoutPos(&self) -> Option<LayoutPos> {

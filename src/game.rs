@@ -8,9 +8,9 @@ use rand::seq::SliceRandom as _;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 pub enum CardColor {
-    Green, 
-    Red,
-    Purple
+    Color1, 
+    Color2,
+    Color3
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
@@ -48,7 +48,7 @@ pub struct Deck {
 
 impl Deck {
     fn new() -> Deck {
-        let colors = [CardColor::Green, CardColor::Red, CardColor::Purple];
+        let colors = [CardColor::Color1, CardColor::Color2, CardColor::Color3];
         let shapes = [CardShape::Oval, CardShape::Diamond, CardShape::Squiggle];
         let numbers = [CardNumber::One, CardNumber::Two, CardNumber::Three];
         let fills = [CardFill::Solid, CardFill::Striped, CardFill::Empty];
@@ -140,10 +140,8 @@ impl GameState {
         GameState{deck, layout: Layout{cards}, selects: Vec::new(), last_set_found: None}
     }
 
-    // What do I need to know from this? In the event of a good set?
-    // maybe, instead of these kind aawkward return signatures, GameState should just keep an
-    // internal record of all changes made, that can be popped from / cleared. That might make more
-    // sense. But it's also kinda overdesigning at this point isn't it....
+    // given a user's selection of cards, adjusts game state and returns SelectResult to indicate
+    // changes / necessary animations
     pub fn select(&mut self, pos: LayoutPos) -> SelectResult {
         if self.selects.contains(&pos) {
             self.selects.retain(|&x| x != pos);
@@ -257,13 +255,27 @@ impl Layout {
     }
 
     pub fn enumerate_2d (self) -> impl Iterator<Item=(LayoutPos, Option<Card>)>{
+
+        // helper function that takes an iterator over a row of the board, and the row index, and
+        // creates an iterator over the row, with each card associated with its full LayoutPos
+        fn distribute_enum((i, row): (usize, [Option<Card>; 6])) -> impl Iterator<Item=(LayoutPos, Option<Card>)> {
+
+            // takes a card and corresponding column index to make the enum tuple
+            let make_enumerated_card = move |(j, card_option)| {
+                (LayoutPos::new(
+                    u16::try_from(i).unwrap(),
+                    u16::try_from(j).unwrap()
+                ).unwrap(), card_option)
+            };
+
+            row.into_iter()
+                .enumerate()
+                .map(make_enumerated_card)
+        }
+
         self.cards.into_iter()
             .enumerate()
-            .map( move |(i, c_arr)|
-                c_arr.into_iter()
-                    .enumerate()
-                    .map( move |(j, c)| (LayoutPos::new(i as u16, j as u16).unwrap(), c) )
-            )
+            .map(distribute_enum)
             .flatten()
     }
 
@@ -274,8 +286,9 @@ impl Layout {
     }
 
     fn count (&self) -> u16 {
-        self.iter().filter(|&&c| c != None)
-            .count() as u16
+        u16::try_from(
+            self.iter().filter(|&&c| c != None).count()
+        ).unwrap()
     }
 
     fn empties (&self) -> Vec<LayoutPos> {

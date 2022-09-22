@@ -1,10 +1,16 @@
 use std::{io, thread, time};
 use std::fmt::Write as _;
 
-use std::sync::mpsc;
+use std::sync::mpsc::{self, SendError};
 use time::{Instant, Duration};
 
-use crossterm::event::{read, Event, KeyEvent, KeyCode, MouseEvent, MouseEventKind, MouseButton};
+use crossterm::event::{self, read, poll, Event, KeyEvent, KeyCode, MouseEvent, MouseEventKind, MouseButton};
+use crossterm::terminal;
+use crossterm::execute;
+
+use log::{info, warn, error};
+use flexi_logger::{FileSpec, Logger, WriteMode, FlexiLoggerError};
+
 
 mod animation;
 mod printing;
@@ -18,24 +24,11 @@ use game::*;
 use animation::*;
 use pos::*;
 
+// Should send a message to the other thread to shut down gracefully
 const threaderr: &str = "thread communication should never fail";
 
 
 pub type Result<T> = std::result::Result<T, SetError>;
-
-pub fn color_to_fg_str(c: &dyn termion::color::Color) -> Result<String> {
-    let mut fg = String::new();
-    write!(fg, "{}", termion::color::Fg(c))?;
-    fg.shrink_to_fit();
-    Ok(fg)
-}
-
-pub fn color_to_bg_str(c: &dyn termion::color::Color) -> Result<String> {
-    let mut fg = String::new();
-    write!(fg, "{}", termion::color::Bg(c))?;
-    fg.shrink_to_fit();
-    Ok(fg)
-}
 
 // const test: Result<(), ()> = Ok(());
 
@@ -46,6 +39,7 @@ pub enum SetErrorKind {
     Fmt,
     SmallScreen,
     LayoutOob,
+    SendErr,
 }
 
 #[derive(Debug)]
@@ -75,6 +69,18 @@ impl From<std::num::TryFromIntError> for SetError {
 impl From<std::fmt::Error> for SetError {
     fn from(err: std::fmt::Error) -> Self {
         Self::new(SetErrorKind::Fmt, "fmt error detected")
+    }
+}
+
+impl From<SendError<Msg>> for SetError {
+    fn from(err: SendError<Msg>) -> Self {
+        Self::new(SetErrorKind::SendErr, "send error detected")
+    }
+}
+
+impl From<FlexiLoggerError> for SetError {
+    fn from(err: FlexiLoggerError) -> Self {
+        Self::new(SetErrorKind::SendErr, "send error detected")
     }
 }
 
@@ -131,47 +137,59 @@ fn key_to_LayoutPos(c: char) -> Option<LayoutPos> {
     }
 }
 
-fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) {
+fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) -> Result<()>{
     match res {
         SelectResult::Pending |
         SelectResult::UnPending => {
-            tx.send(
+            let res = tx.send(
                 Msg::Base(
                     Clone::clone(
                         &state
                     )
                 )
-            ).expect(threaderr);
+            );
+            if res.is_err() { info!("failed to send message to animation thread, err: {:?}", res); };
+            res?;
         },
 
         SelectResult::BadSet(p0, p1, p2) => {
-            tx.send(
+            let res = tx.send(
                 Msg::Timed(
                     vec![TimedMsg::BadOutline(p0), TimedMsg::BadOutline(p1), TimedMsg::BadOutline(p2)],
                     Instant::now() + Duration::from_secs(1)
-            )).expect(threaderr);
+            ));
 
-            tx.send(
+            if res.is_err() { info!("failed to send message to animation thread, err: {:?}", res); };
+            res?;
+
+            let res = tx.send(
                 Msg::Base(
                     Clone::clone(
                         &state
                     )
                 )
-            ).expect(threaderr);
+            );
+
+            if res.is_err() { info!("failed to send message to animation thread, err: {:?}", res); };
+            res?;
         },
 
         SelectResult::GoodSet(p0, p1, p2, _) => {
-            // let 
-            tx.send(
+            let res = tx.send(
                 Msg::Base(
                     Clone::clone(
                         &state
                     )
                 )
-            ).expect(threaderr);
+            );
+
+            if res.is_err() { info!("failed to send message to animation thread, err: {:?}", res); };
+            res?;
         },
         _ => ()
     };
+
+    Ok(())
 }
 
         // Event::Key(Key::Delete) | 
@@ -186,52 +204,83 @@ fn handle_result (res: SelectResult, tx: &mpsc::Sender<Msg>, state: &GameState) 
 fn main() -> Result<()> {
     let (tx, rx) = mpsc::channel::<animation::Msg>();
     let stdin = io::stdin();
-    let handle = thread::spawn(animation::animate(rx));
 
-    let mut state = GameState::new();
-    tx.send(Msg::Base(Clone::clone(&state))).expect(threaderr);
+    terminal::enable_raw_mode()?;
+    execute!(io::stdout(), event::EnableMouseCapture)?;
+    info!("Raw mode enabled");
 
-    // let mut last_mouse_pressed: Option<MouseButton> = None;
+    let _logger = Logger::try_with_str("info")?
+        .log_to_file(FileSpec::default().basename("log").suppress_timestamp().suffix("txt"))
+        .write_mode(WriteMode::Direct)
+        .start()?;
 
-    // idea: to avoid excessive buffering on holding keydown, 
-    // impose time limit on pressing the same key twice.
+    let handle = thread::spawn(|| { animation::animate(rx) });
+    info!("Animation thread spawned");
 
-    loop {
-        match read() {
+    let res = || -> Result<()> {
 
-            Event::Key(
-                KeyEvent{ code, .. }
-            ) => match code {
-                KeyCode::Delete |
-                KeyCode::Backspace => break,
+        let mut state = GameState::new();
+        let initsend = tx.send(Msg::Base(Clone::clone(&state)));
 
-                KeyCode::Char(c) => {
-                    let pos_r = key_to_LayoutPos(c);
-                    if let Some(pos) = pos_r {
-                        let res = state.select(pos);
-                        handle_result(res, &tx, &state);
-                    }
-                }
-            },
+        // idea: to avoid excessive buffering on holding keydown, 
+        // impose time limit on pressing the same key twice.
 
-            Event::Mouse(
-                MouseEvent{
-                    kind:MouseEventKind::Down(MouseButton::Left),
-                    column:x, row:y, ..
-                }
-            ) => {
-                let pos_r = TermPos::new(y, x).unwrap().to_LayoutPos();
-                if let Some(pos) = pos_r {
-                    let res = state.select(pos);
-                    handle_result(res, &tx, &state);
-                }
-            },
-            _ => (),
+        loop {
+            if poll(Duration::from_millis(200))? {
+                match read()? {
+
+                    Event::Key(
+                        KeyEvent{ code, .. }
+                    ) => match code {
+                        KeyCode::Delete |
+                        KeyCode::Backspace => {
+                            break;
+                        },
+
+                        KeyCode::Char(c) => {
+                            let pos_r = key_to_LayoutPos(c);
+                            if let Some(pos) = pos_r {
+                                let res = state.select(pos);
+                                handle_result(res, &tx, &state)?;
+                            };
+                        }
+                        _ => {}
+                    },
+
+                    Event::Mouse(
+                        MouseEvent{
+                            kind:MouseEventKind::Down(MouseButton::Left),
+                            column:x, row:y, ..
+                        }
+                    ) => {
+                        let pos_r = TermPos::new(y, x).unwrap().to_LayoutPos();
+                        if let Some(pos) = pos_r {
+                            let res = state.select(pos);
+                            handle_result(res, &tx, &state)?;
+                        };
+                    },
+                    _ => (),
+                };
+            };
         };
-    };
 
-    tx.send(Msg::Quit).expect(threaderr);
-    if let Err(x) = handle.join() { panic!("{:?}", x); };
+        Ok(())
+    } ();
+    info!("Closure exited");
+
+    terminal::disable_raw_mode()?;
+    execute!(io::stdout(), event::DisableMouseCapture)?;
+    info!("Raw mode exited");
+
+    if let Err(x) = tx.send(Msg::Quit){
+        info!("Failed to send Quit message to animation thread, err: {:?}", x);
+    }
+
+    info!("Waiting for animation thread to be joined");
+
+    if let Err(x) = handle.join(){
+        info!("Joining animation thread returned err: {:?}", x);
+    }
 
     Ok(())
 }

@@ -26,3 +26,20 @@ wait im not using a buf right now lol. ok try taht first
 well that helps a lot, but it doesn't fix everything
 
 errors definitely not being handled properly when they propagate back up
+
+
+
+
+
+
+FIX POS TO BE 0-BASED
+FIX PRINTINIG TO USE SMARTBUF METHODS RATHER THAN STRINGS AND WRITE MACROS
+
+making logging!
+how to make logging tho... do i need it? Well, apparently, yeah. Cuz things are making the thread panic before it can reset the terminal...
+or just do mroe graceful shutdown
+
+
+//why is it slow to react to user input? hm. may want to do some profiling here.
+Suspect that most of this time is just being spent in the printing chaiin? and then the flushing chain...
+yeah, just measure the time spent between them with some logging.
