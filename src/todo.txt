@@ -43,3 +43,58 @@ or just do mroe graceful shutdown
 //why is it slow to react to user input? hm. may want to do some profiling here.
 Suspect that most of this time is just being spent in the printing chaiin? and then the flushing chain...
 yeah, just measure the time spent between them with some logging.
+
+
+
+
+
+
+
+ok, i'm tired of this wasteful printing strategy. fuck that. How should i actually do this? we WAIT to print until we get a new frame of animation, or we get user input, or the screen changes size. Alternatively, we stop printing on focuslost? But then, when we have focus, do we just animate constantly? That still seems like a waste. Even if we want to show the current time, we can do that by just printing each second. In general, I think the issue is that this current paradigm bothers me. Just too wasteful.
+
+and for printing time... I think I just gotta accept that this isn't a browser-based app. Doesn't make sense to be printing the time constantly. At most, do it the way top does it- once per second. So that means, yeah, printing on demand, rather than constantly.
+
+How do I know when to print? And how do I handle the framebuf?
+
+I don't want to rewrite edges revealed as a card moves over them. That sucks. Not specifically anyways. So that suggessts, on a successive call to print, I just remember the UNDERLYING framebuf state, and only update which part is overwritten by the moving card. And I don't update the underlying state unless necessary. Can call that part static. Consists of anything that isn't animating.
+
+On each call to print though, we grab the current positions of each animation and write them over the static part. And we do it every print, no need to cache that I think. Although, each card is LOCALLY static, so maybe I can have the animations remember the rough shape? something to think about...
+
+
+framebuf {
+    static: Grid<TermChar>
+
+    dynamics? list animation?
+    result? Grid<TermChar>?
+}
+
+nononoo
+
+framebuf {
+    static: Grid<(count, TermChar)>
+    dynamic: Grid<(count, TermChar)>
+}
+
+animations write to dynamic. gamestate changes write to static.
+when dynamic count is old, we fall through to static. when static count is old, we fall through to blank
+lines are marked when changed? how does that interact with blank fall-through?
+
+we print only when prompted to print, by a message or an animation timer activating.
+
+
+
+
+
+
+Ok, what's the key idea here? That, each card is effectively static. and yet, with each print call I have to go through all the logic of generating each card again. Kinda wasteful. Would be simpler to STORE the char representation of each card. But that creates a new problem. Who owns these panels?
+
+I think... animation requests them from printing, now renamed panel_gen, on demand. It gives them to framebuf, so framebuf owns them. they are indexable by the card they actually represent. Ainmatiom deletes them, hides them, moves them when necessary, using their handles. panel_gen, (rightly) takes a much more minor role.
+
+panels really are just a grid of pixels. how does framebuf then actually write to the screen?
+For a given pixel, how does it know which framebufs affect it?
+
+there are algorithms for this... 
+
+
+
+framebuf needs a final result grid, so i'm nont writing out unnecessary formatting strtings to the terminal. final result needs to knjoow which lines were changed... Maybe we write to it as soon as we add / move any internal framebuflayer?

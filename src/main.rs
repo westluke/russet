@@ -18,7 +18,7 @@ mod game;
 mod config;
 
 pub mod pos;
-pub mod smartbuf;
+pub mod framebuf;
 
 use game::*;
 use animation::*;

@@ -10,7 +10,7 @@ use crate::game::*;
 use crate::printing;
 use crate::pos::*;
 use crate::SetError as SE;
-use crate::smartbuf::SmartBuf;
+use crate::framebuf::FrameBuf;
 
 use log::{info, warn, error};
 

@@ -100,7 +100,6 @@ pub fn write_time(  buf: &mut SmartBuf<impl Write>,
     Ok(())
 }
 
-
 fn print_deck_contents( buf: &mut SmartBuf<impl Write>,
                         pos: TermPos,
                         bg: Color) -> Result<(), SE> {

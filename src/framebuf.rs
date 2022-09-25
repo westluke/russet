@@ -146,38 +146,121 @@ impl TermChar {
 
 
 
-// T should be some terminal-like type
-pub struct SmartBuf<T: Write> {
-    under: T,
-    counter: u32,
-    cache: Grid<(u32, TermChar)>,
-    prev: Grid<(u32, TermChar)>,
-    write_flag: false   // set after a write so flush knows to run a check
+// algorithm? for each pixel, figure out which framebuflayers affect it? 
+// famebuflayer for every card, including the static ones? I'm not sure including a static layer
+// would even help here. cuz you still have to copy it over into the buffer, right.
+// okay, but what about the cache? well, panels only update when necessary, and cache keeps
+// counter, right? so how does that work. could always transfer every pixel? and counter just tells
+// me whether to update the new flag.
+//
+// I can skip panels with an outdated counter, so that's one good source of optimization.
+// What about panels without an outdated counter?
+// Like, let's say I have a static game board, and im in the middle of an animation moving one card
+// across the screen. How do I optimize for that case?
+//
+// the card only occasionally eclipses other panel buffers. So, for each panel, we check to see if
+// there's been an update relative to the cache. We don't see any until we get to the moving card.
+// So now we know we need to write this card again. but, what about the space left behind??
+// How do we know how to write that? 
+//
+// and what if, the animating card gets dropped? how the hell do we know how to write the space
+// left behind? Ok, on moves or drops, the FrameBuf (not the FrameBufLayer!) stores the last
+// position of the panel? or maybe, it just immediately writes underlying layers to screen?
+// nah, i think it stores last position / new space.
+//
+// And what do we do with the new space? we write to it, even if it seems to be up-to-date?
+// No... we consider it to be part of the vacated panel?
+//
+// No! on moves or deletes, we calculate intersection with other frames and mark them updated?
+// Also, how are we filling in the empty space between cards?
+//
+// go through all the frame buffers
+// checking for changes.
+// Also, remember that I have to do some calculation on every pixel ANYWAYS just in order to
+// generate the printing strings.
+//
+//
+// Here's the thing, theres 3 stages:
+// Figure out what needs to be printed / what's been updated
+// Update the cache
+// make command sequence and print it
+//
+// Is it gathering this information through hooks installed into the underlying python implementation, or is it interpreting the code itself so that it can observe all the intervening steps?
+//
+// n appears in the execution frame of make_counter, and STAYS THERE, even after the call to make_counter is completed. The second call to make_counter creates a NEW frame, with a new binding for n. I'm also noticing a line at the bottom saying "ambiguousParentFrame"; apparently the tutor can get confused between different execution contexts for two identical calls to the same function.
+//
+// There is a lambda defined for make-counter in the top-level environment even before anything has started to run - it looks like that's part of the initial code scan that just sees what variables are defined anywhere.
+
+Also, we can see that make-counter is just bound to a lambda because the name of the lambda is some number, rather than @make-counter. I noticed earlier that deffun creates lambdas tagged with the name of the function, rather than arbitrary heap addresses.
+
+Calls to defvar seem to get desugared to calls to set!, which change the variable binding from bomb to the specified value.
+
+Again, the execution  context from the call to make-counter sticks around after the call has completed.
+
+The arrows made it more clear which values the variables were bound to, they were easy to follow visually.
+
+On the other hand, I much preferred that Stacker shows the actual bodies of the lambdas - it makes it much easier to recognize their origin in the source code.
+
+I like being able to see the calling contexts for all functions in the stack, it makes it much easier to understand where we are executing in relation to the whole program.
+
+I don't like how tricky it is to find other occurrences of the same address. If I want to find, for instance, @1010, I have to search through all the potential addresses until I find the matching address, and there might still be more. It would be much nicer if mousing over an address highlighted the other matching addresses.
+
+If you're trying to understand some part of Python's really really funky scoping rules, I'd recommend trying a simple program in the Tutor.
+
+But if you're trying to understand the behavior of a more complicated program, I'd probably recommend the stacker, since it gives you much more detail and doesn't get too cluttered when the environments start to add up.
+pub struct FrameBufLayer {
+    panel: Grid<(u32, TermChar)>,
+    anchor: TermPos,
+    counter: u32
 }
 
-impl<T: Write> SmartBuf<T> {
+
+
+
+// T should be some terminal-like type
+pub struct FrameBuf<T: Write> {
+    under: T,
+    cache: Grid<(u32, TermChar)>,
+    dyn_counter: u32,
+    new_line_flags: Vec<u32>,
+    layers: Vec<FrameBufLayer>
+}
+
+impl<T: Write> FrameBuf<T> {
     pub fn new(under: T, height: usize, width: usize) -> Self {
         Self {
             under,
-            counter: 0,
-            cache: Grid::new(height, width, (0, TermChar::default())),
-            prev: Grid::new(height, width, (0, TermChar::default())),
+            counter: 1,
+            staticc: Grid::new(height, width, (0, TermChar::default())),
+            dynamic: Grid::new(height, width, (0, TermChar::default())),
+            new_line_flags: vec![0; height]
         }
     }
 
-    pub fn write(&mut self, buf: &str, fg: Color, bg: Color, pos: TermPos) -> Result<()> {
+    pub fn write_dyn(&mut self, buf: &str, fg: Color, bg: Color, pos: TermPos) -> Result<()> {
         for (i, ln) in buf.lines().enumerate() {
             for (j, c) in ln.chars().enumerate() {
                 let npos = (pos + (i, j))?;
-                self.cache[npos] = (self.counter, TermChar::new(c, fg, bg));
+                self.dynamic[npos] = (self.counter, TermChar::new(c, fg, bg));
             };
         };
         Ok(())
     }
 
-    fn get_last_displayed(&mut self, pos: TermPos) -> TermChar {
-        let (cnt, tc) = self.prev[pos];
-        if (self.counter == 0) || (cnt < self.counter - 1) {
+    pub fn write_stat(&mut self, buf: &str, fg: Color, bg: Color, pos: TermPos) -> Result<()> {
+        for (i, ln) in buf.lines().enumerate() {
+            for (j, c) in ln.chars().enumerate() {
+                let npos = (pos + (i, j))?;
+                self.staticc[npos] = (self.counter, TermChar::new(c, fg, bg));
+            };
+        };
+        Ok(())
+    }
+
+    fn char_at(&self, pos: TermPos) -> TermChar {
+        let (cnt_s, tc_s) = self.staticc[pos];
+        let (cnt_d, tc_d) = self.dynamic[pos];
+        if (self.counter <=) || (cnt < self.counter - 1) {
             TermChar::default()
         } else {
             tc
