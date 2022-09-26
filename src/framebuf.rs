@@ -182,47 +182,62 @@ impl TermChar {
 //
 // Here's the thing, theres 3 stages:
 // Figure out what needs to be printed / what's been updated
-// Update the cache
-// make command sequence and print it
+// Update the cache to represent what will be printed
 //
-// Is it gathering this information through hooks installed into the underlying python implementation, or is it interpreting the code itself so that it can observe all the intervening steps?
+// Ok: consider normal cases. How do we know whether a pixel needs to be updated or not? Have to go
+// through list of layers, see if any of them are newer. But what about moved layers? Easy solution: moving or deleting a layer
+// generates a temporary, one-iteration layer in its place.
 //
-// n appears in the execution frame of make_counter, and STAYS THERE, even after the call to make_counter is completed. The second call to make_counter creates a NEW frame, with a new binding for n. I'm also noticing a line at the bottom saying "ambiguousParentFrame"; apparently the tutor can get confused between different execution contexts for two identical calls to the same function.
+// alternative: we go through list of layers, and if we find none, that means we print reset? Does
+// that actually work? If no layers apply, print reset. Mmmm, yeah, that seems t owork actually.
 //
-// There is a lambda defined for make-counter in the top-level environment even before anything has started to run - it looks like that's part of the initial code scan that just sees what variables are defined anywhere.
+// How do counters work with that?
+// Also, ok, layers should be traversed in reverse order, we stop when we successfully print
+// something. How do we know whether to print? Whether the layer was updated this cycle.
+// How do we know that?
+//
+// ok but there's a tricky thing here. we might print even if it wasn't updated this cycle, because
+// a layer on top disappeared, exposing a layer underneath. So tthat's not quite tthe right idea,
+// unless deletting / moving a layer implicitly primes all overlapping layers underneath.
+//
+// What's the real underlying idea here. We update the cache when a change is made. That's the
+// idea. Changes are made to layers. We must mark them for them to be accounted for? Except no,
+// that's not quite right. Changes to layers may affect the pixels underneath the layer, but we
+// don't necessarily know we can make the right update just based on the primed layer.
+//
+// Layer changes prime all CACHE PIXELS underneath that layer. that's it.
+// And layers are always complete, they don't use counters? Yeah, I think so.
+//
+// This is separate step! ignore it for now
+// make command sequence (based on changes to what was printed last) and print it
+//
+// remember that cache is not base state, it's just last printed.
 
-Also, we can see that make-counter is just bound to a lambda because the name of the lambda is some number, rather than @make-counter. I noticed earlier that deffun creates lambdas tagged with the name of the function, rather than arbitrary heap addresses.
 
-Calls to defvar seem to get desugared to calls to set!, which change the variable binding from bomb to the specified value.
-
-Again, the execution  context from the call to make-counter sticks around after the call has completed.
-
-The arrows made it more clear which values the variables were bound to, they were easy to follow visually.
-
-On the other hand, I much preferred that Stacker shows the actual bodies of the lambdas - it makes it much easier to recognize their origin in the source code.
-
-I like being able to see the calling contexts for all functions in the stack, it makes it much easier to understand where we are executing in relation to the whole program.
-
-I don't like how tricky it is to find other occurrences of the same address. If I want to find, for instance, @1010, I have to search through all the potential addresses until I find the matching address, and there might still be more. It would be much nicer if mousing over an address highlighted the other matching addresses.
-
-If you're trying to understand some part of Python's really really funky scoping rules, I'd recommend trying a simple program in the Tutor.
-
-But if you're trying to understand the behavior of a more complicated program, I'd probably recommend the stacker, since it gives you much more detail and doesn't get too cluttered when the environments start to add up.
 pub struct FrameBufLayer {
-    panel: Grid<(u32, TermChar)>,
+    panel: Grid<(TermChar)>,
+
+    // location of top-left corner of this panel
     anchor: TermPos,
-    counter: u32
 }
 
 
 
 
-// T should be some terminal-like type
 pub struct FrameBuf<T: Write> {
+
+    // The underlying Write object (should be a terminal)
     under: T,
-    cache: Grid<(u32, TermChar)>,
-    dyn_counter: u32,
-    new_line_flags: Vec<u32>,
+
+    // The characters that will be written to the screen.
+    cache: Grid<TermChar>,
+
+    // Each change flag marks a line that must be updated, the column in that line
+    // where the change starts, and the number of characters changed
+    change_flags: Vec<(TermPos, u16)>,
+
+    // Each layer is an independent "panel" that can be manipulated across the screen, i.e. a
+    // playing card sliding around
     layers: Vec<FrameBufLayer>
 }
 
