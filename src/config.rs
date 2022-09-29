@@ -1,4 +1,48 @@
 use crossterm::style::Color;
+use std::sync::RwLock;
+use crossterm::terminal;
+use log::{info, warn, error};
+
+
+
+pub struct TermSize {
+    size: RwLock<(u16, u16)>
+}
+
+impl TermSize {
+    pub const fn new () -> Self {
+        Self{ size: RwLock::new((0, 0)) }
+    }
+
+    pub fn update(&self) -> (u16, u16) {
+        let lock = self.size.write().unwrap();
+        let new = terminal::size();
+
+        // Switch order to be row-major
+        if let Ok((x, y)) = new {
+            *lock = (y, x);
+        } else {
+            warn!("Crossterm failed to determine terminal size!");
+        };
+
+        // if a size check fails, we just go with the last value
+        *lock
+    }
+
+    pub fn get(&self) -> (u16, u16) {
+        let lock = self.size.read().unwrap();
+        return *lock;
+    }
+}
+
+pub static ts: TermSize = TermSize::new();
+
+
+
+
+
+
+
 
 pub const COLOR_1: Color = Color::Green;
 pub const COLOR_2: Color = Color::Red;

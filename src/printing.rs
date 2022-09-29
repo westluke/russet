@@ -25,7 +25,7 @@ pub enum CardStyle {
     Pending         // Use PENDING_BG
 }
 
-pub fn print_card(  buf: &mut SmartBuf<impl Write>,
+pub fn print_card(  buf: &mut SmartBuf<impl Wr   ite>,
                     pos: TermPos,
                     card: Card,
                     style: CardStyle) -> Result<(), SE> {

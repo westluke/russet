@@ -6,31 +6,31 @@ use rand::seq::SliceRandom as _;
 
 
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub enum CardColor {
     Color1, 
     Color2,
     Color3
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub enum CardShape {
     Oval,
     Diamond,
     Squiggle
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub enum CardNumber {
     One=1, Two=2, Three=3
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub enum CardFill {
     Solid, Striped, Empty
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub struct Card {
     pub color: CardColor,
     pub shape: CardShape,

@@ -66,11 +66,11 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> Result<(), SE> {
         terminal::Clear(terminal::ClearType::All),
         terminal::SetSize(1, 1),
         terminal::SetTitle("Set!")
-    )?;
+    ).unwrap();
     info!("entered alternate screen, cleared");
 
     // mut cuz we need to adapt to size changes
-    let (mut width, mut height) = terminal::size()?;
+    let (mut width, mut height) = terminal::size().unwrap();
 
     let mut start = Instant::now();
     let mut state: Option<GameState> = None;
@@ -83,8 +83,23 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> Result<(), SE> {
     // poor man's try/catch
     let res = || -> Result<(), SE> {
         loop {
+
+            if ts.update() is too small, continue
             let msg = rx.try_recv();
-            let pos = TermPos::new(height-3, 0)?;
+
+            // This actually should just be a continue, huh, cuz may want to permit temporary small
+            // windows? Yeah, issues with terminal SIZE should propagate up. But a lack of a
+            // terminal should probably cause immediate failure. Cuz Idk how one would recover from
+            // this.
+            //
+            // potentially temporary failures at beginning or end should cause panics.
+            // potentially temporary failures during runtime should be ignored and logged?
+            // if terminal size fails, just keep the last one seen? That makes sense.
+            // And then termpos doesn't have to have a result.
+            // but then also need to abstract away terminal size, i guess use inner mutability on
+            // some constant in config? how do i do that right. mutable global? across difrferent t
+            // hreads? thats gonna r equire mutex.
+            let pos = TermPos::new(height-3, 0);
             printing::write_time(&mut buf, start, pos)?;
 
             if let Ok(m) = msg {
@@ -119,7 +134,7 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> Result<(), SE> {
         stdout2,
         terminal::Clear(terminal::ClearType::All),
         terminal::LeaveAlternateScreen,
-    )?;
+    ).unwrap();
     info!("Returning res");
 
     res

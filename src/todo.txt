@@ -98,3 +98,10 @@ there are algorithms for this...
 
 
 framebuf needs a final result grid, so i'm nont writing out unnecessary formatting strtings to the terminal. final result needs to knjoow which lines were changed... Maybe we write to it as soon as we add / move any internal framebuflayer?
+
+
+
+
+
+to avoid panics (caused by TermPos out of range) just need to be smart about where animation.rs asks for things to be printed. It needs to know the current state of ts.
+maybe animation.rs should be the only thing capable of calling update()?
