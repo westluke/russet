@@ -1,9 +1,9 @@
-    █
-   █x█
-  █xxx█
- █xxxxx█
-█xxxxxxx█
- █xxxxx█
-  █xxx█
-   █x█
-    █
+    X
+   XoX
+  XoooX
+ XoooooX
+XoooooooX
+ XoooooX
+  XoooX
+   XoX
+    X

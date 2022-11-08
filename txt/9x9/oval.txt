@@ -1,9 +1,9 @@
- ███████ 
-█xxxxxxx█
-█xxxxxxx█
-█xxxxxxx█
-█xxxxxxx█
-█xxxxxxx█
-█xxxxxxx█
-█xxxxxxx█
- ███████ 
+ XXXXXXX 
+XoooooooX
+XoooooooX
+XoooooooX
+XoooooooX
+XoooooooX
+XoooooooX
+XoooooooX
+ XXXXXXX 

@@ -1,9 +1,9 @@
- ███████ 
-██    ███
-█      ██
-     ███ 
-    ██
-   ██
-   ██
+ XXXXXXX 
+XX    XXX
+X      XX
+     XXX 
+    XX
+   XX
+   XX
 
-   ██
+   XX

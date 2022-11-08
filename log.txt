@@ -1,11 +1,9 @@
-INFO [set] Animation thread spawned
-INFO [set::animation] locked stdout
-INFO [set::animation] entered alternate screen, cleared
-INFO [set::smartbuf] 55, 183
-INFO [set::animation] Smartbuf initialized
-INFO [set] Closure exited
-INFO [set] Raw mode exited
-INFO [set] Waiting for animation thread to be joined
-INFO [set::animation] Animation loop exited
-INFO [set::animation] Stdout dropped and re-locked
-INFO [set::animation] Returning res
+INFO [set::animation] animation loop starting
+INFO [set::animation] animation loop repeating
+INFO [set::animation] animation loop repeating
+INFO [set::animation] animation loop repeating
+INFO [set] loop over
+INFO [set] after disabling raw mode
+INFO [set] after stdout capture
+INFO [set] Waiting to join animation thread...
+INFO [set::animation] animation loop over

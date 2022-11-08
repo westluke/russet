@@ -1,12 +1,10 @@
 use crossterm::style::Color;
 use std::sync::RwLock;
 use crossterm::terminal;
-use log::{info, warn, error};
-
-
+use log::{warn};
 
 pub struct TermSize {
-    size: RwLock<(u16, u16)>
+    size: RwLock<(i16, i16)>
 }
 
 impl TermSize {
@@ -14,35 +12,97 @@ impl TermSize {
         Self{ size: RwLock::new((0, 0)) }
     }
 
-    pub fn update(&self) -> (u16, u16) {
-        let lock = self.size.write().unwrap();
+    pub fn update(&self) -> (i16, i16) {
+        let mut lock = self.size.write().unwrap();
         let new = terminal::size();
 
         // Switch order to be row-major
         if let Ok((x, y)) = new {
-            *lock = (y, x);
+            let y = i16::try_from(y).unwrap();
+            let x = i16::try_from(x).unwrap();
+
+            if y >= MIN_HEIGHT && x >= MIN_WIDTH {
+                *lock = (y, x);
+            } else {
+                warn!("Terminal too small! Returning last valid value");
+            }
+
         } else {
-            warn!("Crossterm failed to determine terminal size!");
+            warn!("Crossterm failed to determine terminal size! Returning last known value.");
         };
 
         // if a size check fails, we just go with the last value
         *lock
     }
 
-    pub fn get(&self) -> (u16, u16) {
+    pub fn get(&self) -> (i16, i16) {
         let lock = self.size.read().unwrap();
         return *lock;
     }
 }
 
-pub static ts: TermSize = TermSize::new();
+pub static TS: TermSize = TermSize::new();
 
+// NOTE: shape_width must be odd!! otherwise duos can't be centered properly, think about it
+// not unless you use even spacing, and any spacing more than 1 looks weird
 
+#[derive(Copy, Clone)]
+#[allow(non_snake_case)]
+pub struct Scale {
+    pub SHAPE_HEIGHT: i16,
+    pub SHAPE_WIDTH: i16,
+    pub RAW_OVAL: &'static str,
+    pub RAW_DIAMOND: &'static str,
+    pub RAW_SQUIGGLE: &'static str,
+    pub RAW_QUESTION: &'static str,
 
+    // These two are computed. Also, CARD_HEIGHT describes height of card WITHOUT
+    // offset outline
+    pub CARD_HEIGHT: i16,
+    pub CARD_WIDTH: i16
+}
 
+impl Scale {
 
+    #[allow(non_snake_case)]
+    pub const fn new(
+                SHAPE_HEIGHT: i16,
+                SHAPE_WIDTH: i16,
+                RAW_OVAL: &'static str,
+                RAW_DIAMOND: &'static str,
+                RAW_SQUIGGLE: &'static str,
+                RAW_QUESTION: &'static str) -> Self {
+        
+        Self {  SHAPE_HEIGHT,
+                SHAPE_WIDTH,
+                RAW_OVAL,
+                RAW_DIAMOND,
+                RAW_SQUIGGLE,
+                RAW_QUESTION,
+                CARD_HEIGHT: SHAPE_HEIGHT + CARD_INTERNAL_MARGIN_VERT * 2,
+                CARD_WIDTH: (SHAPE_HEIGHT * 3) + (SHAPE_SPACING * 4)
+        }
+    }
+}
 
+pub const SIZE_9: Scale = Scale::new(
+    9, 9,
+    include_str!("../txt/9x9/oval.txt"),
+    include_str!("../txt/9x9/diamond.txt"),
+    include_str!("../txt/9x9/squiggle.txt"),
+    include_str!("../txt/9x9/question.txt")
+);
 
+pub const SIZE_7: Scale = Scale::new(
+    7, 7,
+    include_str!("../txt/7x7/oval.txt"),
+    include_str!("../txt/7x7/diamond.txt"),
+    include_str!("../txt/7x7/squiggle.txt"),
+    include_str!("../txt/7x7/question.txt")
+);
+
+const MIN_HEIGHT: i16 = SIZE_7.CARD_HEIGHT * 4 + CARD_SPACING_VERT * 5;
+const MIN_WIDTH: i16 = SIZE_7.CARD_WIDTH * 4 + CARD_SPACING_HORIZ * 5;
 
 pub const COLOR_1: Color = Color::Green;
 pub const COLOR_2: Color = Color::Red;
@@ -57,34 +117,12 @@ pub const SHADOW: Color = Color::White;
 pub const GOOD_SET: Color = Color::Green;
 pub const BAD_SET: Color = Color::Red;
 
+pub const WIN_MARGIN_VERT: i16 = 1;
+pub const WIN_MARGIN_HORIZ: i16 = 1;
 
+pub const CARD_INTERNAL_MARGIN_VERT: i16 = 1;
+pub const CARD_SPACING_VERT: i16 = 2;
+pub const CARD_SPACING_HORIZ: i16 = 2;
+pub const SHAPE_SPACING: i16 = 1;
 
-
-
-
-pub const CARD_VERT_MARGIN: u16 = 2;
-pub const CARD_HEIGHT: u16 = SHAPE_HEIGHT + CARD_VERT_MARGIN;
-pub const CARD_WIDTH: u16 = (SHAPE_WIDTH * 3) + (4 * SHAPE_SPACING);
-pub const CARD_SPACING_VERT: u16 = 2;
-pub const CARD_SPACING_HORIZ: u16 = 2;
-
-
-// NOTE: shape_width must be odd!! otherwise duos can't be centered properly, think about it
-// not unless you use even spacing, and any spacing more than 1 looks weird
-pub const RAW_OVAL: &str = include_str!("../txt/9x9/oval.txt");
-pub const RAW_DIAMOND: &str = include_str!("../txt/9x9/diamond.txt");
-pub const RAW_SQUIGGLE: &str = include_str!("../txt/9x9/squiggle.txt");
-pub const RAW_QUESTION: &str = include_str!("../txt/9x9/question.txt");
-
-pub const SHAPE_HEIGHT: u16 = 9;
-pub const SHAPE_WIDTH: u16 = 9;
-pub const SHAPE_SPACING: u16 = 1;
-
-// pub const RAW_OVAL: &str = include_str!("../txt/7x7/oval.txt");
-// pub const RAW_DIAMOND: &str = include_str!("../txt/7x7/diamond.txt");
-// pub const RAW_SQUIGGLE: &str = include_str!("../txt/7x7/squiggle.txt");
-// pub const RAW_QUESTION: &str = include_str!("../txt/7x7/question.txt");
-
-// pub const SHAPE_HEIGHT: u16 = 7;
-// pub const SHAPE_WIDTH: u16 = 7;
-// pub const SHAPE_SPACING: u16 = 1;
+pub const LAST_FOUND_OFFSET: i16 = 20;

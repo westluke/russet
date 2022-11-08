@@ -1,43 +1,168 @@
-use std::{thread, io, time};
+use std::{thread, io, time, sync};
+use io::Write;
 
 use time::{Instant, Duration};
-use std::{sync::mpsc};
-use io::{BufWriter, Write as _};
+use std::sync::{Arc, Mutex, mpsc::{self, TryRecvError}};
 
-use crossterm::{style::Color, terminal, execute};
+use crossterm::{terminal, execute};
+use log::{info};
 
 use crate::game::*;
-use crate::printing;
-use crate::pos::*;
-use crate::SetError as SE;
-use crate::framebuf::FrameBuf;
+// use crate::printing;
+// use crate::pos::*;
+use crate::err::*;
+use crate::config::*;
+use crate::framebuf::{FrameBuf, FrameBufLayer};
 
-use log::{info, warn, error};
+
+// mod cardrepo;
+// use cardrepo::CardRepo;
+
+
+
+
+static anim_dur: Duration = Duration::from_millis(500);
+
 
 
 
 // Sent from main thread to animation thread
+// ChangeSet and main don't determine animation parameters, this module does
+// That includes the amount of time that a card is highlighted, for example
+
 pub enum Msg {
-    Quit,
-    Base(GameState),                // Canceled by later Base
-    Timed(Vec<TimedMsg>, Instant)   // These have to be separate cuz they all happen at the same time
+    QuitMsg,
+    // ChangeMsg(ChangeSet)
 }
 
-// For messages that have to be kept until they expire
-pub enum TimedMsg {
-    StaticCard(SetPos, Option<Card>),                               // Placeholder for both ends during a MoveCard
-    MoveCard(SetPos, SetPos, Card, Color),     // Optional color to be used for the cards border as it moves.
-    BadOutline(LayoutPos),                                             // Red border that flashes when the user incorrectly tries to select a set
-}
+// struct AnimationState {
+//     pub buf: FrameBuf,
+//     pub anims: Vec<AnimationAtom>
+// }
 
-impl Msg {
-    fn timed_out(&self, i0: Instant) -> bool {
-        match self {
-            &Msg::Timed(_, i1) => i0 >= i1,
-            _ => false
-        }
-    }
-}
+// impl AnimationState {
+//     fn new () -> Self {
+//         Self {
+//             buf: FrameBuf::new(),
+//             anims: Vec::new()
+//         }
+//     }
+// }
+
+// struct AnimationAtom {
+//     base: ChangeAtom,
+//     start: Instant,
+//     end: Instant,
+
+//     // For use in "cancelling" by speeding up?
+//     // already_cancelled: bool,
+    
+//     stamp: u32,
+// }
+
+// impl AnimationAtom {
+//     fn new (base: ChangeAtom, start: Instant, end: Instant) -> Self {
+//         Self { base, start, end }
+//     }
+
+//     fn expired (&self, i: &Instant) -> bool {
+//         i > self.start
+//     }
+
+// pub enum Change {
+//     BadOutline(Card),
+//     GoodMove(Card, LayoutPos),
+//     Move(Card, LayoutPos),
+//     Fade(Card),
+//     Deal(Card, LayoutPos),
+//     Select(Card),
+//     Deselect(Card)
+// }
+//
+
+    // issues here: is this animation also keeping tracko f a base state somehow?
+    // And how does that interact with deselect?
+
+    // fn involves (&self, card: &Card) -> bool {
+    //     use ChangeAtom as CA;
+
+    //     match *self.base {
+    //         CA::BadOutline(c, _) => c == *card,
+    //         CA::GoodMove(c, _, _) => c == *card,
+    //         CA::Move(c, _, _) => c == *card,
+    //         CA::Fade(c, _) => c == *card,
+    //         CA::Deal(c, _) => c == *card,
+    //         CA::Select(c, _) => c == *card,
+    //         CA::Deselect(c, _) => c == *card,
+    //     }
+    // }
+
+    // fn involves (&self, lp: &LayoutPos) -> bool {
+    //     use ChangeAtom as CA;
+
+    //     match *self.base {
+    //         CA::Move(_, l0, l1) => l == *lp,
+    //         CA::GoodMove(_, l0, l1) => l == *lp,
+    //         CA::BadOutline(_, l) => l == *lp,
+    //         CA::Select(_, l) => l == *lp,
+    //         CA::Deselect(_, l) => l == *lp,
+    //         CA::Fade(_, l) => l == *lp,
+    //         CA::Deal(_, l) => l == *lp,
+    //     }
+    // }
+
+    // should things even cancel? Well, not yet they shouldn't. This isn't required functionality.
+    // stahp for now.
+
+    // fn cancelled (&self, anim: &AnimationAtom) -> bool {
+    //     use ChangeAtom as CA;
+
+    //     if (anim.stamp <= self.stamp) { return false; };
+            
+
+    //     match *self.base {
+    //         CA::Move(_, l0, l1) => match anim.base {
+    //             CA::BadOutline(_, l) => (l == l1),
+    //             CA::Select(_, l) => (l == l1),
+    //             CA::Select(_, l) => (l == l1),
+    //         }
+    //         CA::BadOutline(c, _, _) =>
+    //             anim.stamp >= self.stamp,
+    //         CA::GoodMove(c, lp) => 
+    //             anim.involves(lp) && match anim.base {
+    //                 CA::Move(
+    //                 CA::
+                    
+    //         },
+    //     }
+        
+    // }
+// }
+
+// impl From<&ChangeSet> for Vec<AnimationAtom> {
+//     fn from(cst: &ChangeSet) -> Self {
+//         let mut result = Vec::new();
+//         let now = Instant::now();
+
+//         for &chng in &cst.changes {
+//             result.push(
+//                 AnimationAtom {
+//                     base: chng,
+//                     start: now,
+//                     end: now + anim_dur
+//                 }
+//             );
+//         };
+
+//         result
+//     }
+// }
+
+
+// fn ChangeSet_to_AnimationAtoms (cst: ChangeSet) -> Vec<AnimationAtom> {
+// }
+
+
 
 pub fn sleep_until(i: Instant) {
     loop {
@@ -48,16 +173,103 @@ pub fn sleep_until(i: Instant) {
     };
 }
 
+// pub fn interp(
+//         src:    TermPos, 
+//         dst:    TermPos,
+//         start:  Instant,
+//         end:    Instant,
+//         now:    Instant) -> TermPos {
+
+//     if end < now { return dst; };
+//     if now < start { return src; };
+
+//     let space_diff = dst - src;
+//     let time_diff = end - start;
+//     let ratio = (end - now).as_secs_f64() / time_diff.as_secs_f64();
+
+//     src + (space_diff * ratio);
+// }
 
 
 
-pub fn animate(rx: mpsc::Receiver<Msg>) -> Result<(), SE> {
 
-    // lock standard out to avoid lock thrashing, then convert it to a MouseTerminal and set it
-    // to raw mode. Don't think order matters for mouse/raw
-    let mut stdout = io::stdout().lock();
-    info!("locked stdout");
+// Returns whether the game is over or not
+// Could be because of error, or because of requested quit
+// pub fn animate_frame(
+//     cst: ChangeSet,
+//     state: &mut AnimationState) {
 
+//     use ChangeAtom as CA;
+
+//     // let now = Instant::now();
+//     let (width, height) = ts.update();
+//     // state.anims.append(Vec::<AnimationAtom>::from(cst));
+
+//     // Ignore animations for now!! Just do immediate updates
+//     // perhaps layers iin the buf should be grouped with their badoutline/goodoutline/
+//     // selected versions? So those  versions don't have to  be cloned at runtime?
+//     // May not be necessary.
+
+//     for chng in &cst.changes {
+//         match *chng {
+//             CA::Move(c, _, l1) => state.buf.move_layer(c, l1),
+//             CA::GoodMove(c, _, l1) => state.buf.move_layer(c, l1),
+//             CA::BadOutline(c, _) => state.buf.replace_layer(c, _),
+//             CA::Select(c, _) => state.buf.replace_layer(c, _),
+//             CA::Deselect(c, _) => state.buf.replace_layer(c, _),
+//             CA::Fade(c, _) => state.buf.delete_layer(c),
+//             CA::Dead(c, l1) => state.buf.insert_layer(c, l1),
+//         }
+//     }
+
+//     state.buf.flush();
+// }
+
+    // for anim in &state.anims {
+    //     let st = anim.start;
+    //     let nd = anim.end;
+
+    //     match anim.base {
+    //         CA::Move(c, l0, l1) => {
+    //             let newpos = interp(l0, l1, st, end, now);
+    //             anim.buf.move_layer(c, newpos);
+    //         },
+    //         CA::GoodMove(c, l0, l1) => {
+    //         }
+    //     }
+    // }
+
+        // have to update the animations, cancel them if necessary,
+        // then go through them and, for each one, determine the necessary changes
+        // to corresponding framebuflayers
+
+    // how do i handle the cst...
+
+    // buf.flush();
+
+
+    // if state.is_some() {
+    //     printing::print_gamestate(
+    //         &mut buf,
+    //         state.as_ref().unwrap()
+    //     )?;
+    // }
+
+    // buf.flush();
+    // thread::sleep(Duration::from_millis(200));
+// }
+
+
+
+
+pub fn animate<T: Write>(share: Arc<Mutex<FrameBuf<T>>>, rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<Msg> ) -> Result<()> {
+
+    // lock standard out to avoid lock thrashing. Already converted to raw mouse terminal by main
+    let mut stdout = io::stdout();//.lock();
+
+    // is it a problem that share has stdout internally???
+    // Idk enough about stdout i think
+    //
     // Swap to alternate screen, clear it (this might just be a scrolled-down version of the
     // main screen, but it's fine bc scroll is disabled in raw mode)
     execute!(
@@ -67,75 +279,62 @@ pub fn animate(rx: mpsc::Receiver<Msg>) -> Result<(), SE> {
         terminal::SetSize(1, 1),
         terminal::SetTitle("Set!")
     ).unwrap();
-    info!("entered alternate screen, cleared");
+
+    // let repo = CardRepo::new();
 
     // mut cuz we need to adapt to size changes
-    let (mut width, mut height) = terminal::size().unwrap();
+    let (mut width, mut height) = TS.update();
+    debug_assert!(width != 0 && height != 0);
 
     let mut start = Instant::now();
-    let mut state: Option<GameState> = None;
+    // let mut state: Option<GameState> = None;
 
-    // Wrap stdout in a buf that only writes characters when necessary
-    // Note: SmartBuf is NOT Write. Which means we can't execute! on it directly.
-    let mut buf = SmartBuf::new(stdout, height.into(), width.into()); 
-    info!("Smartbuf initialized");
+    let mut buf = FrameBuf::new(stdout, height.into(), width.into()); 
+    let mut buf_lay = FrameBufLayer::default();
+    buf.push_layer(buf_lay);
 
-    // poor man's try/catch
-    let res = || -> Result<(), SE> {
-        loop {
+    buf.flush();
 
-            if ts.update() is too small, continue
-            let msg = rx.try_recv();
 
-            // This actually should just be a continue, huh, cuz may want to permit temporary small
-            // windows? Yeah, issues with terminal SIZE should propagate up. But a lack of a
-            // terminal should probably cause immediate failure. Cuz Idk how one would recover from
-            // this.
-            //
-            // potentially temporary failures at beginning or end should cause panics.
-            // potentially temporary failures during runtime should be ignored and logged?
-            // if terminal size fails, just keep the last one seen? That makes sense.
-            // And then termpos doesn't have to have a result.
-            // but then also need to abstract away terminal size, i guess use inner mutability on
-            // some constant in config? how do i do that right. mutable global? across difrferent t
-            // hreads? thats gonna r equire mutex.
-            let pos = TermPos::new(height-3, 0);
-            printing::write_time(&mut buf, start, pos)?;
+    info!("animation loop starting");
 
-            if let Ok(m) = msg {
-                match m {
-                    Msg::Quit => break,
-                    Msg::Base(g) => state = Some(g),
-                    Msg::Timed(_, _) => ()
-                };
-            };
+    // Exits only due to error or quit message
+    // What should this behavior be like?
+    // Obviously if we quit because of a quitmsg, we should complete the rest of the exit
+    // procedure. But what about an error? 
+    loop {
+        info!("animation loop repeating");
+        thread::sleep(Duration::from_millis(200));
+        let msg = rx.try_recv();
+        match msg {
+            Err(TryRecvError::Disconnected) | Ok(Msg::QuitMsg) => break,
+            Err(TryRecvError::Empty) => continue,
+            // Ok(Msg::Change(cst)) => 
+        }
+    }
 
-            if state.is_some() {
-                printing::print_gamestate(
-                    &mut buf,
-                    state.as_ref().unwrap()
-                )?;
-            }
+    info!("animation loop over");
 
-            buf.flush()?;
-            thread::sleep(Duration::from_millis(200));
-        };
-        buf.flush()?;
-        Ok(())
-    }();
-    info!("Animation loop exited");
+    // Necessary if we exited loop due to error, rather than forward quitmsg
+    sx_back.send(Msg::QuitMsg);
+
+    // gamestate shows all statically visible cards.
+    // I think, it might make sense later for GameSTate to be keeping an internal record of all
+    // changes, all of which get sent to animation, tagged with their timestamps?
+    // But should I do that now?
+
 
     // Create a new instance, let original stdout get dropped (and therefore unlocked)
     // thanks to Non-Lexical Lifetimes
     let mut stdout2 = io::stdout().lock();
-    info!("Stdout dropped and re-locked");
 
     execute!(
         stdout2,
         terminal::Clear(terminal::ClearType::All),
         terminal::LeaveAlternateScreen,
     ).unwrap();
-    info!("Returning res");
 
-    res
+    Ok(())
+
+    // res
 }
