@@ -1,7 +1,4 @@
 INFO [set::animation] animation loop starting
-INFO [set::animation] animation loop repeating
-INFO [set::animation] animation loop repeating
-INFO [set::animation] animation loop repeating
 INFO [set] loop over
 INFO [set] after disabling raw mode
 INFO [set] after stdout capture

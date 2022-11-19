@@ -141,7 +141,7 @@ fn input_frame(state: &GameState) -> Result<FrameResult> {
 
 fn main() -> Result<()> {
     let (sx, rx) = mpsc::channel::<animation::Msg>();
-    let (sx_back, rx_back) = mpsc::channel::<animation::Msg>();
+    let (sx_back, rx_back) = mpsc::channel::<animation::BackMsg>();
 
     terminal::enable_raw_mode()?;
     execute!(io::stdout(), event::EnableMouseCapture)?;
@@ -154,17 +154,20 @@ fn main() -> Result<()> {
     let gs = GameState::default();
     let (y, x) = TS.get();
 
-    let state = 
-        Arc::new(
-            Mutex::new(
-                FrameBuf::new(io::stdout(), y, x)
-            )
-        );
-
-    let shared_state = state.clone();
+    // what is the right solution here??
+    //
+    // Ok whats the issues: animation needs to know about gamestate and/or changes to gamestate.
+    // main needs to know which panel a click hits. Is that the only information it needs?
+    // yeah, actually. Ok, so why not query it via channels? and have animation use recv_timeout to
+    // sleep, inistead of fixed frame timeout.
+    // sure that might not be super speedy, but neither is mutex locking. And it's a little bit
+    // cleaner, I think. makes the interfaces very explicit. and the performance is negligible!!!
+    // Stop worrying about it dumbfuck. There's an inherent dependence here anyways, because the
+    // frames are moving. Only avoidable if using a cache, and there's no way im doing that.
+    // ok u gotta sleep dude
 
     let handle = thread::spawn(|| {
-        animation::animate(shared_state, rx, sx_back)
+        animation::animate(rx, sx_back)
     });
 
     // let initsend = tx.send(Msg::Base(Clone::clone(&state)));
@@ -188,11 +191,9 @@ fn main() -> Result<()> {
     info!("loop over");
 
     terminal::disable_raw_mode()?;
+
     info!("after disabling raw mode");
 
-    // it's not getting here. so it can't acquire stdout. fuck how does that work.
-    // I could PASS the framebuf a Write object to flush to....
-    // I also don't even need to lock it, I think. So just skip that for now?
     info!("after stdout capture");
 
     if let Err(x) = sx.send(Msg::QuitMsg){

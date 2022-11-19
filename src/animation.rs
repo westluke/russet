@@ -1,17 +1,19 @@
-use std::{thread, io, time, sync};
+use std::{thread, io, time, sync, collections};
 use io::Write;
 
 use time::{Instant, Duration};
-use std::sync::{Arc, Mutex, mpsc::{self, TryRecvError}};
+use sync::{Arc, Mutex, mpsc::{self, RecvTimeoutError}};
 
-use crossterm::{terminal, execute};
+use crossterm::{terminal, execute, style};
 use log::{info};
 
 use crate::game::*;
+use crate::pos::*;
 // use crate::printing;
 // use crate::pos::*;
 use crate::err::*;
 use crate::config::*;
+use crate::termchar::*;
 use crate::framebuf::{FrameBuf, FrameBufLayer};
 
 
@@ -32,7 +34,13 @@ static anim_dur: Duration = Duration::from_millis(500);
 
 pub enum Msg {
     QuitMsg,
+    Collide(TermPos),
     // ChangeMsg(ChangeSet)
+}
+
+pub enum BackMsg {
+    QuitMsg,
+    // Collisions(
 }
 
 // struct AnimationState {
@@ -262,7 +270,7 @@ pub fn sleep_until(i: Instant) {
 
 
 
-pub fn animate<T: Write>(share: Arc<Mutex<FrameBuf<T>>>, rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<Msg> ) -> Result<()> {
+pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Result<()> {
 
     // lock standard out to avoid lock thrashing. Already converted to raw mouse terminal by main
     let mut stdout = io::stdout();//.lock();
@@ -290,10 +298,12 @@ pub fn animate<T: Write>(share: Arc<Mutex<FrameBuf<T>>>, rx: mpsc::Receiver<Msg>
     // let mut state: Option<GameState> = None;
 
     let mut buf = FrameBuf::new(stdout, height.into(), width.into()); 
-    let mut buf_lay = FrameBufLayer::default();
+    let mut buf_lay = FrameBufLayer::new(None, 10, 10, TermPos::new(0, 0));
+    buf_lay.fill(Some(TermChar::solid(style::Color::Red)));
+    // let mut buf_lay = FrameBufLayer::default();
+    // buf_lay
     buf.push_layer(buf_lay);
 
-    buf.flush();
 
 
     info!("animation loop starting");
@@ -303,20 +313,19 @@ pub fn animate<T: Write>(share: Arc<Mutex<FrameBuf<T>>>, rx: mpsc::Receiver<Msg>
     // Obviously if we quit because of a quitmsg, we should complete the rest of the exit
     // procedure. But what about an error? 
     loop {
-        info!("animation loop repeating");
-        thread::sleep(Duration::from_millis(200));
-        let msg = rx.try_recv();
+        let msg = rx.recv_timeout(Duration::from_millis(200));
         match msg {
-            Err(TryRecvError::Disconnected) | Ok(Msg::QuitMsg) => break,
-            Err(TryRecvError::Empty) => continue,
-            // Ok(Msg::Change(cst)) => 
+            Err(RecvTimeoutError::Disconnected) | Ok(Msg::QuitMsg) => break,
+            Err(RecvTimeoutError::Timeout) => (),
+            Ok(Msg::Collide(_)) => continue,
         }
+        buf.flush();
     }
 
     info!("animation loop over");
 
     // Necessary if we exited loop due to error, rather than forward quitmsg
-    sx_back.send(Msg::QuitMsg);
+    sx_back.send(BackMsg::QuitMsg);
 
     // gamestate shows all statically visible cards.
     // I think, it might make sense later for GameSTate to be keeping an internal record of all
