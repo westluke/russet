@@ -128,16 +128,16 @@ impl<T: Write> FrameBuf<T> {
             let lay = self.layers.get(lay_i).unwrap();
 
             // and every *stained* row of that layer...
-            for key in lay.stains.stains.keys() {
+            for &key in lay.stained_rows() {
 
                 // initialize a new set of changes if none are available
                 let mut changes = stys.entry(key).or_insert(Vec::new());
                 let mut nch = Termable::new();
-                let (start, end) = lay.stains.stains.get(key).unwrap().start_end();
+                let (start, end) = lay.get_stain(key).unwrap().start_end();
 
                 // for every character that was stained...
                 for tc_i in start..end {
-                    let tc = lay.get(key, tc);
+                    let tc = lay[(key, tc_i)];
                     if let Some(mut x) = nch.push(tc) {
                         changes.push(nch.finalize());
                         nch = x;
@@ -191,3 +191,6 @@ impl<T: Write> FrameBuf<T> {
         // self.stains = Vec::new();
     }
 }
+
+
+

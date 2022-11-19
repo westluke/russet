@@ -1,5 +1,6 @@
 use std::cmp::{Ordering, min, max};
-use std::collections::HashMap;
+use std::collections;
+use collections::HashMap;
 
 // Indicates "dirty" portions of a FrameBufLayer, starting at start,
 // and extending len TermChars to the right
@@ -66,6 +67,13 @@ impl StainSet {
         Self {stains: HashMap::new(), sorted: true}
     }
 
+    pub fn keys(&self) -> collections::hash_map::Keys<i16, Stain> {
+        self.stains.keys()
+    }
+
+    pub fn get_stain(&self, row: i16) -> Option<Stain> {
+        self.stains.get(&row).copied()
+    }
 
     fn union_one(&mut self, ln: i16, s: &Stain) {
         if let Some(v) = self.stains.get_mut(&ln) {
