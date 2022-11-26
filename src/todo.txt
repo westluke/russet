@@ -105,3 +105,26 @@ framebuf needs a final result grid, so i'm nont writing out unnecessary formatti
 
 to avoid panics (caused by TermPos out of range) just need to be smart about where animation.rs asks for things to be printed. It needs to know the current state of ts.
 maybe animation.rs should be the only thing capable of calling update()?
+
+
+
+
+Should each termchar have a timestamp? Or should I still have a stain, but just permit isolated segments....
+If we do termchars with timestamps, I have to check every termchar, at least at the top level.
+If I do stains, I limit which ones I have to check, OH WAIT BUT I STILL HAVE TO FALL THROUGH ON EVERY NONE CUZ THERE MIGHT BE A CHANGE SOMEWHERE UNDERNEATH.
+So yeah, definitely just do stamps on termchars.
+
+
+fuck, but what about stamps OUTSIDE the panel? This doesn't work for that.
+zalternatives: each panel stores the entire screen, again. I find that kinda gross...
+each panel stores a hashmap from pos to stamp? maybe???
+
+Given that this is the case, we don't want stamps, actually. we want each panel to store changes
+as a hash from line number to something else... a Vec? but in going over the changes, we don't care what order they're
+in, do we?so a hash from line number to hashset of row number.
+
+            // Why are my keys starting to feel weird? Is it just the humidity?
+            // They feel kinda sticky. But also maybe I'll just get used to it.
+            // It's not like it's affecting their functionality at all. No double presses,
+            // no stuck keys. They're still totally fine, they just feel slightly mushier.
+            // Probably a normal part of the wearing-in process.

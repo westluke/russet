@@ -63,7 +63,6 @@ pub struct Scale {
 }
 
 impl Scale {
-
     #[allow(non_snake_case)]
     pub const fn new(
                 SHAPE_HEIGHT: i16,

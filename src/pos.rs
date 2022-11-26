@@ -22,8 +22,8 @@ impl LayoutPos {
         Self{row, col}
     }
 
-    pub fn row(&self) -> u8 { self.row }
-    pub fn col(&self) -> u8 { self.col }
+    pub fn row(self) -> u8 { self.row }
+    pub fn col(self) -> u8 { self.col }
 }
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
@@ -160,19 +160,19 @@ impl TermPos {
         Self {y, x}
     }
 
-    pub fn set_x(&self, x:i16) -> Self {
+    pub fn set_x(self, x:i16) -> Self {
         Self::new(self.y, x)
     }
 
-    pub fn set_y(&self, y:i16) -> Self {
+    pub fn set_y(self, y:i16) -> Self {
         Self::new(y, self.x)
     }
 
-    pub fn x(&self) -> i16 {
+    pub fn x(self) -> i16 {
         self.x
     }
 
-    pub fn y(&self) -> i16 {
+    pub fn y(self) -> i16 {
         self.y
     }
 
@@ -210,11 +210,11 @@ impl TermPos {
         iter::from_fn(clos).fuse()
     }
 
-    pub fn range_to(&self, bottomright: Self) -> impl Iterator<Item=TermPos> {
+    pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
         Self::pos_range(*self, bottomright)
     }
 
-    pub fn to_LayoutPos(&self, s: Scale) -> Option<LayoutPos> {
+    pub fn to_LayoutPos(self, s: Scale) -> Option<LayoutPos> {
         // Let's say a card's "y-zone" extends from its top edge to the top edge of the card below
         // it. similarly for "x-zone", left edges.
         //

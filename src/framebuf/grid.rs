@@ -8,8 +8,14 @@ pub struct Grid<T: Copy> {
     width: usize
 }
 
+impl<T: Copy + Default> Default for Grid<T> {
+    fn default() -> Self {
+        Self::new(0, 0, T::default())
+    }
+}
+
 impl<T: Copy> Grid<T> {
-    fn new(height: usize, width: usize, fill: T) -> Self {
+    pub fn new(height: usize, width: usize, fill: T) -> Self {
         Self{ grid: vec![vec![fill; width]; height], height, width }
     }
 
@@ -21,6 +27,14 @@ impl<T: Copy> Grid<T> {
 
     pub fn width(&self) -> usize {
         self.width
+    }
+
+    pub fn get(&self, pos: TermPos) -> Option<T> {
+        if let Some(row) = self.grid.get(pos.y()) {
+            if let Some(cell) = row.get(pos.x()) {
+                cell
+            } else { None }
+        } else { None }
     }
 
     fn resize(&mut self, height: usize, width: usize, fill: T){
