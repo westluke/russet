@@ -1,21 +1,18 @@
 use std::io::{Write};
-use std::collections::{HashMap, HashSet};
-use std::ops::{Index, IndexMut};
-use std::cmp::{Ordering, min, max};
+use std::borrow::Borrow;
+use std::collections::{HashSet};
+use std::ops::BitOr;
 
-use crossterm::style::{self, Color, ContentStyle, StyledContent, Colors, SetColors, Print};
+use crossterm::style::{self, Color, ContentStyle, StyledContent, PrintStyledContent};
 use crossterm::{queue, cursor};
 
 use crate::pos::*;
-use crate::err::*;
-use crate::deck::Card;
 use crate::termchar::*;
 
 use log::{info, warn, error};
 
 mod grid;
-mod stain;
-mod layer;
+pub mod layer;
 
 use grid::Grid;
 use layer::Layer;
@@ -23,8 +20,10 @@ use layer::Layer;
 pub type LayerCell = Option<TermChar>;
 
 pub struct FrameBuf<T: Write> {
-    height: i16,
-    width: i16,
+    // FrameBuf doesn't have an independent width, it's just the width of the external terminal
+    // object
+    // height: i16,
+    // width: i16,
 
     // The underlying Write object (should be a terminal, probably stdout)
     under: T,
@@ -57,11 +56,11 @@ impl<T: Write> FrameBuf<T> {
         }
     }
 
-    // pub fn push_layer(&mut self, lay: Layer) {
-    //     self.layers.push(lay);
-    //     // self.change_flags.append(&mut lay.flags());
-    //     // merge_flagss(self.change_flags);
-    // }
+    pub fn push_layer(&mut self, lay: Layer) {
+        self.layers.push(lay);
+        // self.change_flags.append(&mut lay.flags());
+        // merge_flagss(self.change_flags);
+    }
 
     // fn char_at(&self, pos: TermPos) -> TermChar {
     //     for lay in self.layers.iter().rev() {
@@ -87,12 +86,15 @@ impl<T: Write> FrameBuf<T> {
         let mut dirty_lines = HashSet::new();
 
         for lay_i in 0..self.layers.len() {
-            let keys: HashSet = lay_i.dirtu_lines().collect();
-            dirty_lines.union(keys);
+            let keys: HashSet<i16> = self.layers[lay_i].dirty_lines().collect();
+            dirty_lines = dirty_lines.bitor(&keys);
         }
+
+        info!("Starting flush!");
         
         // for every dirty line...
         for row_i in dirty_lines {
+            info!("line {} is dirty", row_i);
 
             // start a new line update
             let mut lnup = LineUpdate::new(self.width);
@@ -107,6 +109,10 @@ impl<T: Write> FrameBuf<T> {
                     let dirty = lay.is_dirty(pos);
                     let opaq = lay.get_c(pos);
 
+                    // _ opaque -> done, paint with this cell
+                    // newly transparent -> fall through, initialize with default background
+                    // old transparent -> fall through, do NOT initialize, if we need to change then we'll know later on.
+
                     match (dirty, opaq) {
                         // If we hit an opaque cell, we're done -- we won't see changes past this
                         (_, Some(c)) => {
@@ -120,13 +126,27 @@ impl<T: Write> FrameBuf<T> {
                         (true, None) => lnup.set(col_i, Default::default()),
 
                         // If we hit an old transparent cell, we just fall through
-                        (true, Some(c)) => (),
+                        (false, None) => (),
                     };
                 };
             };
 
-            execute the lnup!
+            for (col_i, cont) in lnup.finalize() {
+                queue!(
+                    self.under, 
+                    cursor::MoveTo(
+                        u16::try_from(col_i).unwrap(),
+                        u16::try_from(row_i).unwrap()),
+                    PrintStyledContent(cont));
+            };
         };
+
+        // clear all layers
+        for lay in &mut self.layers {
+            lay.clean();
+        }
+
+        self.under.flush();
     }
 }
 
@@ -151,13 +171,13 @@ impl LineUpdate {
 
     // Returns number of characters consumed to find start, Termable produced (if any)
     fn first_termable(&mut self) -> (i16, Option<Termable>) {
-        let term = None;
+        let mut term = None;
         let mut cons = 0;
 
         for i in 0..self.cs.len() {
             let c_opt = self.cs[i];
 
-            match (term, c_opt) {
+            match (&mut term, c_opt) {
                 (None, None) => {
                     cons += 1;
                 },
@@ -168,7 +188,7 @@ impl LineUpdate {
                     self.cs.drain(0..i);
                     return (cons, term);
                 },
-                (Some(ref mut t), Some(c)) => {
+                (Some(t), Some(c)) => {
                     if !t.push(c) {
                         self.cs.drain(0..i);
                         return (cons, term);
@@ -177,72 +197,33 @@ impl LineUpdate {
             };
         };
 
+        self.cs.drain(0..);
         (cons, term)
     }
 
     // Outputs a vector of pairs (i, cont) where cont is a StyledContent ready to be Print'd,
     // and i is the column where cont should be printed
-    pub fn finalize(self) -> Vec<(i16, StyledContent<Termable>)> {
+    pub fn finalize(mut self) -> Vec<(i16, StyledContent<Termable>)> {
         let mut out = Vec::new();
-        let mut col = 0i16;
 
         let (mut cons, mut term) = self.first_termable();
         let mut last = 0;
 
         while let Some(t) = term {
-            out.push(last + cons, t.finalize());
-            last += cons + t.len();
-            cons, term = self.first_termable();
-
-            
-        }
-
-        // Would love to refactor this...
-        // extract first termable function?
-        
-        // For each cell in this line...
-        for c_i in 0..self.cs.len() {
-
-            // If there's something there...
-            if let Some(c) = self.cs[c_i] {
-                
-                // And if there's a termable currently being built...
-                if let Some(ref mut t) = term {
-
-                    // then try pushing it onto the current termable, but if this requires
-                    // splitting off a new termable...
-                    if let Some(t2) = t.push(c) {
-
-                        // then the old one is complete, we can push it and start the new one.
-                        out.push((col, t.finalize()));
-                        term = Some(t2);
-                    };
-
-                // if there's no current termable, start a new one
-                } else {
-                    col = i16::try_from(c_i).unwrap();
-                    term = Some(Termable::from(c));
-                };
-            // if there's nothing in this cell and we have a termable in progress, push it
-            } else if let Some(ref mut t) = term {
-                out.push((col, t.finalize()));
-            };
-        };
-
-        // If there was a termable in progress when we finished, push it
-        if let Some(ref mut t) = term {
-            out.push((col, t.finalize()));
+            let len = t.len();
+            info!("last: {}", last);
+            info!("cons: {}", cons);
+            info!("len: {}", len);
+            out.push((last + cons, t.finalize()));
+            last += cons + len;
+            (cons, term) = self.first_termable();
         };
 
         out
     }
 }
 
-// What's the right abstraction here?
-// we need to construct these sequences, but when/where do we break them?
-// Really what we care about is printable sequences.
-// Ok so, Termable is a TermChar sequence that can be printed as a single command.
-// and then TermableSet will be a set of those
+// Termable is a TermChar sequence that can be printed as a single command.
 pub enum Termable {
     Bg { n: usize, bg: Color }, // n is just the number of spaces to use
     Fg { s: String, fg: Color, bg: Color }
@@ -253,7 +234,7 @@ impl std::fmt::Display for Termable {
         match *self {
             Termable::Bg { n, .. } =>
                 write!(f, "{}", " ".repeat(n)),
-            Termable::Fg { s, .. } =>
+            Termable::Fg { ref s, .. } =>
                 write!(f, "{}", s),
         }
     }
@@ -272,37 +253,51 @@ impl From<TermChar> for Termable {
 
 impl Termable {
 
+    pub fn len(&self) -> i16 {
+        let i = match self {
+            Self::Bg { n, .. } => *n,
+            Self::Fg { s, .. } => s.len()
+        };
+        i16::try_from(i).unwrap()
+    }
+
     // None cells MUST BE HANDLED EXTERNALLY. This is for adding visible, printable characters,
     // NOT for handling transparency. Returns true iff tc was compatible and added successfully.
     // Therefore returns false iff tc will need a new Termable to be added to.
     pub fn push(&mut self, tc: TermChar) -> bool {
-        match (*self, tc) {
-            (Termable::Bg { ref mut n, bg: bg0 }, TermChar::Bg { bg }) => {
-                if bg0 == bg {
-                    *n += 1;
-                    None
-                } else { Some(Self::from(tc)) }
+        match (self, tc) {
+            (Termable::Fg { s, bg: bg0, .. }, TermChar::Bg { bg }) => {
+                if *bg0 == bg {
+                    s.push(' ');
+                    true
+                } else { false }
+            },
+            (Termable::Fg { s, fg: fg0, bg: bg0 }, TermChar::Fg { c, fg, bg }) => {
+                if (*bg0 == bg) && (*fg0 == fg) {
+                    s.push(c);
+                    true
+                } else { false }
             }
-            (Termable::Bg { n, bg: bg0 }, TermChar::Fg { c, fg, bg }) => {
+            (Termable::Bg { n, bg: bg0 }, TermChar::Bg { bg }) => {
+                if *bg0 == bg {
+                    *n += 1;
+                    true
+                } else { false }
+            },
+            (self_, TermChar::Fg { c, fg, bg }) => {
+                let (n, bg0) = match self_.borrow() {
+                    Termable::Bg { n, bg } => (*n, *bg),
+                    _ => panic!("should not be able to reach this arm")
+
+                };
+
                 if bg0 == bg {
                     let mut s = " ".repeat(n);
                     s.push(c);
-                    *self = Self::Fg { s, fg, bg };
-                    None
-                } else { Some(Self::from(tc)) }
-            }
-            (Termable::Fg { ref mut s, fg, bg: bg0 }, TermChar::Bg { bg }) => {
-                if bg0 == bg {
-                    s.push(' ');
-                    None
-                } else { Some(Self::from(tc)) }
-            }
-            (Termable::Fg { ref mut s, fg: fg0, bg: bg0 }, TermChar::Fg { c, fg, bg }) => {
-                if (bg0 == bg) && (fg0 == fg) {
-                    s.push(c);
-                    None
-                } else { Some(Self::from(tc)) }
-            }
+                    *self_ = Self::Fg { s, fg, bg };
+                    true
+                } else { false }
+            },
         }
     }
 
@@ -317,6 +312,13 @@ impl Termable {
         match *self {
             Termable::Bg {..} => None,
             Termable::Fg {fg, ..} => Some(fg),
+        }
+    }
+
+    fn n(&self) -> usize {
+        match *self {
+            Termable::Bg { n, .. } => n,
+            _ => panic!("this function should never be called on a non-Bg variant!!")
         }
     }
 

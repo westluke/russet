@@ -14,7 +14,7 @@ use crate::pos::*;
 use crate::err::*;
 use crate::config::*;
 use crate::termchar::*;
-use crate::framebuf::{FrameBuf, FrameBufLayer};
+use crate::framebuf::{FrameBuf, layer::Layer};
 
 
 // mod cardrepo;
@@ -298,8 +298,10 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     // let mut state: Option<GameState> = None;
 
     let mut buf = FrameBuf::new(stdout, height.into(), width.into()); 
-    let mut buf_lay = FrameBufLayer::new(None, 10, 10, TermPos::new(0, 0));
-    buf_lay.fill(Some(TermChar::solid(style::Color::Red)));
+    let mut buf_lay = Layer::new(
+        None, 10, 10, TermPos::new(0, 0),
+        Some(TermChar::solid(style::Color::Red)));
+    // buf_lay.fill(Some(TermChar::solid(style::Color::Red)));
     // let mut buf_lay = FrameBufLayer::default();
     // buf_lay
     buf.push_layer(buf_lay);

@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, hash_map::Keys};
+use std::iter::Copied;
 
 use crate::deck::Card;
 use crate::termchar::TermChar;
@@ -46,25 +47,41 @@ impl Default for Layer {
 }
 
 impl Layer {
-    pub fn new(card: Option<Card>, height: i16, width: i16, anchor: TermPos) -> Self {
+    pub fn new(card: Option<Card>, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
+        let mut dirtied = HashMap::new();
+
+        if fill.is_some() {
+            for row in 0..height {
+                dirtied.insert(row, HashSet::from_iter(0..width));
+            };
+        };
+
         Self {
             card,
-            dirtied: HashMap::new(),
-            panel: Grid::new(height.try_into().unwrap(), width.try_into().unwrap(), (None, 0)),
+            dirtied,
+            panel: Grid::new(height.try_into().unwrap(), width.try_into().unwrap(), fill),
             anchor,
         }
     }
 
+    // pub fn uniform(card: Option<Card>, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
+    // }
 
-    // make from_safe method for termpos? no new
+    // // make from_safe method for termpos? no new
     pub fn is_dirty(&self, pos: TermPos) -> bool {
-        if let Some(x) = self.dirtied.get(pos.y()) {
-            x.contains(pos.x())
+        if let Some(x) = self.dirtied.get(&pos.y()) {
+            x.contains(&pos.x())
         } else { false }
     }
 
-    // pub fn get_dirtied(&self) -> &HashSet<i16> {
-    // }
+    pub fn clean(&mut self) {
+        self.dirtied.clear();
+    }
+
+    pub fn dirty_lines(&self) -> Copied<Keys<i16, HashSet<i16>>> {
+        self.dirtied.keys().copied()
+    }
+
 
     pub fn get_c(&self, pos: TermPos) -> Option<LayerCell>{
         self.panel.get(pos)

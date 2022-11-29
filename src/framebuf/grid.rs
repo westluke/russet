@@ -30,9 +30,9 @@ impl<T: Copy> Grid<T> {
     }
 
     pub fn get(&self, pos: TermPos) -> Option<T> {
-        if let Some(row) = self.grid.get(pos.y()) {
-            if let Some(cell) = row.get(pos.x()) {
-                cell
+        if let Some(row) = self.grid.get(usize::try_from(pos.y()).unwrap()) {
+            if let Some(cell) = row.get(usize::try_from(pos.x()).unwrap()) {
+                Some(*cell)
             } else { None }
         } else { None }
     }

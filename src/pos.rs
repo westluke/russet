@@ -210,9 +210,9 @@ impl TermPos {
         iter::from_fn(clos).fuse()
     }
 
-    pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
-        Self::pos_range(*self, bottomright)
-    }
+    // pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
+    //     Self::pos_range(*self, bottomright)
+    // }
 
     pub fn to_LayoutPos(self, s: Scale) -> Option<LayoutPos> {
         // Let's say a card's "y-zone" extends from its top edge to the top edge of the card below
