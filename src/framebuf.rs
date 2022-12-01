@@ -8,6 +8,7 @@ use crossterm::{queue, cursor};
 
 use crate::pos::*;
 use crate::termchar::*;
+use crate::util::*;
 
 use log::{info, warn, error};
 
@@ -20,16 +21,11 @@ use layer::Layer;
 pub type LayerCell = Option<TermChar>;
 
 pub struct FrameBuf<T: Write> {
-    // FrameBuf doesn't have an independent width, it's just the width of the external terminal
-    // object
-    // height: i16,
-    // width: i16,
-
     // The underlying Write object (should be a terminal, probably stdout)
     under: T,
 
     // Each layer is an independent "panel" that can be manipulated across the screen, i.e. a
-    // playing card sliding around
+    // playing card sliding around. Start of the vec is top of the stack
     layers: Vec<Layer>,
 }
 
@@ -48,38 +44,24 @@ pub struct FrameBuf<T: Write> {
 // }
 
 impl<T: Write> FrameBuf<T> {
-    pub fn new(under: T, height: i16, width: i16) -> Self {
+    pub fn new(under: T) -> Self {
         Self {
             under,
-            height, width,
             layers: Vec::new()
         }
     }
 
+    // Pushes layer onto the TOP (most visible part) of the stack
     pub fn push_layer(&mut self, lay: Layer) {
-        self.layers.push(lay);
-        // self.change_flags.append(&mut lay.flags());
-        // merge_flagss(self.change_flags);
+        self.layers.insert(0, lay);
     }
 
-    // fn char_at(&self, pos: TermPos) -> TermChar {
-    //     for lay in self.layers.iter().rev() {
-    //         if !lay.contains(pos) { continue; };
-    //         if let Some(tc) = lay[pos] { return tc; }
-    //     }
-    //     TermChar::default()
-    // }
+    // Slides layer under the BOTTOM (least visible part) of the stack
+    pub fn shup_layer(&mut self, lay: Layer) {
+        self.layers.push(lay);
+    }
 
-    // fn queue_acc(&mut self, s: &str, foreground: Option<Color>, background: Option<Color>) {
-    //     queue!(
-    //         self.under,
-    //         SetColors (
-    //             Colors{ foreground, background }
-    //         ),
-    //         Print(s)
-    //     );
-    // }
-
+    // Writes all new changes out to the underlying buffer
     pub fn flush(&mut self)  {
 
         // can optimize by pre-fetching dirtied line numbers
@@ -90,28 +72,21 @@ impl<T: Write> FrameBuf<T> {
             dirty_lines = dirty_lines.bitor(&keys);
         }
 
-        info!("Starting flush!");
-        
         // for every dirty line...
         for row_i in dirty_lines {
-            info!("line {} is dirty", row_i);
 
             // start a new line update
-            let mut lnup = LineUpdate::new(self.width);
+            let mut lnup = LineUpdate::new(TS.width());
 
             // for every cell in this line...
-            for col_i in 0..self.width {
+            for col_i in 0..TS.width() {
 
                 // for every layer...
                 for lay_i in 0..self.layers.len() {
                     let lay = self.layers.get(lay_i).unwrap();
-                    let pos = TermPos::from((row_i, col_i)).chk();
+                    let pos = TermPos::ffrom((row_i, col_i)).chk();
                     let dirty = lay.is_dirty(pos);
                     let opaq = lay.get_c(pos);
-
-                    // _ opaque -> done, paint with this cell
-                    // newly transparent -> fall through, initialize with default background
-                    // old transparent -> fall through, do NOT initialize, if we need to change then we'll know later on.
 
                     match (dirty, opaq) {
                         // If we hit an opaque cell, we're done -- we won't see changes past this
@@ -131,12 +106,16 @@ impl<T: Write> FrameBuf<T> {
                 };
             };
 
+            queue!(
+                self.under,
+                cursor::MoveToRow(u16::try_from(row_i).unwrap())
+            );
+
             for (col_i, cont) in lnup.finalize() {
                 queue!(
                     self.under, 
-                    cursor::MoveTo(
-                        u16::try_from(col_i).unwrap(),
-                        u16::try_from(row_i).unwrap()),
+                    cursor::MoveToColumn(
+                        u16::try_from(col_i).unwrap()),
                     PrintStyledContent(cont));
             };
         };
@@ -211,9 +190,6 @@ impl LineUpdate {
 
         while let Some(t) = term {
             let len = t.len();
-            info!("last: {}", last);
-            info!("cons: {}", cons);
-            info!("len: {}", len);
             out.push((last + cons, t.finalize()));
             last += cons + len;
             (cons, term) = self.first_termable();

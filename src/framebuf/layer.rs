@@ -5,6 +5,9 @@ use std::iter::Copied;
 use crate::deck::Card;
 use crate::termchar::TermChar;
 use crate::pos::TermPos;
+use crate::util::*;
+
+use log::{info};
 
 use super::Grid;
 
@@ -35,24 +38,25 @@ pub struct Layer {
     anchor: TermPos,
 }
 
-impl Default for Layer {
-    fn default() -> Self {
-        Self {
-            card: None,
-            dirtied: HashMap::new(),
-            panel: Grid::default(),
-            anchor: TermPos::try_from((0i16, 0i16)).unwrap().chk(),
-        }
-    }
-}
+// impl Default for Layer {
+//     fn default() -> Self {
+//         Self {
+//             card: None,
+//             dirtied: HashMap::new(),
+//             panel: Grid::default(),
+//             anchor: TermPos::try_from((0i16, 0i16)).unwrap().chk(),
+//         }
+//     }
+// }
 
 impl Layer {
     pub fn new(card: Option<Card>, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
         let mut dirtied = HashMap::new();
 
         if fill.is_some() {
+            let (y, x): (i16, i16) = anchor.finto();
             for row in 0..height {
-                dirtied.insert(row, HashSet::from_iter(0..width));
+                dirtied.insert(row + y, HashSet::from_iter(x..(x+width)));
             };
         };
 
@@ -63,9 +67,6 @@ impl Layer {
             anchor,
         }
     }
-
-    // pub fn uniform(card: Option<Card>, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
-    // }
 
     // // make from_safe method for termpos? no new
     pub fn is_dirty(&self, pos: TermPos) -> bool {
@@ -84,7 +85,52 @@ impl Layer {
 
 
     pub fn get_c(&self, pos: TermPos) -> Option<LayerCell>{
-        self.panel.get(pos)
+        self.panel.get(pos - self.anchor)
+    }
+
+    pub fn set_c(&mut self, pos: TermPos, cel: LayerCell) -> Result<()> {
+        self.panel.set(pos - self.anchor, cel)
+    }
+
+    // Spaces are treated as OPAQUE in this function.
+    pub fn set_s(&mut self, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+        let start = pos - self.anchor;
+        let start_x = start.x();
+        let chars: Vec<char> = s.chars().collect();
+
+        for i in 0..chars.len() {
+            if chars[i] == '\n' {
+                pos = pos + (1, 0).finto();
+                pos = pos.set_x(start_x);
+            } else {
+                self.set_c(pos, Some(TermChar::new(chars[i], fg, bg)))?;
+                pos = pos + (0, 1).finto();
+            };
+        };
+
+        Ok(())
+    }
+
+    // Spaces are treated as CLEAR in this function.
+    pub fn set_s_clear(&mut self, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+        let start = pos - self.anchor;
+        let start_x = start.x();
+        let chars: Vec<char> = s.chars().collect();
+
+        for i in 0..chars.len() {
+            if chars[i] == '\n' {
+                pos = pos + (1, 0).finto();
+                pos = pos.set_x(start_x);
+            } else if chars[i] == ' ' {
+                // if space, no change to cell underneath
+                pos = pos + (0, 1).finto();
+            } else {
+                self.set_c(pos, Some(TermChar::new(chars[i], fg, bg)))?;
+                pos = pos + (0, 1).finto();
+            };
+        };
+
+        Ok(())
     }
 
     // pub fn fill(&mut self, c: Option<TermChar>) {
@@ -202,26 +248,26 @@ impl Layer {
     // }
 }
 
-impl Index<TermPos> for Layer {
-    type Output = LayerCell;
+// impl Index<TermPos> for Layer {
+//     type Output = LayerCell;
 
-    fn index(&self, pos: TermPos) -> &Self::Output {
-        &self.panel[pos]
-    }
-}
+//     fn index(&self, pos: TermPos) -> &Self::Output {
+//         &self.panel[pos]
+//     }
+// }
 
-impl IndexMut<TermPos> for Layer {
-    fn index_mut(&mut self, pos: TermPos) -> &mut Self::Output {
-        &mut self.panel[pos]
-    }
-}
+// impl IndexMut<TermPos> for Layer {
+//     fn index_mut(&mut self, pos: TermPos) -> &mut Self::Output {
+//         &mut self.panel[pos]
+//     }
+// }
 
-impl Index<(i16, i16)> for Layer {
-    type Output = LayerCell;
+// impl Index<(i16, i16)> for Layer {
+//     type Output = LayerCell;
 
-    fn index(&self, pos: (i16, i16)) -> &Self::Output {
-        let y = usize::try_from(pos.0).unwrap();
-        let x = usize::try_from(pos.1).unwrap();
-        &self.panel[(y, x)]
-    }
-}
+//     fn index(&self, pos: (i16, i16)) -> &Self::Output {
+//         let y = usize::try_from(pos.0).unwrap();
+//         let x = usize::try_from(pos.1).unwrap();
+//         &self.panel[(y, x)]
+//     }
+// }

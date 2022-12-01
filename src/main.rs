@@ -17,21 +17,19 @@ use flexi_logger::{FileSpec, Logger, WriteMode};
 mod animation;
 // mod printing;
 mod game;
-mod config;
+mod util;
 
 pub mod pos;
 pub mod deck;
 pub mod framebuf;
 pub mod layout;
-pub mod err;
 pub mod termchar;
 
 use game::*;
 use animation::*;
 use framebuf::*;
-use config::*;
+use util::*;
 // use pos::*;
-use err::*;
 // use deck::*;
 
 // pub use game::all_cards;
@@ -152,7 +150,7 @@ fn main() -> Result<()> {
         .start()?;
 
     let gs = GameState::default();
-    let (y, x) = TS.get();
+    let (y, x) = TS.dims();
 
     // what is the right solution here??
     //

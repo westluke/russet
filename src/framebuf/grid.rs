@@ -1,6 +1,8 @@
 use std::ops::{Index, IndexMut};
 use crate::pos::TermPos;
 
+use crate::util::{*, SetErrorKind as SEK, SetError as SE};
+
 #[derive(Clone, Debug)]
 pub struct Grid<T: Copy> {
     grid: Vec<Vec<T>>,
@@ -30,11 +32,26 @@ impl<T: Copy> Grid<T> {
     }
 
     pub fn get(&self, pos: TermPos) -> Option<T> {
-        if let Some(row) = self.grid.get(usize::try_from(pos.y()).unwrap()) {
-            if let Some(cell) = row.get(usize::try_from(pos.x()).unwrap()) {
-                Some(*cell)
+        let pos_tup: Result<(usize, usize)> = pos.try_into();
+        if let Ok((row_i, col_i)) = pos_tup {
+            if let Some(row) = self.grid.get(row_i) {
+                if let Some(cell) = row.get(col_i) {
+                    Some(*cell)
+                } else { None }
             } else { None }
         } else { None }
+    }
+
+    pub fn set(&mut self, pos: TermPos, cel: T) -> Result<()> {
+        let pos_tup: Result<(usize, usize)> = pos.try_into();
+        if let Ok((row_i, col_i)) = pos_tup {
+            if let Some(row) = self.grid.get_mut(row_i) {
+                if let Some(cell) = row.get_mut(col_i) {
+                    *cell = cel;
+                    Ok(())
+                } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::get")) }
+            } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::get")) }
+        } else { Err(SE::new(SEK::PanelOob, "TermPos has negative components in Grid::get")) }
     }
 
     fn resize(&mut self, height: usize, width: usize, fill: T){

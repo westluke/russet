@@ -3,22 +3,6 @@ use std::io;
 
 use flexi_logger::{FlexiLoggerError};
 
-// tabm x
-// tabm +x
-// tabs
-
-pub type Result<T> = std::result::Result<T, SetError>;
-
-pub trait Parwnu<R, E> {
-    fn parwnu(self) -> R;
-}
-
-impl<R, E> Parwnu<R, E> for std::result::Result<R, E> {
-    fn parwnu(self) -> R {
-        self.ok().unwrap()
-    }
-}
-
 #[derive(Debug)]
 pub enum SetErrorKind {
     Io(io::Error),
@@ -27,7 +11,9 @@ pub enum SetErrorKind {
     // SmallScreen,
     // LayoutOob,
     ThreadComm,
-    Logging
+    Logging,
+    Conversion,
+    PanelOob,
 }
 
 #[derive(Debug)]

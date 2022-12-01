@@ -11,14 +11,13 @@ use crate::game::*;
 use crate::pos::*;
 // use crate::printing;
 // use crate::pos::*;
-use crate::err::*;
-use crate::config::*;
+use crate::util::*;
 use crate::termchar::*;
 use crate::framebuf::{FrameBuf, layer::Layer};
 
 
-// mod cardrepo;
-// use cardrepo::CardRepo;
+mod cardrepo;
+use cardrepo::CardRepo;
 
 
 
@@ -297,14 +296,18 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     let mut start = Instant::now();
     // let mut state: Option<GameState> = None;
 
-    let mut buf = FrameBuf::new(stdout, height.into(), width.into()); 
+    let mut buf = FrameBuf::new(stdout); 
     let mut buf_lay = Layer::new(
         None, 10, 10, TermPos::new(0, 0),
         Some(TermChar::solid(style::Color::Red)));
+    let mut buf_lay_1 = Layer::new(
+        None, 20, 10, TermPos::new(5, 7),
+        Some(TermChar::solid(style::Color::Blue)));
     // buf_lay.fill(Some(TermChar::solid(style::Color::Red)));
     // let mut buf_lay = FrameBufLayer::default();
     // buf_lay
     buf.push_layer(buf_lay);
+    buf.push_layer(buf_lay_1);
 
 
 

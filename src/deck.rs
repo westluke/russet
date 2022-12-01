@@ -19,6 +19,16 @@ pub enum CardNumber {
     One=1, Two=2, Three=3
 }
 
+impl From<CardNumber> for i16 {
+    fn from(cn: CardNumber) -> Self {
+        match cn {
+            One => 1,
+            Two => 2,
+            Three => 3
+        }
+    }
+}
+
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug, Hash)]
 pub enum CardFill {
     Solid, Striped, Empty
