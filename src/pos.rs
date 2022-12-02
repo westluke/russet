@@ -3,6 +3,7 @@ use std::ops::{Add, Sub};
 use std::iter;
 use std::cmp::{min, max};
 use std::fmt::Debug;
+use std::collections::HashSet;
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
 
@@ -101,47 +102,61 @@ impl TermPos {
         self.y
     }
 
-    // pub fn bounding_box(v: &Vec<Self>) -> (Self, Self) {
-    //     let (mut min_y, mut min_x) = (i16::MIN, i16::MIN);
-    //     let (mut max_y, mut max_x) = (i16::MAX, i16::MAX);
+    // returns upper-leftmost point and lower-rightmost point in this vector
+    pub fn bounding_box<T>(v: T) -> (Self, Self)
+    where
+        T: IntoIterator<Item=Self>
+    {
+        let (mut min_y, mut min_x) = (i16::MIN, i16::MIN);
+        let (mut max_y, mut max_x) = (i16::MAX, i16::MAX);
 
-    //     for &tp in v {
-    //         let (y, x): (i16, i16) = tp.into();
-    //         min_y = min(y, min_x);
-    //         max_y = max(y, max_y);
-    //         min_x = min(x, min_x);
-    //         max_x = max(x, max_x);
-    //     }
+        for tp in v.into_iter() {
+            let (y, x): (i16, i16) = tp.finto();
+            min_y = min(y, min_x);
+            max_y = max(y, max_y);
+            min_x = min(x, min_x);
+            max_x = max(x, max_x);
+        }
 
-    //     (Self::new(min_y, min_x), Self::new(max_y, max_x))
-    // }
+        (Self::new(min_y, min_x), Self::new(max_y, max_x))
+    }
 
-    // pub fn pos_range(topleft: Self, bottomright: Self) -> impl Iterator<Item=TermPos> {
-    //     let mut pos = topleft;
+    // Visits every pos in the rectangle defined by self as top left, and bottomright, inclusive.
+    fn pos_range(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
+        let mut pos = self;
 
-    //     let clos = move || {
-    //         pos = pos + (0i16, 1i16);
-    //         if pos.x() > bottomright.x() {
-    //             pos = TermPos::from((pos.y() + 1, topleft.x()));
-    //         };
+        // we'll pass this into from_fn, so it'll be called over and over to produce iterator.
+        let clos = move || {
 
-    //         if pos.y() > bottomright.y() {
-    //             None  
-    //         } else {
-    //             Some(pos)
-    //         }
-    //     };
+            // advance one step to the right.
+            pos = pos + (0i16, 1i16).finto();
 
-    //     iter::from_fn(clos).fuse()
-    // }
+            // If we've passed the right edge...
+            if pos.x() > bottomright.x() {
 
-    // pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
-    //     Self::pos_range(*self, bottomright)
-    // }
+                // take one step downwards and return to the starting column.
+                pos = (pos.y() + 1, self.x()).finto();
+
+                // If, in doing so, we've passed the bottom edge, then we're done.
+                if pos.y() > bottomright.y() {
+                    None
+                } else {
+                    Some(pos)
+                }
+            } else {
+                Some(pos)
+            }
+        };
+
+        iter::from_fn(clos).fuse()
+    }
+
+    pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
+        debug_assert!(self.x() <= bottomright.x() && self.y() <= bottomright.y());
+        self.pos_range(bottomright)
+    }
 
 }
-
-
 
 impl<T> TryFrom <(T, T)> for TermPos
 where
@@ -158,19 +173,6 @@ where
     }
 }
 
-impl<T> FFrom <(T, T)> for TermPos
-where
-    i16: TryFrom<T>,
-    <i16 as TryFrom<T>>::Error: Debug
-{
-    fn ffrom((y, x): (T, T)) -> Self {
-        let (y, x) = (i16::try_from(y).unwrap(), i16::try_from(x).unwrap());
-        Self::new(y, x)
-    }
-}
-
-
-
 impl<T> TryFrom<TermPos> for (T, T)
 where
     T: TryFrom<i16>,
@@ -185,18 +187,6 @@ where
         }
     }
 }
-
-impl<T> FFrom<TermPos> for (T, T)
-where
-    T: TryFrom<i16>,
-    <T as TryFrom<i16>>::Error: Debug
-{
-    fn ffrom(pos: TermPos) -> Self {
-        (T::try_from(pos.y()).unwrap(), T::try_from(pos.x()).unwrap())
-    }
-}
-
-
 
 // impl<T> Add<(T, T)> for TermPos where i16: TryFrom<T> {
 //     type Output = Self;

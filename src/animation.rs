@@ -309,7 +309,8 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     buf.push_layer(buf_lay);
     buf.push_layer(buf_lay_1);
 
-
+    let repo = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
+    buf.push_layer(repo.get_outline_thin());
 
     info!("animation loop starting");
 

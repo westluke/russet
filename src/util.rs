@@ -1,5 +1,6 @@
 use crossterm::style::Color;
 use std::sync::RwLock;
+use std::fmt::Debug;
 use crossterm::terminal;
 use log::{warn};
 
@@ -23,6 +24,16 @@ pub trait FFrom<T> {
 
 pub trait FInto<T> {
     fn finto (self) -> T;
+}
+
+impl<S, T> FFrom<S> for T
+where
+    T: TryFrom<S>,
+    <T as TryFrom<S>>::Error: Debug
+{
+    fn ffrom(s: S) -> Self {
+        Self::try_from(s).unwrap()
+    }
 }
 
 impl<S, T> FInto<T> for S where T: FFrom<S> {

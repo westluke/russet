@@ -68,7 +68,7 @@ impl<T: Write> FrameBuf<T> {
         let mut dirty_lines = HashSet::new();
 
         for lay_i in 0..self.layers.len() {
-            let keys: HashSet<i16> = self.layers[lay_i].dirty_lines().collect();
+            let keys: HashSet<i16> = self.layers[lay_i].get_dirty_lines().collect();
             dirty_lines = dirty_lines.bitor(&keys);
         }
 
@@ -240,7 +240,16 @@ impl Termable {
     // None cells MUST BE HANDLED EXTERNALLY. This is for adding visible, printable characters,
     // NOT for handling transparency. Returns true iff tc was compatible and added successfully.
     // Therefore returns false iff tc will need a new Termable to be added to.
-    pub fn push(&mut self, tc: TermChar) -> bool {
+    pub fn push(&mut self, mut tc: TermChar) -> bool {
+        match tc {
+            TermChar::Fg { ref mut c, .. } => {
+                if *c == 'X' {
+                    *c = '┗';
+                }
+            },
+            _ => ()
+        };
+
         match (self, tc) {
             (Termable::Fg { s, bg: bg0, .. }, TermChar::Bg { bg }) => {
                 if *bg0 == bg {

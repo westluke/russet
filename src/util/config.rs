@@ -96,9 +96,14 @@ pub const CARD_BR: &'static str = "\
 pub const CARD_BL: &'static str = "\
 ┗┓
  ┗";
+// pub const CARD_TL: &'static str = "\
+//  ┏
+// ┏┛";
+
 pub const CARD_TL: &'static str = "\
- ┏
-┏┛";
+ X
+XX";
+// pub const CARD_TL: &'static str = "asdlf";
 pub const CARD_TR: &'static str = "\
 ┓
 ┗┓";
