@@ -1,4 +1,5 @@
 use std::{io, thread, time};
+use std::env;
 
 use std::sync::{Arc, Mutex, mpsc, mpsc::TryRecvError};
 use time::{Duration};
@@ -138,6 +139,7 @@ fn input_frame(state: &GameState) -> Result<FrameResult> {
 
 
 fn main() -> Result<()> {
+    env::set_var("RUST_BACKTRACE", "1");
     let (sx, rx) = mpsc::channel::<animation::Msg>();
     let (sx_back, rx_back) = mpsc::channel::<animation::BackMsg>();
 

@@ -57,13 +57,13 @@ pub const SIZE_7: Scale = Scale::new(
     include_str!("../../txt/7x7/question.txt")
 );
 
-pub const TERM_BG: Color = Color::Reset;
+pub const TERM_BG: Color = Color::Black;
 
 pub const MIN_HEIGHT: i16 = SIZE_7.CARD_HEIGHT * 4 + CARD_SPACING_VERT * 5;
 pub const MIN_WIDTH: i16 = SIZE_7.CARD_WIDTH * 4 + CARD_SPACING_HORIZ * 5;
 
-pub const COLOR_1: Color = Color::Green;
-pub const COLOR_2: Color = Color::Red;
+pub const COLOR_1: Color = Color::Red;
+pub const COLOR_2: Color = Color::Green;
 pub const COLOR_3: Color = Color::Blue;
 
 pub const CARD_BG: Color = Color::White;
@@ -90,20 +90,15 @@ pub const PIPE_BL: &'static str = "┗";
 pub const PIPE_TL: &'static str = "┏";
 pub const PIPE_TR: &'static str = "┓";
 
-pub const CARD_BR: &'static str = "\
-┏┛
-┛";
-pub const CARD_BL: &'static str = "\
-┗┓
- ┗";
-// pub const CARD_TL: &'static str = "\
-//  ┏
-// ┏┛";
-
-pub const CARD_TL: &'static str = "\
- X
-XX";
-// pub const CARD_TL: &'static str = "asdlf";
-pub const CARD_TR: &'static str = "\
-┓
-┗┓";
+pub const CARD_BR: &'static str = concat!(
+"┏┛\n",
+"┛");
+pub const CARD_BL: &'static str = concat!(
+"┗┓\n",
+" ┗");
+pub const CARD_TL: &'static str = concat!(
+" ┏\n",
+"┏┛");
+pub const CARD_TR: &'static str = concat!(
+"┓\n",
+"┗┓");

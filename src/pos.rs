@@ -8,12 +8,12 @@ use std::collections::HashSet;
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
 
 #[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
-pub struct LayoutPos {
+pub struct DealtPos {
     row: u8,
     col: u8
 }
 
-impl LayoutPos {
+impl DealtPos {
     pub fn new(row: u8, col: u8) -> Self {
         debug_assert!(
             row <= 2 && 
@@ -33,17 +33,17 @@ pub enum GamePos {
     LastFound0,
     LastFound1,
     LastFound2,
-    Dealt(LayoutPos)
+    Dealt(DealtPos)
 }
 
 impl GamePos {
     pub fn new_dealt(row:u8, col:u8) -> Self {
-        Self::Dealt(LayoutPos::new(row, col))
+        Self::Dealt(DealtPos::new(row, col))
     }
 }
 
-impl From<LayoutPos> for GamePos {
-    fn from(pos: LayoutPos) -> Self {
+impl From<DealtPos> for GamePos {
+    fn from(pos: DealtPos) -> Self {
         Self::Dealt(pos)
     }
 }
@@ -82,6 +82,15 @@ impl TermPos {
         self
     }
 
+    pub fn onscreen(self) -> bool {
+        let (h, w) = TS.dims();
+
+        0 <= self.y &&
+        self.y < h &&
+        0 <= self.x &&
+        self.x < w
+    }
+
     pub fn new(y:i16, x:i16) -> Self {
         Self {y, x}
     }
@@ -107,12 +116,12 @@ impl TermPos {
     where
         T: IntoIterator<Item=Self>
     {
-        let (mut min_y, mut min_x) = (i16::MIN, i16::MIN);
-        let (mut max_y, mut max_x) = (i16::MAX, i16::MAX);
+        let (mut min_y, mut min_x) = (i16::MAX, i16::MAX);
+        let (mut max_y, mut max_x) = (i16::MIN, i16::MIN);
 
         for tp in v.into_iter() {
             let (y, x): (i16, i16) = tp.finto();
-            min_y = min(y, min_x);
+            min_y = min(y, min_y);
             max_y = max(y, max_y);
             min_x = min(x, min_x);
             max_x = max(x, max_x);
@@ -123,6 +132,7 @@ impl TermPos {
 
     // Visits every pos in the rectangle defined by self as top left, and bottomright, inclusive.
     fn pos_range(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
+        // log::info!("self: {:?}, br: {:?}", self, bottomright);
         let mut pos = self;
 
         // we'll pass this into from_fn, so it'll be called over and over to produce iterator.
@@ -154,6 +164,12 @@ impl TermPos {
     pub fn range_to(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
         debug_assert!(self.x() <= bottomright.x() && self.y() <= bottomright.y());
         self.pos_range(bottomright)
+    }
+
+    pub fn from_Pos(pos: &GamePos, scale: &Scale, active: bool) {
+    }
+
+    pub fn from_GamePos(pos: &GamePos, scale: &Scale, active: bool) {
     }
 
 }
@@ -188,6 +204,21 @@ where
     }
 }
 
+// impl<T> TryFrom<TermPos> for (T, T)
+// where
+//     T: TryFrom<i16>,
+//     <T as TryFrom<i16>>::Error: Debug
+// {
+//     type Error = SE;
+//     fn try_from(pos: TermPos) -> Result<Self> {
+//         if let (Ok(y), Ok(x)) = (pos.y().try_into(), pos.x().try_into()) {
+//             Ok((y, x))
+//         } else {
+//             Err(SE::new(SEK::Conversion, "conversion error!"))
+//         }
+//     }
+// }
+
 // impl<T> Add<(T, T)> for TermPos where i16: TryFrom<T> {
 //     type Output = Self;
 
@@ -206,33 +237,53 @@ where
 //     }
 // }
 
-// impl From<(&LayoutPos, &Scale)> for TermPos {
-//     fn from ((lp, s): (&LayoutPos, &Scale)) -> Self {
-//         let (row, col): (i16, i16) = (lp.row.into(), lp.col.into());
-//         let y = (row * s.CARD_HEIGHT) + (row * CARD_SPACING_VERT) + WIN_MARGIN_VERT;
-//         let x = (col * s.CARD_WIDTH)  + (col * CARD_SPACING_HORIZ) + WIN_MARGIN_HORIZ;
-//         TermPos::from((y, x))
-    // }
-// }
+impl From<(&DealtPos, &Scale)> for TermPos {
+    fn from ((lp, s): (&DealtPos, &Scale)) -> Self {
+        let (row, col): (i16, i16) = (lp.row.into(), lp.col.into());
+        let y = (row * s.CARD_HEIGHT) + (row * CARD_SPACING_VERT) + WIN_MARGIN_VERT;
+        let x = (col * s.CARD_WIDTH)  + (col * CARD_SPACING_HORIZ) + WIN_MARGIN_HORIZ;
+        (y, x).finto() + 
+    }
+}
 
-// impl From<(&GamePos, &Scale)> for TermPos {
-//     fn from((sp, s): (&GamePos, &Scale)) -> Self {
-//         let (width, height) = TS.update();
+impl From<(&GamePos, &Scale)> for TermPos {
+    fn from((sp, s): (&GamePos, &Scale)) -> Self {
 
-//         // adjustments by 1 are for the border, which is always offset by 1.
-//         let bottom = height - s.CARD_HEIGHT - WIN_MARGIN_VERT - 1;
-//         let right = width - s.CARD_WIDTH - WIN_MARGIN_HORIZ;
-//         let left = WIN_MARGIN_HORIZ + 1;
+        // these are accurate, i just messed up calculations I think
+        let (height, width) = TS.update();
 
-//         match sp {
-//             GamePos::Deck => TermPos::new(bottom - CARD_SPACING_VERT,  left),
-//             GamePos::LastFound0 => TermPos::new(bottom, right - LAST_FOUND_OFFSET * 2),
-//             GamePos::LastFound1 => TermPos::new(bottom - CARD_SPACING_VERT, right - LAST_FOUND_OFFSET),
-//             GamePos::LastFound2 => TermPos::new(bottom - CARD_SPACING_VERT * 2, right),
-//             GamePos::Dealt(pos) => TermPos::from((pos, s))
-//         }
-//     }
-// }
+        // Ignoring outline for now:
+        // placing a card at height makes it just outside the viewing window.
+        // placing one at height - s.CARD_HEIGHT makes the entire main body just visible.
+        // But that looks bad, so we enforce a minimum distance from the bottom, which is
+        // WIN_MARGIN_VERT.
+        let bottom = height - s.CARD_HEIGHT - WIN_MARGIN_VERT;
+        let right = width - s.CARD_WIDTH - WIN_MARGIN_HORIZ;
+        let left = WIN_MARGIN_HORIZ;
+
+        let pos = match sp {
+            // subtract card_spacing_vert so it aligns with lastfound1
+            GamePos::Deck => TermPos::new(bottom - CARD_SPACING_VERT,  left),
+            GamePos::LastFound0 => TermPos::new(bottom, right - LAST_FOUND_OFFSET * 2),
+            GamePos::LastFound1 => TermPos::new(bottom - CARD_SPACING_VERT, right - LAST_FOUND_OFFSET),
+            GamePos::LastFound2 => TermPos::new(bottom - CARD_SPACING_VERT * 2, right),
+
+            // to allow for correction below (stupid, i know)
+            GamePos::Dealt(pos) => TermPos::from((pos, s)) + (1, 0).finto()
+        };
+
+        // to make this work for an inactive card, have to shift up.
+        // Justification: consider a card positioned at pos, flush with the left and bottom 
+        // borders (so, as if we didn't have window margins). Once border is turned on, anchor
+        // point shifts relative to card body - anchor point is now one cell to left of top-left
+        // card point. So border does not extend offscreen on left. But it DOES extend one cell
+        // offscreen on bottom. So must shift up.
+        //
+        // If you're trying to place an active card instead, take the result of this function and
+        // shift down by 1 (add (1, 0))
+        pos + (-1, 0).finto()
+    }
+}
 
 impl Add<TermPos> for TermPos {
     type Output = Self;

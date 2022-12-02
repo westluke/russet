@@ -13,7 +13,8 @@ use crate::pos::*;
 // use crate::pos::*;
 use crate::util::*;
 use crate::termchar::*;
-use crate::framebuf::{FrameBuf, layer::Layer};
+use crate::framebuf::{FrameBuf, layer::Layer, LayerCell::{self, *}};
+use crate::deck::*;
 
 
 mod cardrepo;
@@ -274,9 +275,6 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     // lock standard out to avoid lock thrashing. Already converted to raw mouse terminal by main
     let mut stdout = io::stdout();//.lock();
 
-    // is it a problem that share has stdout internally???
-    // Idk enough about stdout i think
-    //
     // Swap to alternate screen, clear it (this might just be a scrolled-down version of the
     // main screen, but it's fine bc scroll is disabled in raw mode)
     execute!(
@@ -287,30 +285,27 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
         terminal::SetTitle("Set!")
     ).unwrap();
 
-    // let repo = CardRepo::new();
-
     // mut cuz we need to adapt to size changes
     let (mut width, mut height) = TS.update();
     debug_assert!(width != 0 && height != 0);
 
     let mut start = Instant::now();
-    // let mut state: Option<GameState> = None;
 
+    // GONNA NEED A BETTER SYSTEM FOR KEEPING TRACK OF WHICH KAYER IS WHICH
+    // ALSO NEED TO RMEMEBER TO FIX UP LAYER DISPLAY SYSTEM
+    
+    let repo7 = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
+    let repo9 = CardRepo::new(SIZE_9, TERM_BG, CARD_BG);
     let mut buf = FrameBuf::new(stdout); 
-    let mut buf_lay = Layer::new(
-        None, 10, 10, TermPos::new(0, 0),
-        Some(TermChar::solid(style::Color::Red)));
-    let mut buf_lay_1 = Layer::new(
-        None, 20, 10, TermPos::new(5, 7),
-        Some(TermChar::solid(style::Color::Blue)));
-    // buf_lay.fill(Some(TermChar::solid(style::Color::Red)));
-    // let mut buf_lay = FrameBufLayer::default();
-    // buf_lay
-    buf.push_layer(buf_lay);
-    buf.push_layer(buf_lay_1);
+    let mut deck = repo7.get_deck();
+    let mut deck_active = repo7.get_deck_active();
 
-    let repo = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
-    buf.push_layer(repo.get_outline_thin());
+    deck.deactivate();
+    deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
+    deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
+
+    buf.push_layer(deck);
+    buf.push_layer(deck);
 
     info!("animation loop starting");
 

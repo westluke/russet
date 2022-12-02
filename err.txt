@@ -1,0 +1,161 @@
+   Compiling set v0.1.0 (/home/luke/Documents/rust_projs/set)
+warning: unused imports: `Arc`, `Mutex`
+ --> src/main.rs:4:17
+  |
+4 | use std::sync::{Arc, Mutex, mpsc, mpsc::TryRecvError};
+  |                 ^^^  ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `collections`
+ --> src/animation.rs:1:35
+  |
+1 | use std::{thread, io, time, sync, collections};
+  |                                   ^^^^^^^^^^^
+
+warning: unused imports: `Arc`, `Mutex`
+ --> src/animation.rs:5:12
+  |
+5 | use sync::{Arc, Mutex, mpsc::{self, RecvTimeoutError}};
+  |            ^^^  ^^^^^
+
+warning: unused import: `style`
+ --> src/animation.rs:7:36
+  |
+7 | use crossterm::{terminal, execute, style};
+  |                                    ^^^^^
+
+warning: unused import: `crate::game::*`
+  --> src/animation.rs:10:5
+   |
+10 | use crate::game::*;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `crate::termchar::*`
+  --> src/animation.rs:15:5
+   |
+15 | use crate::termchar::*;
+   |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `*`, `layer::Layer`, `self`
+  --> src/animation.rs:16:33
+   |
+16 | use crate::framebuf::{FrameBuf, layer::Layer, LayerCell::{self, *}};
+   |                                 ^^^^^^^^^^^^              ^^^^  ^
+
+warning: unused import: `crate::deck::*`
+  --> src/animation.rs:17:5
+   |
+17 | use crate::deck::*;
+   |     ^^^^^^^^^^^^^^
+
+warning: unused import: `CardNumber`
+ --> src/animation/cardrepo.rs:2:57
+  |
+2 | use crate::deck::{Card, CardShape, CardColor, CardFill, CardNumber, all_cards};
+  |                                                         ^^^^^^^^^^
+
+warning: unused imports: `IndexMut`, `Index`
+ --> src/game.rs:5:16
+  |
+5 | use std::ops::{Index, IndexMut};
+  |                ^^^^^  ^^^^^^^^
+
+warning: unused import: `rand::seq::SliceRandom as _`
+ --> src/game.rs:6:5
+  |
+6 | use rand::seq::SliceRandom as _;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `crossterm::style::Color`
+ --> src/util.rs:1:5
+  |
+1 | use crossterm::style::Color;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::collections::HashSet`
+ --> src/pos.rs:6:5
+  |
+6 | use std::collections::HashSet;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `self`
+ --> src/framebuf.rs:6:24
+  |
+6 | use crossterm::style::{self, Color, ContentStyle, StyledContent, PrintStyledContent};
+  |                        ^^^^
+
+warning: unused imports: `error`, `warn`
+  --> src/framebuf.rs:13:17
+   |
+13 | use log::{info, warn, error};
+   |                 ^^^^  ^^^^^
+
+warning: unused imports: `IndexMut`, `Index`
+ --> src/framebuf/layer.rs:1:16
+  |
+1 | use std::ops::{Index, IndexMut};
+  |                ^^^^^  ^^^^^^^^
+
+warning: unused import: `info`
+  --> src/framebuf/layer.rs:10:11
+   |
+10 | use log::{info};
+   |           ^^^^
+
+warning: unused imports: `ContentStyle`, `StyledContent`
+ --> src/termchar.rs:1:37
+  |
+1 | use crossterm::style::{self, Color, StyledContent, ContentStyle};
+  |                                     ^^^^^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: unused import: `std::fmt`
+ --> src/termchar.rs:2:5
+  |
+2 | use std::fmt;
+  |     ^^^^^^^^
+
+warning: unused import: `framebuf::*`
+  --> src/main.rs:31:5
+   |
+31 | use framebuf::*;
+   |     ^^^^^^^^^^^
+
+error[E0599]: no method named `deactivate` found for struct `Layer` in the current scope
+   --> src/animation.rs:303:10
+    |
+303 |     deck.deactivate();
+    |          ^^^^^^^^^^ method not found in `Layer`
+    |
+   ::: src/framebuf/layer.rs:19:1
+    |
+19  | pub struct Layer {
+    | ---------------- method `deactivate` not found for this struct
+
+error[E0369]: cannot add `({integer}, {integer})` to `(&pos::LayoutPos, &config::Scale)`
+   --> src/pos.rs:266:59
+    |
+266 |             GamePos::Dealt(pos) => TermPos::from((pos, s) + (1, 0))
+    |                                                  -------- ^ ------ ({integer}, {integer})
+    |                                                  |
+    |                                                  (&pos::LayoutPos, &config::Scale)
+
+error[E0308]: mismatched types
+   --> src/pos.rs:278:15
+    |
+278 |         pos + (-1, 0)
+    |               ^^^^^^^ expected struct `pos::TermPos`, found tuple
+    |
+    = note: expected struct `pos::TermPos`
+                found tuple `({integer}, {integer})`
+
+warning: unused import: `io::Write`
+ --> src/animation.rs:2:5
+  |
+2 | use io::Write;
+  |     ^^^^^^^^^
+
+Some errors have detailed explanations: E0308, E0369, E0599.
+For more information about an error, try `rustc --explain E0308`.
+warning: `set` (bin "set") generated 21 warnings
+error: could not compile `set` due to 3 previous errors; 21 warnings emitted

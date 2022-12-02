@@ -18,7 +18,35 @@ pub mod layer;
 use grid::Grid;
 use layer::Layer;
 
-pub type LayerCell = Option<TermChar>;
+// pub type LayerCell = Option<TermChar>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LayerCell {
+    Opaque(TermChar),
+    Transparent,
+}
+
+impl LayerCell {
+    fn is_opaque(&self) -> bool {
+        if let Transparent = self {
+            false
+        } else {
+            true
+        }
+    }
+
+    fn is_transparent(&self) -> bool {
+        !self.is_opaque()
+    }
+}
+
+use LayerCell::*;
+
+impl Default for LayerCell {
+    fn default() -> Self {
+        Transparent
+    }
+}
 
 pub struct FrameBuf<T: Write> {
     // The underlying Write object (should be a terminal, probably stdout)
@@ -110,15 +138,30 @@ impl<T: Write> FrameBuf<T> {
                 self.under,
                 cursor::MoveToRow(u16::try_from(row_i).unwrap())
             );
-
+            
             for (col_i, cont) in lnup.finalize() {
                 queue!(
                     self.under, 
                     cursor::MoveToColumn(
                         u16::try_from(col_i).unwrap()),
-                    PrintStyledContent(cont));
+                    PrintStyledContent(cont)
+                );
             };
         };
+
+        // queue!(
+        //     self.under,
+        //     cursor::MoveTo(0, 0),
+        //     PrintStyledContent(
+                // StyledContent::new(
+                //     ContentStyle {
+                //         background_color: Some(Color::Red), ..
+                //         ContentStyle::default()
+                //     },
+                //     "tes┗ting"
+                // )
+        //     )
+        // );
 
         // clear all layers
         for lay in &mut self.layers {
@@ -141,7 +184,7 @@ impl Default for LineUpdate {
 
 impl LineUpdate {
     pub fn new(length: i16) -> Self {
-        Self { cs: vec![None; usize::try_from(length).unwrap()] }
+        Self { cs: vec![Transparent; usize::try_from(length).unwrap()] }
     }
 
     pub fn set(&mut self, i: i16, c: LayerCell) {
@@ -157,17 +200,17 @@ impl LineUpdate {
             let c_opt = self.cs[i];
 
             match (&mut term, c_opt) {
-                (None, None) => {
+                (None, Transparent) => {
                     cons += 1;
                 },
-                (None, Some(c)) => {
+                (None, Opaque(c)) => {
                     term = Some(Termable::from(c));
                 },
-                (Some(_), None) => {
+                (Some(_), Transparent) => {
                     self.cs.drain(0..i);
                     return (cons, term);
                 },
-                (Some(t), Some(c)) => {
+                (Some(t), Opaque(c)) => {
                     if !t.push(c) {
                         self.cs.drain(0..i);
                         return (cons, term);
@@ -211,7 +254,8 @@ impl std::fmt::Display for Termable {
             Termable::Bg { n, .. } =>
                 write!(f, "{}", " ".repeat(n)),
             Termable::Fg { ref s, .. } =>
-                write!(f, "{}", s),
+                {info!("S{}E", s);
+                write!(f, "{}", s)}
         }
     }
 }
@@ -232,7 +276,7 @@ impl Termable {
     pub fn len(&self) -> i16 {
         let i = match self {
             Self::Bg { n, .. } => *n,
-            Self::Fg { s, .. } => s.len()
+            Self::Fg { s, .. } => s.chars().count()
         };
         i16::try_from(i).unwrap()
     }
@@ -241,14 +285,14 @@ impl Termable {
     // NOT for handling transparency. Returns true iff tc was compatible and added successfully.
     // Therefore returns false iff tc will need a new Termable to be added to.
     pub fn push(&mut self, mut tc: TermChar) -> bool {
-        match tc {
-            TermChar::Fg { ref mut c, .. } => {
-                if *c == 'X' {
-                    *c = '┗';
-                }
-            },
-            _ => ()
-        };
+        // match tc {
+        //     TermChar::Fg { ref mut c, .. } => {
+        //         if *c == 'X' {
+        //             *c = '┗';
+        //         }
+        //     },
+        //     _ => ()
+        // };
 
         match (self, tc) {
             (Termable::Fg { s, bg: bg0, .. }, TermChar::Bg { bg }) => {
