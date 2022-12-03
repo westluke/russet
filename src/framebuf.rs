@@ -16,7 +16,7 @@ mod grid;
 pub mod layer;
 
 use grid::Grid;
-use layer::Layer;
+use layer::{Layer, LayerGroup};
 
 // pub type LayerCell = Option<TermChar>;
 
@@ -54,7 +54,7 @@ pub struct FrameBuf<T: Write> {
 
     // Each layer is an independent "panel" that can be manipulated across the screen, i.e. a
     // playing card sliding around. Start of the vec is top of the stack
-    layers: Vec<Layer>,
+    layer_groups: Vec<LayerGroup>,
 }
 
 // impl<T: Write> Index<Option<Card>> for FrameBuf<T> {
@@ -75,18 +75,44 @@ impl<T: Write> FrameBuf<T> {
     pub fn new(under: T) -> Self {
         Self {
             under,
-            layers: Vec::new()
+            layer_groups: Vec::new()
         }
     }
 
     // Pushes layer onto the TOP (most visible part) of the stack
-    pub fn push_layer(&mut self, lay: Layer) {
-        self.layers.insert(0, lay);
+    pub fn push_layer(&mut self, id: String, lay: Layer) {
+        self.layer_groups.insert(0, LayerGroup::new(id, vec![lay]));
     }
 
     // Slides layer under the BOTTOM (least visible part) of the stack
-    pub fn shup_layer(&mut self, lay: Layer) {
-        self.layers.push(lay);
+    pub fn shup_layer(&mut self, id: String, lay: Layer) {
+        self.layer_groups.push(LayerGroup::new(id, vec![lay]));
+    }
+
+    pub fn push_layer_group(&mut self, layg: LayerGroup) {
+        self.layer_groups.insert(0, layg);
+    }
+
+    pub fn shup_layer_group(&mut self, layg: LayerGroup) {
+        self.layer_groups.push(layg);
+    }
+
+    pub fn get_layer_mut(&mut self, gid: String, id: String) -> Option<&mut Layer> {
+        for lay in &mut self.layer_groups {
+            if lay.get_id() == gid {
+                return lay.get_layer_mut(id);
+            }
+        }
+        return None;
+    }
+
+    pub fn get_layer_group_mut(&mut self, gid: String) -> Option<&mut LayerGroup> {
+        for lay in &mut self.layer_groups {
+            if lay.get_id() == gid {
+                return Some(lay);
+            }
+        }
+        None
     }
 
     // Writes all new changes out to the underlying buffer
@@ -95,8 +121,8 @@ impl<T: Write> FrameBuf<T> {
         // can optimize by pre-fetching dirtied line numbers
         let mut dirty_lines = HashSet::new();
 
-        for lay_i in 0..self.layers.len() {
-            let keys: HashSet<i16> = self.layers[lay_i].get_dirty_lines().collect();
+        for lay_i in 0..self.layer_groups.len() {
+            let keys: HashSet<i16> = self.layer_groups[lay_i].get_dirty_lines();
             dirty_lines = dirty_lines.bitor(&keys);
         }
 
@@ -106,30 +132,33 @@ impl<T: Write> FrameBuf<T> {
             // start a new line update
             let mut lnup = LineUpdate::new(TS.width());
 
+            
+            // note: i don't actually need to check every cell, can optimize this out
             // for every cell in this line...
             for col_i in 0..TS.width() {
 
                 // for every layer...
-                for lay_i in 0..self.layers.len() {
-                    let lay = self.layers.get(lay_i).unwrap();
+                for layg_i in 0..self.layer_groups.len() {
+                    let layg = self.layer_groups.get(layg_i).unwrap();
                     let pos = TermPos::ffrom((row_i, col_i)).chk();
-                    let dirty = lay.is_dirty(pos);
-                    let opaq = lay.get_c(pos);
+                    let (cel, change) = layg.get_c(pos);
 
-                    match (dirty, opaq) {
+                    match (change, cel) {
+                    // how doew this algorithm extend to layergroups?
                         // If we hit an opaque cell, we're done -- we won't see changes past this
-                        (_, Some(c)) => {
-                            lnup.set(col_i, c);
+                        // stupid and wrong, not actuall optimizing
+                        (_, cel @ Opaque(_)) => {
+                            lnup.set(col_i, cel);
                             break;
                         },
 
                         // If we hit a newly transparent cell, we have to keep going,
                         // waiting for the next opaque cell. But in case we fall ALL the way
                         // through, we put in the default value (terminal background)
-                        (true, None) => lnup.set(col_i, Default::default()),
+                        (true, Transparent) => lnup.set(col_i, Opaque(Default::default())),
 
                         // If we hit an old transparent cell, we just fall through
-                        (false, None) => (),
+                        (false, Transparent) => (),
                     };
                 };
             };
@@ -149,22 +178,8 @@ impl<T: Write> FrameBuf<T> {
             };
         };
 
-        // queue!(
-        //     self.under,
-        //     cursor::MoveTo(0, 0),
-        //     PrintStyledContent(
-                // StyledContent::new(
-                //     ContentStyle {
-                //         background_color: Some(Color::Red), ..
-                //         ContentStyle::default()
-                //     },
-                //     "tes┗ting"
-                // )
-        //     )
-        // );
-
         // clear all layers
-        for lay in &mut self.layers {
+        for lay in &mut self.layer_groups {
             lay.clean();
         }
 
@@ -172,6 +187,7 @@ impl<T: Write> FrameBuf<T> {
     }
 }
 
+// this is stupid and wrong, it's not actually optimizing at all
 pub struct LineUpdate {
     cs: Vec<LayerCell>
 }

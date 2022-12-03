@@ -166,11 +166,11 @@ impl TermPos {
         self.pos_range(bottomright)
     }
 
-    pub fn from_Pos(pos: &GamePos, scale: &Scale, active: bool) {
-    }
+    // pub fn from_Pos(pos: &GamePos, scale: &Scale, active: bool) {
+    // }
 
-    pub fn from_GamePos(pos: &GamePos, scale: &Scale, active: bool) {
-    }
+    // pub fn from_GamePos(pos: &GamePos, scale: &Scale, active: bool) {
+    // }
 
 }
 
@@ -204,45 +204,13 @@ where
     }
 }
 
-// impl<T> TryFrom<TermPos> for (T, T)
-// where
-//     T: TryFrom<i16>,
-//     <T as TryFrom<i16>>::Error: Debug
-// {
-//     type Error = SE;
-//     fn try_from(pos: TermPos) -> Result<Self> {
-//         if let (Ok(y), Ok(x)) = (pos.y().try_into(), pos.x().try_into()) {
-//             Ok((y, x))
-//         } else {
-//             Err(SE::new(SEK::Conversion, "conversion error!"))
-//         }
-//     }
-// }
-
-// impl<T> Add<(T, T)> for TermPos where i16: TryFrom<T> {
-//     type Output = Self;
-
-//     fn add(self, (y, x): (T, T)) -> Self::Output {
-//         let (y, x) = (i16::try_from(y).parwnu(), i16::try_from(x).parwnu());
-//         Self::new(self.y + y, self.x + x)
-//     }
-// }
-
-// impl<T> Add<TermPos> for (T, T) where i16: From<T> {
-//     type Output = TermPos;
-
-//     fn add(self, tp: TermPos) -> Self::Output {
-//         let (y, x) = (i16::try_from(self.0).unwrap(), i16::try_from(self.1).unwrap());
-//         TermPos::new(y + tp.y(), x + tp.x())
-//     }
-// }
-
+// Again, returns correct positioning for INACTIVE card.
 impl From<(&DealtPos, &Scale)> for TermPos {
     fn from ((lp, s): (&DealtPos, &Scale)) -> Self {
         let (row, col): (i16, i16) = (lp.row.into(), lp.col.into());
-        let y = (row * s.CARD_HEIGHT) + (row * CARD_SPACING_VERT) + WIN_MARGIN_VERT;
-        let x = (col * s.CARD_WIDTH)  + (col * CARD_SPACING_HORIZ) + WIN_MARGIN_HORIZ;
-        (y, x).finto() + 
+        let y = WIN_MARGIN_VERT + (row * (s.CARD_HEIGHT + 1 + CARD_SPACING_VERT));
+        let x = WIN_MARGIN_HORIZ + (col * (s.CARD_WIDTH + CARD_SPACING_HORIZ));
+        (y, x).finto()
     }
 }
 

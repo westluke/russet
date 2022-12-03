@@ -1,6 +1,8 @@
 use crate::pos::*;
 use crate::deck::{Card, Deck};
 use crate::layout::*;
+use std::collections::HashSet;
+use crate::util::*;
 
 use std::ops::{Index, IndexMut};
 use rand::seq::SliceRandom as _;
@@ -17,7 +19,7 @@ fn is_a_set(c0:Card, c1:Card, c2:Card) -> bool {
     all_diff_or_all_same(c0.fill, c1.fill, c2.fill)
 }
 
-fn find_set(lay:Layout) -> Option<[LayoutPos; 3]> {
+fn find_set(lay:Layout) -> Option<[DealtPos; 3]> {
     let cards:Vec<_> = lay.enumerate_2d().filter(|(_, c)| *c != None).collect();
     for i in 0..cards.len() {
         for j in i..cards.len() {
@@ -44,33 +46,33 @@ fn find_set(lay:Layout) -> Option<[LayoutPos; 3]> {
 // even on an otherwise blank bnaord, we need to include cards AND layoutpos, all the time
 
 // Represents changes that have occurred in the gamestate with VISUAL consequences
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 pub enum ChangeAtom {
-    Reflow(Card, LayoutPos, LayoutPos),
-    GoodMove(Card, LayoutPos, GamePos),
-    BadOutline(Card, LayoutPos),
-    Select(Card, LayoutPos),
-    Deselect(Card, LayoutPos),
-    Fade(Card, LayoutPos),
-    Deal(Card, LayoutPos),
+    Reflow(Card, DealtPos, DealtPos),
+    GoodMove(Card, DealtPos, GamePos),
+    BadOutline(Card, DealtPos),
+    Select(Card, DealtPos),
+    Deselect(Card, DealtPos),
+    Fade(Card, DealtPos),
+    Deal(Card, DealtPos),
 }
 
 // stamp is handy for identifying which came later in a more concrete way than instants
 #[derive(Clone, Debug)]
 pub struct ChangeSet {
-    changes: Vec<ChangeAtom>,
-    stamp: u32
+    pub changes: HashSet<ChangeAtom>,
+    pub stamp: u32
 }
 
 impl ChangeSet {
-    pub fn new(changes: Vec<ChangeAtom>, stamp: u32) -> Self {
+    pub fn new(changes: HashSet<ChangeAtom>, stamp: u32) -> Self {
         Self { changes, stamp}
     }
 }
 
 impl Default for ChangeSet {
     fn default() -> Self {
-        Self { changes: Vec::new(), stamp: 0}
+        Self { changes: HashSet::new(), stamp: 0}
     }
 }
 
@@ -79,8 +81,8 @@ pub struct GameState {
     deck: Deck,
     layout: Layout,
     last_set_found: Option<(Card, Card, Card)>,
-    selects: Vec<LayoutPos>,
-    changes: Vec<ChangeSet>,
+    selects: Vec<DealtPos>,
+    changesets: Vec<ChangeSet>,
     id_counter: u32
 }
 
@@ -95,52 +97,59 @@ impl Default for GameState {
     fn default() -> Self {
         let mut deck = Deck::new();
         let mut cards = [[None; 6]; 3];
+        let mut changesets = Vec::new();
+        let mut cs = HashSet::new();
 
-        for row in (&mut cards).into_iter(){
-            for (i, c) in row.into_iter().enumerate() {
-                *c = if i <= 3 { deck.pop() } else { None };
+        for (row_i, row) in (&mut cards).into_iter().enumerate() {
+            for (col_i, cel) in row.into_iter().enumerate() {
+                if col_i <= 3 {
+                    *cel = deck.pop();
+                    cs.insert(ChangeAtom::Deal(cel.unwrap(), DealtPos::new(row_i.finto(), col_i.finto())));
+                }
             }
         }
+
+        changesets.push(ChangeSet::new(cs, 0));
 
         GameState {
             deck,
             layout: Layout::new(cards),
             last_set_found: None,
             selects: Vec::new(),
-            changes: Vec::new(),
-            id_counter: 0
+            changesets,
+            id_counter: 1
         }
     }
 }
 
 impl GameState {
     pub fn pop_changeset(&mut self) -> ChangeSet {
-        self.changes.pop().unwrap()
+        self.changesets.pop().unwrap()
     }
 
     pub fn has_changes(&self) -> bool {
-        !self.changes.is_empty()
+        !self.changesets.is_empty()
     }
 
     /// given a user's selection of cards, adjusts game state and self.changes to indicate
     /// necessary next steps
-    pub fn select(&mut self, pos: LayoutPos) {
+    pub fn select(&mut self, pos: DealtPos) {
 
         let card_at = match self.layout[pos] {
             None => return,
             Some(x) => x
         };
 
-        let mut chs = Vec::new();
+        let mut chs = HashSet::new();
 
         if self.selects.contains(&pos) {
             self.selects.retain(|&x| x != pos);
-            chs.push(ChangeAtom::Deselect(card_at, pos));
+            chs.insert(ChangeAtom::Deselect(card_at, pos));
         }
 
         else if self.selects.len() <= 1 {
             self.selects.push(pos);
-            chs.push(ChangeAtom::Select(card_at, pos));
+            chs.insert(ChangeAtom::Select(card_at, pos));
         }
 
         else if self.selects.len() == 2 {
@@ -164,37 +173,37 @@ impl GameState {
                 self.selects.clear();
                 self.last_set_found = Some((c0, c1, c2));
 
-                chs.push(ChangeAtom::GoodMove(c0, p0, GamePos::LastFound0));
-                chs.push(ChangeAtom::GoodMove(c1, p1, GamePos::LastFound1));
-                chs.push(ChangeAtom::GoodMove(c2, p2, GamePos::LastFound2));
+                chs.insert(ChangeAtom::GoodMove(c0, p0, GamePos::LastFound0));
+                chs.insert(ChangeAtom::GoodMove(c1, p1, GamePos::LastFound1));
+                chs.insert(ChangeAtom::GoodMove(c2, p2, GamePos::LastFound2));
 
                 for (c, l0, l1) in self.layout.redistribute() {
-                    chs.push(ChangeAtom::Reflow(c, l0, l1));
+                    chs.insert(ChangeAtom::Reflow(c, l0, l1));
                 };
 
                 for (c, l) in self.layout.refill(&mut self.deck) {
-                    chs.push(ChangeAtom::Deal(c, l));
+                    chs.insert(ChangeAtom::Deal(c, l));
                 };
 
             } else {
                 self.selects.clear();
-                chs.push(ChangeAtom::BadOutline(c0, p0));
-                chs.push(ChangeAtom::BadOutline(c1, p1));
-                chs.push(ChangeAtom::BadOutline(c2, p2));
+                chs.insert(ChangeAtom::BadOutline(c0, p0));
+                chs.insert(ChangeAtom::BadOutline(c1, p1));
+                chs.insert(ChangeAtom::BadOutline(c2, p2));
             }
         } else {
             panic!("self.selects should never have more than 3 elements");
         }
 
-        self.changes.push(ChangeSet::new(chs, self.id_counter));
+        self.changesets.push(ChangeSet::new(chs, self.id_counter));
         self.id_counter += 1;
     }
 
-    pub fn enumerate_cards(&self) -> impl Iterator<Item=(LayoutPos, Option<Card>)> {
+    pub fn enumerate_cards(&self) -> impl Iterator<Item=(DealtPos, Option<Card>)> {
         self.layout.enumerate_2d()
     }
 
-    pub fn selected(&self, pos: LayoutPos) -> bool {
+    pub fn selected(&self, pos: DealtPos) -> bool {
         self.selects.contains(&pos)
     }
 

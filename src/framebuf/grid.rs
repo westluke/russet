@@ -76,34 +76,34 @@ impl<T: Copy> Grid<T> {
     }
 }
 
-impl<T: Copy> Index<(usize, usize)> for Grid<T> {
-    type Output = T;
+// impl<T: Copy> Index<(usize, usize)> for Grid<T> {
+//     type Output = T;
 
-    fn index(&self, (y, x): (usize, usize)) -> &Self::Output {
-        &self.grid[y][x]
-    }
-}
+//     fn index(&self, (y, x): (usize, usize)) -> &Self::Output {
+//         &self.grid[y][x]
+//     }
+// }
 
-impl<T: Copy> IndexMut<(usize, usize)> for Grid<T> {
-    fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut Self::Output {
-        &mut self.grid[y][x]
-    }
-}
+// impl<T: Copy> IndexMut<(usize, usize)> for Grid<T> {
+//     fn index_mut(&mut self, (y, x): (usize, usize)) -> &mut Self::Output {
+//         &mut self.grid[y][x]
+//     }
+// }
 
-impl<T: Copy> Index<TermPos> for Grid<T> {
-    type Output = T;
+// impl<T: Copy> Index<TermPos> for Grid<T> {
+//     type Output = T;
 
-    fn index(&self, pos: TermPos) -> &Self::Output {
-        &self.grid
-            [usize::try_from(pos.y()).unwrap()]
-            [usize::try_from(pos.x()).unwrap()]
-    }
-}
+//     fn index(&self, pos: TermPos) -> &Self::Output {
+//         &self.grid
+//             [usize::try_from(pos.y()).unwrap()]
+//             [usize::try_from(pos.x()).unwrap()]
+//     }
+// }
 
-impl<T: Copy> IndexMut<TermPos> for Grid<T> {
-    fn index_mut(&mut self, pos: TermPos) -> &mut Self::Output {
-        &mut self.grid
-            [usize::try_from(pos.y()).unwrap()]
-            [usize::try_from(pos.x()).unwrap()]
-    }
-}
+// impl<T: Copy> IndexMut<TermPos> for Grid<T> {
+//     fn index_mut(&mut self, pos: TermPos) -> &mut Self::Output {
+//         &mut self.grid
+//             [usize::try_from(pos.y()).unwrap()]
+//             [usize::try_from(pos.x()).unwrap()]
+//     }
+// }

@@ -26,10 +26,12 @@ pub mod framebuf;
 pub mod layout;
 pub mod termchar;
 
-use game::*;
+use game::{*, ChangeAtom::*};
 use animation::*;
 use framebuf::*;
 use util::*;
+use pos::*;
+use deck::*;
 // use pos::*;
 // use deck::*;
 
@@ -140,8 +142,10 @@ fn input_frame(state: &GameState) -> Result<FrameResult> {
 
 fn main() -> Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
-    let (sx, rx) = mpsc::channel::<animation::Msg>();
-    let (sx_back, rx_back) = mpsc::channel::<animation::BackMsg>();
+
+    let (game_snd, game_rcv) = mpsc::channel::<animation::Msg>();
+    let (click_snd, click_rcv) = mpsc::channel::<animation::ClickMsg>();
+    let (back_snd, back_rcv) = mpsc::channel::<animation::BackMsg>();
 
     terminal::enable_raw_mode()?;
     execute!(io::stdout(), event::EnableMouseCapture)?;
@@ -151,34 +155,27 @@ fn main() -> Result<()> {
         .write_mode(WriteMode::Direct)
         .start()?;
 
-    let gs = GameState::default();
+    let mut gs = GameState::default();
     let (y, x) = TS.dims();
 
-    // what is the right solution here??
-    //
-    // Ok whats the issues: animation needs to know about gamestate and/or changes to gamestate.
-    // main needs to know which panel a click hits. Is that the only information it needs?
-    // yeah, actually. Ok, so why not query it via channels? and have animation use recv_timeout to
-    // sleep, inistead of fixed frame timeout.
-    // sure that might not be super speedy, but neither is mutex locking. And it's a little bit
-    // cleaner, I think. makes the interfaces very explicit. and the performance is negligible!!!
-    // Stop worrying about it dumbfuck. There's an inherent dependence here anyways, because the
-    // frames are moving. Only avoidable if using a cache, and there's no way im doing that.
-    // ok u gotta sleep dude
-
     let handle = thread::spawn(|| {
-        animation::animate(rx, sx_back)
+        animation::animate(game_rcv, click_rcv, back_snd)
     });
 
-    // let initsend = tx.send(Msg::Base(Clone::clone(&state)));
+    let initsend = game_snd.send(
+        Msg::ChangeMsg(
+            gs.pop_changeset()
+        )
+    );
 
     // idea: to avoid excessive buffering on holding keydown, 
     // impose time limit on pressing the same key twice.
 
     loop {
-        match rx_back.try_recv() {
-           Err(TryRecvError::Disconnected) | Ok(_) => break, 
-           _ => ()
+        match back_rcv.try_recv() {
+           Err(TryRecvError::Disconnected) | Ok(BackMsg::QuitMsg) => break, 
+           Err(TryRecvError::Empty) => (),
+           // Ok(BackMsg::Collide()) => ()
         }
 
         match input_frame(&gs) {
@@ -188,19 +185,11 @@ fn main() -> Result<()> {
         }
     };
 
-    info!("loop over");
-
     terminal::disable_raw_mode()?;
 
-    info!("after disabling raw mode");
-
-    info!("after stdout capture");
-
-    if let Err(x) = sx.send(Msg::QuitMsg){
+    if let Err(x) = game_snd.send(Msg::QuitMsg){
         info!("Failed to send Quit message to animation thread, err: {:?}", x);
     }
-
-    info!("Waiting to join animation thread...");
 
     // Set timeout on join, we don't want to wait too long.
     if let Err(x) = handle.join(){

@@ -24,16 +24,16 @@ impl<T> IndexMut<(T, T)> for Layout where usize: From<T> {
     }
 }
 
-impl Index<LayoutPos> for Layout {
+impl Index<DealtPos> for Layout {
     type Output = Option<Card>;
     
-    fn index(&self, pos:LayoutPos) -> &Self::Output {
+    fn index(&self, pos:DealtPos) -> &Self::Output {
         &self.cards[usize::from(pos.row())][usize::from(pos.col())]
     }
 }
 
-impl IndexMut<LayoutPos> for Layout {
-    fn index_mut(&mut self, pos:LayoutPos) -> &mut Self::Output {
+impl IndexMut<DealtPos> for Layout {
+    fn index_mut(&mut self, pos:DealtPos) -> &mut Self::Output {
         &mut self.cards[usize::from(pos.row())][usize::from(pos.col())]
     }
 }
@@ -47,15 +47,15 @@ impl Layout {
         self.cards.iter().flatten()
     }
 
-    pub fn enumerate_2d (self) -> impl Iterator<Item=(LayoutPos, Option<Card>)>{
+    pub fn enumerate_2d (self) -> impl Iterator<Item=(DealtPos, Option<Card>)>{
 
         // helper function that takes an iterator over a row of the board, and the row index, and
-        // creates an iterator over the row, with each card associated with its full LayoutPos
-        fn distribute_enum((i, row): (usize, [Option<Card>; 6])) -> impl Iterator<Item=(LayoutPos, Option<Card>)> {
+        // creates an iterator over the row, with each card associated with its full DealtPos
+        fn distribute_enum((i, row): (usize, [Option<Card>; 6])) -> impl Iterator<Item=(DealtPos, Option<Card>)> {
 
             // takes a card and corresponding column index to make the enum tuple
             let make_enumerated_card = move |(j, card_option)| {
-                (LayoutPos::new(
+                (DealtPos::new(
                     u8::try_from(i).unwrap(),
                     u8::try_from(j).unwrap()
                 ), card_option)
@@ -72,7 +72,7 @@ impl Layout {
             .flatten()
     }
 
-    pub fn remove(&mut self, p: LayoutPos) {
+    pub fn remove(&mut self, p: DealtPos) {
         // let spot = self[p];
         self[p] = None;
         // spot
@@ -84,14 +84,14 @@ impl Layout {
         ).unwrap()
     }
 
-    fn empties (&self) -> Vec<LayoutPos> {
+    fn empties (&self) -> Vec<DealtPos> {
         self.enumerate_2d()
             .filter(|&(pos, c)| c == None)
             .map(|(pos, c)| pos)
             .collect()
     }
 
-    fn extras (&self) -> Vec<LayoutPos> {
+    fn extras (&self) -> Vec<DealtPos> {
         self.enumerate_2d()
             .filter(|&(pos, c)|
                 c != None &&
@@ -105,8 +105,8 @@ impl Layout {
     // (main section cards are never moved)
     // Returns Vec of tuples (p0, p1, c) where c is moved card, p0 is c's initial location, and p1
     // is c's final location
-    pub fn redistribute(&mut self) -> Vec<(Card, LayoutPos, LayoutPos)> {
-        let empties: Vec<LayoutPos> = self.empties().
+    pub fn redistribute(&mut self) -> Vec<(Card, DealtPos, DealtPos)> {
+        let empties: Vec<DealtPos> = self.empties().
             into_iter()
             .filter(|&pos| pos.col() <= 3)
             .collect();
@@ -119,8 +119,8 @@ impl Layout {
         for i in 0..to_fill {
             to_return.push((
                 self[extras[i]].expect("extras should not contain any nones"),
-                LayoutPos::from(extras[i]), 
-                LayoutPos::from(empties[i]),
+                DealtPos::from(extras[i]), 
+                DealtPos::from(empties[i]),
             ));
 
             self[empties[i]] = self[extras[i]];
@@ -130,8 +130,8 @@ impl Layout {
         to_return
     }
 
-    pub fn refill(&mut self, deck: &mut Deck) -> Vec<(Card, LayoutPos)> {
-        let empties: Vec<LayoutPos> = self.empties().
+    pub fn refill(&mut self, deck: &mut Deck) -> Vec<(Card, DealtPos)> {
+        let empties: Vec<DealtPos> = self.empties().
             into_iter()
             .filter(|&pos| pos.col() <= 3)
             .collect();
@@ -141,7 +141,7 @@ impl Layout {
 
         for i in 0..to_fill {
             let c = deck.pop().unwrap();
-            to_return.push((c, LayoutPos::from(empties[i])));
+            to_return.push((c, DealtPos::from(empties[i])));
             self[empties[i]] = Some(c);
         }
 

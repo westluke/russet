@@ -1,5 +1,6 @@
 use crossterm::style::{self, Color, StyledContent, ContentStyle};
 use std::fmt;
+use crate::util::*;
 
 #[derive (Clone, Copy, Debug, PartialEq, Eq)]
 pub enum TermChar {
@@ -9,7 +10,7 @@ pub enum TermChar {
 
 impl Default for TermChar {
     fn default () -> Self {
-        Self::Bg {bg: Color::Reset}
+        Self::Bg {bg: TERM_BG}
     }
 }
 

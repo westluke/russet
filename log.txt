@@ -1,28 +1,335 @@
 INFO [set::animation] animation loop starting
-INFO [set::framebuf] S┃                       ┃E
-INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
-INFO [set::framebuf] S┃           E
-INFO [set::framebuf] SXXXE
-INFO [set::framebuf] S         ┃E
 INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
-INFO [set::framebuf] S┗┓         E
-INFO [set::framebuf] SXXE
-INFO [set::framebuf] S          ┏┛E
-INFO [set::framebuf] S┃          E
-INFO [set::framebuf] SXXE
-INFO [set::framebuf] S           ┃E
-INFO [set::framebuf] S┏┛        E
-INFO [set::framebuf] SXXXXXE
-INFO [set::framebuf] S        ┗┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏E
 INFO [set::framebuf] S┃        E
 INFO [set::framebuf] SXE
 INFO [set::framebuf] SXXXE
 INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓         E
+INFO [set::framebuf] S       ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┏┛       E
+INFO [set::framebuf] S         ┗┓E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S╳╳╳E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S╳╳╳E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S ┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓        E
+INFO [set::framebuf] S        ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓         E
+INFO [set::framebuf] S       ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S╳E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S╳E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S╳E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S╳E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S╳╳╳E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S╳╳╳E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S ┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓         E
+INFO [set::framebuf] S       ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓         E
+INFO [set::framebuf] S       ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓        E
+INFO [set::framebuf] S        ┏┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓          E
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┃E
 INFO [set::framebuf] S┃          E
 INFO [set::framebuf] SXXE
 INFO [set::framebuf] S           ┃E
-INFO [set] loop over
-INFO [set] after disabling raw mode
-INFO [set] after stdout capture
-INFO [set] Waiting to join animation thread...
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┏┛        E
+INFO [set::framebuf] SXXXXXE
+INFO [set::framebuf] S        ┗┓E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┏┛        E
+INFO [set::framebuf] S        ┗┓E
+INFO [set::framebuf] S┏┛       E
+INFO [set::framebuf] S         ┗┓E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┗┓E
+INFO [set::framebuf] S┗━━━━━━━━━━━━━━━━━━━━━┛E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] SXXE
+INFO [set::framebuf] S           ┃E
+INFO [set::framebuf] S ┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┏┛       E
+INFO [set::framebuf] S         ┗┓E
+INFO [set::framebuf] S┏┛       E
+INFO [set::framebuf] S         ┗┓E
+INFO [set::framebuf] S┏┛        E
+INFO [set::framebuf] S        ┗┓E
+INFO [set::framebuf] S┏┛          E
+INFO [set::framebuf] S          ┗┓E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃           E
+INFO [set::framebuf] SXXXE
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S ┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
+INFO [set::framebuf] S ┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┃                       ┃E
+INFO [set::framebuf] S ┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃        E
+INFO [set::framebuf] S╳╳╳╳╳E
+INFO [set::framebuf] S        ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃         E
+INFO [set::framebuf] S         ┃E
+INFO [set::framebuf] S┏E
+INFO [set::framebuf] S┃          E
+INFO [set::framebuf] S          ┃E
+INFO [set::framebuf] S┃E
+INFO [set::framebuf] S┗┓         E
+INFO [set::framebuf] SXXE
+INFO [set::framebuf] S          ┏┛E
+INFO [set::framebuf] S┏━━━━━━━━━━━━━━━━━━━━━┓E
 INFO [set::animation] animation loop over

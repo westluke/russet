@@ -25,12 +25,6 @@ warning: unused import: `style`
 7 | use crossterm::{terminal, execute, style};
   |                                    ^^^^^
 
-warning: unused import: `crate::game::*`
-  --> src/animation.rs:10:5
-   |
-10 | use crate::game::*;
-   |     ^^^^^^^^^^^^^^
-
 warning: unused import: `crate::termchar::*`
   --> src/animation.rs:15:5
    |
@@ -56,15 +50,15 @@ warning: unused import: `CardNumber`
   |                                                         ^^^^^^^^^^
 
 warning: unused imports: `IndexMut`, `Index`
- --> src/game.rs:5:16
+ --> src/game.rs:7:16
   |
-5 | use std::ops::{Index, IndexMut};
+7 | use std::ops::{Index, IndexMut};
   |                ^^^^^  ^^^^^^^^
 
 warning: unused import: `rand::seq::SliceRandom as _`
- --> src/game.rs:6:5
+ --> src/game.rs:8:5
   |
-6 | use rand::seq::SliceRandom as _;
+8 | use rand::seq::SliceRandom as _;
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused import: `crossterm::style::Color`
@@ -115,39 +109,29 @@ warning: unused import: `std::fmt`
 2 | use std::fmt;
   |     ^^^^^^^^
 
+warning: unused import: `ChangeAtom::*`
+  --> src/main.rs:29:15
+   |
+29 | use game::{*, ChangeAtom::*};
+   |               ^^^^^^^^^^^^^
+
 warning: unused import: `framebuf::*`
   --> src/main.rs:31:5
    |
 31 | use framebuf::*;
    |     ^^^^^^^^^^^
 
-error[E0599]: no method named `deactivate` found for struct `Layer` in the current scope
-   --> src/animation.rs:303:10
-    |
-303 |     deck.deactivate();
-    |          ^^^^^^^^^^ method not found in `Layer`
-    |
-   ::: src/framebuf/layer.rs:19:1
-    |
-19  | pub struct Layer {
-    | ---------------- method `deactivate` not found for this struct
+warning: unused import: `pos::*`
+  --> src/main.rs:33:5
+   |
+33 | use pos::*;
+   |     ^^^^^^
 
-error[E0369]: cannot add `({integer}, {integer})` to `(&pos::LayoutPos, &config::Scale)`
-   --> src/pos.rs:266:59
-    |
-266 |             GamePos::Dealt(pos) => TermPos::from((pos, s) + (1, 0))
-    |                                                  -------- ^ ------ ({integer}, {integer})
-    |                                                  |
-    |                                                  (&pos::LayoutPos, &config::Scale)
-
-error[E0308]: mismatched types
-   --> src/pos.rs:278:15
-    |
-278 |         pos + (-1, 0)
-    |               ^^^^^^^ expected struct `pos::TermPos`, found tuple
-    |
-    = note: expected struct `pos::TermPos`
-                found tuple `({integer}, {integer})`
+warning: unused import: `deck::*`
+  --> src/main.rs:34:5
+   |
+34 | use deck::*;
+   |     ^^^^^^^
 
 warning: unused import: `io::Write`
  --> src/animation.rs:2:5
@@ -155,7 +139,639 @@ warning: unused import: `io::Write`
 2 | use io::Write;
   |     ^^^^^^^^^
 
-Some errors have detailed explanations: E0308, E0369, E0599.
-For more information about an error, try `rustc --explain E0308`.
-warning: `set` (bin "set") generated 21 warnings
-error: could not compile `set` due to 3 previous errors; 21 warnings emitted
+warning[E0170]: pattern binding `One` is named the same as one of the variants of the type `CardNumber`
+  --> src/deck.rs:25:13
+   |
+25 |             One => 1,
+   |             ^^^ help: to match on the variant, qualify the path: `CardNumber::One`
+   |
+   = note: `#[warn(bindings_with_variant_name)]` on by default
+
+warning[E0170]: pattern binding `Two` is named the same as one of the variants of the type `CardNumber`
+  --> src/deck.rs:26:13
+   |
+26 |             Two => 2,
+   |             ^^^ help: to match on the variant, qualify the path: `CardNumber::Two`
+
+warning[E0170]: pattern binding `Three` is named the same as one of the variants of the type `CardNumber`
+  --> src/deck.rs:27:13
+   |
+27 |             Three => 3
+   |             ^^^^^ help: to match on the variant, qualify the path: `CardNumber::Three`
+
+warning: unreachable pattern
+  --> src/deck.rs:26:13
+   |
+25 |             One => 1,
+   |             --- matches any value
+26 |             Two => 2,
+   |             ^^^ unreachable pattern
+   |
+   = note: `#[warn(unreachable_patterns)]` on by default
+
+warning: unreachable pattern
+  --> src/deck.rs:27:13
+   |
+25 |             One => 1,
+   |             --- matches any value
+26 |             Two => 2,
+27 |             Three => 3
+   |             ^^^^^ unreachable pattern
+
+warning: unused variable: `start`
+   --> src/animation.rs:298:13
+    |
+298 |     let mut start = Instant::now();
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `repo9`
+   --> src/animation.rs:304:9
+    |
+304 |     let repo9 = CardRepo::new(SIZE_9, TERM_BG, CARD_BG);
+    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_repo9`
+
+warning: unused variable: `click_msg`
+   --> src/animation.rs:327:19
+    |
+327 |         if let Ok(click_msg) = click_msg {
+    |                   ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_click_msg`
+
+warning: unused variable: `stamp`
+   --> src/animation.rs:339:42
+    |
+339 |                 let ChangeSet { changes, stamp } = cs;
+    |                                          ^^^^^ help: try ignoring the field: `stamp: _`
+
+warning: unused variable: `msg`
+  --> src/util/err.rs:26:36
+   |
+26 |     pub fn new(kind: SetErrorKind, msg: &str) -> Self {
+   |                                    ^^^ help: if this is intentional, prefix it with an underscore: `_msg`
+
+warning: unused variable: `err`
+  --> src/util/err.rs:50:13
+   |
+50 |     fn from(err: SendError<T>) -> Self {
+   |             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
+
+warning: unused variable: `err`
+  --> src/util/err.rs:56:13
+   |
+56 |     fn from(err: TryRecvError) -> Self {
+   |             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
+
+warning: unused variable: `err`
+  --> src/util/err.rs:62:14
+   |
+62 |      fn from(err: FlexiLoggerError) -> Self {
+   |              ^^^ help: if this is intentional, prefix it with an underscore: `_err`
+
+warning: unused variable: `One`
+  --> src/deck.rs:25:13
+   |
+25 |             One => 1,
+   |             ^^^ help: if this is intentional, prefix it with an underscore: `_One`
+
+warning: unused variable: `Two`
+  --> src/deck.rs:26:13
+   |
+26 |             Two => 2,
+   |             ^^^ help: if this is intentional, prefix it with an underscore: `_Two`
+
+warning: unused variable: `Three`
+  --> src/deck.rs:27:13
+   |
+27 |             Three => 3
+   |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_Three`
+
+warning: unused variable: `pos`
+  --> src/layout.rs:89:24
+   |
+89 |             .filter(|&(pos, c)| c == None)
+   |                        ^^^ help: if this is intentional, prefix it with an underscore: `_pos`
+
+warning: unused variable: `c`
+  --> src/layout.rs:90:25
+   |
+90 |             .map(|(pos, c)| pos)
+   |                         ^ help: if this is intentional, prefix it with an underscore: `_c`
+
+warning: unused variable: `c`
+  --> src/layout.rs:99:25
+   |
+99 |             .map(|(pos, c)| pos)
+   |                         ^ help: if this is intentional, prefix it with an underscore: `_c`
+
+warning: unused variable: `column`
+   --> src/main.rs:104:23
+    |
+104 | fn handle_mouse_event(column: u16, row: u16) -> Result<FrameResult>{
+    |                       ^^^^^^ help: if this is intentional, prefix it with an underscore: `_column`
+
+warning: unused variable: `row`
+   --> src/main.rs:104:36
+    |
+104 | fn handle_mouse_event(column: u16, row: u16) -> Result<FrameResult>{
+    |                                    ^^^ help: if this is intentional, prefix it with an underscore: `_row`
+
+warning: unused variable: `state`
+   --> src/main.rs:114:16
+    |
+114 | fn input_frame(state: &GameState) -> Result<FrameResult> {
+    |                ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
+
+warning: unused variable: `click_snd`
+   --> src/main.rs:147:10
+    |
+147 |     let (click_snd, click_rcv) = mpsc::channel::<animation::ClickMsg>();
+    |          ^^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_click_snd`
+
+warning: unused variable: `y`
+   --> src/main.rs:159:10
+    |
+159 |     let (y, x) = TS.dims();
+    |          ^ help: if this is intentional, prefix it with an underscore: `_y`
+
+warning: unused variable: `x`
+   --> src/main.rs:159:13
+    |
+159 |     let (y, x) = TS.dims();
+    |             ^ help: if this is intentional, prefix it with an underscore: `_x`
+
+warning: unused variable: `initsend`
+   --> src/main.rs:165:9
+    |
+165 |     let initsend = game_snd.send(
+    |         ^^^^^^^^ help: if this is intentional, prefix it with an underscore: `_initsend`
+
+warning: variable does not need to be mutable
+   --> src/animation.rs:295:10
+    |
+295 |     let (mut width, mut height) = TS.update();
+    |          ----^^^^^
+    |          |
+    |          help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> src/animation.rs:295:21
+    |
+295 |     let (mut width, mut height) = TS.update();
+    |                     ----^^^^^^
+    |                     |
+    |                     help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/animation.rs:298:9
+    |
+298 |     let mut start = Instant::now();
+    |         ----^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+  --> src/framebuf/layer.rs:41:13
+   |
+41 |         let mut dirtied = HashMap::new();
+   |             ----^^^^^^^
+   |             |
+   |             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/framebuf/layer.rs:140:29
+    |
+140 |     pub fn set_s(&mut self, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+    |                             ----^^^
+    |                             |
+    |                             help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/framebuf/layer.rs:166:35
+    |
+166 |     pub fn set_s_clear(&mut self, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+    |                                   ----^^^
+    |                                   |
+    |                                   help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> src/framebuf.rs:287:28
+    |
+287 |     pub fn push(&mut self, mut tc: TermChar) -> bool {
+    |                            ----^^
+    |                            |
+    |                            help: remove this `mut`
+
+warning: variant `Msgs` is never constructed
+   --> src/main.rs:111:5
+    |
+108 | enum FrameResult {
+    |      ----------- variant in this enum
+...
+111 |     Msgs(Vec<Msg>)
+    |     ^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: static `anim_dur` is never used
+  --> src/animation.rs:26:8
+   |
+26 | static anim_dur: Duration = Duration::from_millis(500);
+   |        ^^^^^^^^
+
+warning: variant `Nop` is never constructed
+  --> src/animation.rs:37:5
+   |
+35 | pub enum Msg {
+   |          --- variant in this enum
+36 |     QuitMsg,
+37 |     Nop,
+   |     ^^^
+
+warning: function `sleep_until` is never used
+   --> src/animation.rs:177:8
+    |
+177 | pub fn sleep_until(i: Instant) {
+    |        ^^^^^^^^^^^
+
+warning: fields `cards_active`, `shadow`, `outline_thin`, `outline_good` and `outline_bad` are never read
+  --> src/animation/cardrepo.rs:15:5
+   |
+11 | pub struct CardRepo {
+   |            -------- fields in this struct
+...
+15 |     cards_active: HashMap<Card, Layer>,
+   |     ^^^^^^^^^^^^
+16 |     shadow: Layer,
+   |     ^^^^^^
+17 |     outline_thin: Layer,
+   |     ^^^^^^^^^^^^
+18 |     outline_good: Layer,
+   |     ^^^^^^^^^^^^
+19 |     outline_bad: Layer
+   |     ^^^^^^^^^^^
+
+warning: function `get_bg` is never used
+   --> src/animation/cardrepo.rs:212:4
+    |
+212 | fn get_bg(c:Card, bg: Color) -> Color {
+    |    ^^^^^^
+
+warning: associated function `get_card_active` is never used
+  --> src/animation/cardrepo.rs:34:12
+   |
+34 |     pub fn get_card_active(&self, c: Card) -> Layer {
+   |            ^^^^^^^^^^^^^^^
+
+warning: associated function `get_shadow` is never used
+  --> src/animation/cardrepo.rs:49:12
+   |
+49 |     pub fn get_shadow(&self) -> Layer {
+   |            ^^^^^^^^^^
+
+warning: associated function `get_outline_thin` is never used
+  --> src/animation/cardrepo.rs:53:12
+   |
+53 |     pub fn get_outline_thin(&self) -> Layer {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: associated function `get_outline_good` is never used
+  --> src/animation/cardrepo.rs:57:12
+   |
+57 |     pub fn get_outline_good(&self) -> Layer {
+   |            ^^^^^^^^^^^^^^^^
+
+warning: associated function `get_outline_bad` is never used
+  --> src/animation/cardrepo.rs:61:12
+   |
+61 |     pub fn get_outline_bad(&self) -> Layer {
+   |            ^^^^^^^^^^^^^^^
+
+warning: function `all_diff_or_all_same` is never used
+  --> src/game.rs:10:4
+   |
+10 | fn all_diff_or_all_same<T: Eq> (a:T, b:T, c:T) -> bool {
+   |    ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `is_a_set` is never used
+  --> src/game.rs:15:4
+   |
+15 | fn is_a_set(c0:Card, c1:Card, c2:Card) -> bool {
+   |    ^^^^^^^^
+
+warning: function `find_set` is never used
+  --> src/game.rs:22:4
+   |
+22 | fn find_set(lay:Layout) -> Option<[DealtPos; 3]> {
+   |    ^^^^^^^^
+
+warning: variants `Reflow`, `GoodMove`, `BadOutline`, `Select`, `Deselect` and `Fade` are never constructed
+  --> src/game.rs:51:5
+   |
+50 | pub enum ChangeAtom {
+   |          ---------- variants in this enum
+51 |     Reflow(Card, DealtPos, DealtPos),
+   |     ^^^^^^
+52 |     GoodMove(Card, DealtPos, GamePos),
+   |     ^^^^^^^^
+53 |     BadOutline(Card, DealtPos),
+   |     ^^^^^^^^^^
+54 |     Select(Card, DealtPos),
+   |     ^^^^^^
+55 |     Deselect(Card, DealtPos),
+   |     ^^^^^^^^
+56 |     Fade(Card, DealtPos),
+   |     ^^^^
+   |
+   = note: `ChangeAtom` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: fields `deck`, `layout`, `last_set_found`, `selects` and `id_counter` are never read
+  --> src/game.rs:81:5
+   |
+80 | pub struct GameState {
+   |            --------- fields in this struct
+81 |     deck: Deck,
+   |     ^^^^
+82 |     layout: Layout,
+   |     ^^^^^^
+83 |     last_set_found: Option<(Card, Card, Card)>,
+   |     ^^^^^^^^^^^^^^
+84 |     selects: Vec<DealtPos>,
+   |     ^^^^^^^
+85 |     changesets: Vec<ChangeSet>,
+86 |     id_counter: u32
+   |     ^^^^^^^^^^
+   |
+   = note: `GameState` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: associated function `has_changes` is never used
+   --> src/game.rs:130:12
+    |
+130 |     pub fn has_changes(&self) -> bool {
+    |            ^^^^^^^^^^^
+
+warning: associated function `select` is never used
+   --> src/game.rs:136:12
+    |
+136 |     pub fn select(&mut self, pos: DealtPos) {
+    |            ^^^^^^
+
+warning: associated function `enumerate_cards` is never used
+   --> src/game.rs:202:12
+    |
+202 |     pub fn enumerate_cards(&self) -> impl Iterator<Item=(DealtPos, Option<Card>)> {
+    |            ^^^^^^^^^^^^^^^
+
+warning: associated function `selected` is never used
+   --> src/game.rs:206:12
+    |
+206 |     pub fn selected(&self, pos: DealtPos) -> bool {
+    |            ^^^^^^^^
+
+warning: associated function `last_set_found` is never used
+   --> src/game.rs:210:12
+    |
+210 |     pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
+    |            ^^^^^^^^^^^^^^
+
+warning: associated function `height` is never used
+  --> src/util.rs:89:12
+   |
+89 |     pub fn height(&self) -> i16 {
+   |            ^^^^^^
+
+warning: constant `QUESTION_BG` is never used
+  --> src/util/config.rs:70:11
+   |
+70 | pub const QUESTION_BG: Color = Color::White;
+   |           ^^^^^^^^^^^
+
+warning: constant `SHADOW` is never used
+  --> src/util/config.rs:74:11
+   |
+74 | pub const SHADOW: Color = Color::Black;
+   |           ^^^^^^
+
+warning: constant `PIPE_BR` is never used
+  --> src/util/config.rs:88:11
+   |
+88 | pub const PIPE_BR: &'static str = "┛";
+   |           ^^^^^^^
+
+warning: constant `PIPE_BL` is never used
+  --> src/util/config.rs:89:11
+   |
+89 | pub const PIPE_BL: &'static str = "┗";
+   |           ^^^^^^^
+
+warning: constant `PIPE_TL` is never used
+  --> src/util/config.rs:90:11
+   |
+90 | pub const PIPE_TL: &'static str = "┏";
+   |           ^^^^^^^
+
+warning: constant `PIPE_TR` is never used
+  --> src/util/config.rs:91:11
+   |
+91 | pub const PIPE_TR: &'static str = "┓";
+   |           ^^^^^^^
+
+warning: associated function `is_empty` is never used
+  --> src/deck.rs:86:8
+   |
+86 |     fn is_empty(&self) -> bool {
+   |        ^^^^^^^^
+
+warning: associated function `peek_n` is never used
+  --> src/deck.rs:90:8
+   |
+90 |     fn peek_n(&self, n:usize) -> &[Card] {
+   |        ^^^^^^
+
+warning: associated function `take3` is never used
+   --> src/deck.rs:100:8
+    |
+100 |     fn take3(&mut self) -> Option<(Card, Card, Card)> {
+    |        ^^^^^
+
+warning: associated function `is_opaque` is never used
+  --> src/framebuf.rs:30:8
+   |
+30 |     fn is_opaque(&self) -> bool {
+   |        ^^^^^^^^^
+
+warning: associated function `is_transparent` is never used
+  --> src/framebuf.rs:38:8
+   |
+38 |     fn is_transparent(&self) -> bool {
+   |        ^^^^^^^^^^^^^^
+
+warning: associated function `n` is never used
+   --> src/framebuf.rs:347:8
+    |
+347 |     fn n(&self) -> usize {
+    |        ^
+
+warning: associated function `resize` is never used
+  --> src/framebuf/grid.rs:57:8
+   |
+57 |     fn resize(&mut self, height: usize, width: usize, fill: T){
+   |        ^^^^^^
+
+warning: associated function `refill` is never used
+  --> src/framebuf/grid.rs:67:8
+   |
+67 |     fn refill(&mut self, fill: T) {
+   |        ^^^^^^
+
+warning: associated function `row_iter` is never used
+  --> src/framebuf/grid.rs:74:8
+   |
+74 |     fn row_iter(&self) -> std::slice::Iter<'_, Vec<T>> {
+   |        ^^^^^^^^
+
+warning: fields `card` and `display` are never read
+  --> src/framebuf/layer.rs:22:5
+   |
+19 | pub struct Layer {
+   |            ----- fields in this struct
+...
+22 |     card: Option<Card>,
+   |     ^^^^
+...
+25 |     display: bool,
+   |     ^^^^^^^
+   |
+   = note: `Layer` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: associated function `iter` is never used
+  --> src/layout.rs:46:8
+   |
+46 |     fn iter (&self) -> impl Iterator<Item=&Option<Card>> {
+   |        ^^^^
+
+warning: associated function `count` is never used
+  --> src/layout.rs:81:8
+   |
+81 |     fn count (&self) -> u16 {
+   |        ^^^^^
+
+warning: associated function `extra3` is never used
+   --> src/layout.rs:151:8
+    |
+151 |     fn extra3(&mut self, deck: &mut Deck) -> Vec<(GamePos, GamePos, Card)> {
+    |        ^^^^^^
+
+warning: associated function `style_cmd` is never used
+  --> src/termchar.rs:57:8
+   |
+57 |     fn style_cmd(&self) -> style::Colors {
+   |        ^^^^^^^^^
+
+warning: associated function `matches` is never used
+  --> src/termchar.rs:64:8
+   |
+64 |     fn matches(&self, fg0: Color, bg0: Color) -> bool {
+   |        ^^^^^^^
+
+warning: static variable `anim_dur` should have an upper case name
+  --> src/animation.rs:26:8
+   |
+26 | static anim_dur: Duration = Duration::from_millis(500);
+   |        ^^^^^^^^ help: convert the identifier to upper case: `ANIM_DUR`
+   |
+   = note: `#[warn(non_upper_case_globals)]` on by default
+
+warning: unused `std::result::Result` that must be used
+   --> src/animation.rs:360:5
+    |
+360 |     back_snd.send(BackMsg::QuitMsg);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(unused_must_use)]` on by default
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+  --> src/animation/cardrepo.rs:94:9
+   |
+94 |         set_shape_rel(scale, &mut card_lay, card, (drop, offset + shape_pos + spacing).finto(), bg);
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> src/animation/cardrepo.rs:111:5
+    |
+111 |     card_lay.set_s_clear((drop, offset).finto(), String::from(scale.RAW_QUESTION), fg, bg);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: variable `One` should have a snake case name
+  --> src/deck.rs:25:13
+   |
+25 |             One => 1,
+   |             ^^^ help: convert the identifier to snake case (notice the capitalization): `one`
+   |
+   = note: `#[warn(non_snake_case)]` on by default
+
+warning: variable `Two` should have a snake case name
+  --> src/deck.rs:26:13
+   |
+26 |             Two => 2,
+   |             ^^^ help: convert the identifier to snake case: `two`
+
+warning: variable `Three` should have a snake case name
+  --> src/deck.rs:27:13
+   |
+27 |             Three => 3
+   |             ^^^^^ help: convert the identifier to snake case: `three`
+
+warning: unused `std::result::Result` that must be used
+   --> src/framebuf.rs:137:13
+    |
+137 | /             queue!(
+138 | |                 self.under,
+139 | |                 cursor::MoveToRow(u16::try_from(row_i).unwrap())
+140 | |             );
+    | |_____________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+    = note: this warning originates in the macro `queue` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused `std::result::Result` that must be used
+   --> src/framebuf.rs:143:17
+    |
+143 | /                 queue!(
+144 | |                     self.under, 
+145 | |                     cursor::MoveToColumn(
+146 | |                         u16::try_from(col_i).unwrap()),
+147 | |                     PrintStyledContent(cont)
+148 | |                 );
+    | |_________________^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+    = note: this warning originates in the macro `queue` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+warning: unused `std::result::Result` that must be used
+   --> src/framebuf.rs:171:9
+    |
+171 |         self.under.flush();
+    |         ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+warning: unused `std::result::Result` that must be used
+   --> src/framebuf/layer.rs:234:13
+    |
+234 |             lay.set_c(pos, ch);
+    |             ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: this `Result` may be an `Err` variant, which should be handled
+
+For more information about this error, try `rustc --explain E0170`.
+warning: `set` (bin "set") generated 110 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 0.81s
+     Running `target/debug/set`

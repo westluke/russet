@@ -1,6 +1,8 @@
 use std::ops::{Index, IndexMut};
 use std::collections::{HashMap, HashSet, hash_map::Keys};
-use std::iter::Copied;
+use std::iter;
+use iter::Copied;
+use std::ops::BitOr;
 
 use crate::deck::Card;
 use crate::termchar::TermChar;
@@ -15,11 +17,183 @@ use crossterm::style::Color;
 
 pub use super::{LayerCell::{self, *}};
 
+// pub struct TreeID {
+//     ids: Vec<String>
+// }
+
+pub struct Tree {
+    tk: TreeKind,
+    id: String,
+    display: bool,
+    anchor: TermPos
+}
+
+enum TreeKind {
+    Leaf {
+        panel: Grid<LayerCell>,
+        dirtied: HashMap<i16, HashSet<i16>>,
+    },
+
+    Branch {
+        children: Vec<Tree>,
+        // dirty_cache: HashMap<i16, HashSet<i16>>,
+        // cell_cache: Grid<LayerCell>,
+    }
+}
+
+// impl Default for Tree {
+// }
+
+// How does this get flushed?
+// how do cells get set?
+// how do cells get read?
+// Ok, for reading cells, we advance along the branches of the root until we reach one that's opaque at that cell,
+// or until we fall through. Falling all the way through is expensive, though, which is where caching comes in I think.
+// I mean, it's not much more expensive than it was before. So skip caching for now, but keep in mind that it's very possible here.
+
+impl TreeKind {
+}
+
+impl Tree {
+    pub fn new_leaf((height, width): (i16, i16), fill: LayerCell, id: String, display: bool, anchor: TermPos) -> Self {
+        debug_assert!(height >= 1 && width >= 1);
+        let res = Self {
+            tk: TreeKind::Leaf {
+                panel: Grid::new(height.finto(), width.finto(), fill),
+                dirtied: HashMap::new()
+            },
+            id,
+            display,
+            anchor
+        };
+
+        // res.dirty_opaq();
+        res
+    }
+
+    pub fn leaves(&self) -> Vec<&Tree> {
+        match self.tk {
+            TreeKind::Leaf {..} => vec![self],
+            TreeKind::Branch {children, ..} => {
+                children.iter()
+                    .flat_map(|c| c.leaves())
+                    .collect()
+            }
+        }
+    }
+
+    pub fn leaves_mut(&mut self) -> Vec<&mut Tree> {
+        match self.tk {
+            TreeKind::Leaf {..} => vec![self],
+            TreeKind::Branch {children, ..} => {
+                children.iter()
+                    .flat_map(|c| c.leaves_mut())
+                    .collect()
+            }
+        }
+    }
+
+    pub fn new_branch(children: Vec<Tree>, id: String, display: bool, anchor: TermPos) -> Self {
+        let res = Self {
+            tk: TreeKind::Branch {
+                children
+            },
+            id,
+            display,
+            anchor
+        };
+
+        // res.dirty_opaq();
+        res
+    }
+
+    // pub fn set_cell(
+    // pub fn get_cell
+
+    // set_cell_rel
+    // get_cell_rel
+    
+}
+
+pub struct LayerGroup {
+    id: String,
+    layers: Vec<(Layer>
+}
+
+impl LayerGroup {
+    pub fn new(id: String, layers: Vec<Layer>) -> Self {
+        Self { id, layers }
+    }
+
+    pub fn get_id(&self) -> String {
+        self.id
+    }
+
+    pub fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
+
+    pub fn push_layer(&mut self, lay: Layer) {
+        self.layers.insert(0, lay);
+    }
+
+    pub fn shup_layer(&mut self, lay: Layer) {
+        self.layers.push(lay);
+    }
+
+    pub fn get_layer_mut(&mut self, id: String) -> Option<&mut Layer> {
+        for lay in &mut self.layers {
+            if lay.get_id() == id {
+                return Some(lay);
+            }
+        }
+        return None;
+    }
+
+    pub fn get_dirty_lines(&self) -> HashSet<i16> {
+        let mut res = HashSet::new();
+        for lay in self.layers {
+            res = res.bitor(&lay.get_dirty_lines());
+        }
+        res
+    }
+
+    pub fn clean(&mut self) {
+        for lay in self.layers {
+            lay.clean();
+        }
+    }
+    
+    // should layergroups have anchors?? not yet
+
+    // could optimize this further by caching results, checking dirty lines to see if cache
+    // invalidated. But that's something for later - maybe with tree-structured layers.
+    pub fn get_c(&self, pos: TermPos) -> (LayerCell, bool) {
+        let mut res = LayerCell::default();
+        let mut change = false;
+
+        for lay_i in 0..self.layers.len() {
+            let lay = self.layers.get(lay_i).unwrap();
+            let cel = lay.get_c(pos);
+            let dirt = lay.is_dirty(pos);
+            change = change || dirt;
+
+            match cel {
+                // If we hit an opaque cell, we're done -- we won't see changes past this
+                Opaque(_) => return (cel, change),
+                _ => (),
+            };
+        };
+
+        (res, change)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Layer {
     
     // so calling code can pull out specific layers
-    card: Option<Card>,
+    id: String,
 
     // analogous to css display property: if false, this layer is invisible.
     display: bool,
@@ -36,23 +210,12 @@ pub struct Layer {
 }
 
 impl Layer {
-    pub fn new(card: Option<Card>, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
+    pub fn new(id: String, height: i16, width: i16, anchor: TermPos, fill: LayerCell) -> Self {
         debug_assert!(height >= 0 && width >= 0);
-        let mut dirtied = HashMap::new();
-
-        // DONT ADD NEGATIVE NUMBERS TO DIRTIED EVER
-        // if fill.is_opaque() {
-        //     let (mut y, mut x): (i16, i16) = anchor.finto();
-        //     y = max(y, 0);
-        //     x = max(x, 0);
-
-        //     for row in y..(height +  {
-        //         dirtied.insert(row + y, HashSet::from_iter(x..(x+width)));
-        //     };
-        // };
+        let dirtied = HashMap::new();
 
         let mut res = Self {
-            card,
+            id,
             display: true,
             dirtied,
             panel: Grid::new(height.try_into().unwrap(), width.try_into().unwrap(), fill),
@@ -63,6 +226,24 @@ impl Layer {
         res
     }
 
+    pub fn set_id(&mut self, id: String) {
+        self.id = id;
+    }
+    
+    pub fn get_id(&mut self) -> String {
+        self.id
+    }
+
+    pub fn activate(&mut self) {
+        self.display = true;
+        self.dirty_opaq();
+    }
+
+    pub fn deactivate(&mut self) {
+        self.dirty_opaq();
+        self.display = false;
+    }
+
     pub fn get_anchor(&self) -> TermPos {
         self.anchor
     }
@@ -71,7 +252,7 @@ impl Layer {
         let (tl, br) = TermPos::bounding_box(self.corners());
         for pos in tl.range_to(br).filter(|p| p.onscreen()) {
             let cel = self.get_c(pos);
-            if cel.is_some() {
+            if cel.is_opaque() {
                 self.dirtied
                     .entry(pos.y())
                     .or_insert_with(|| HashSet::new())
@@ -109,17 +290,21 @@ impl Layer {
         self.dirtied.clear();
     }
 
-    pub fn get_dirty_lines(&self) -> Copied<Keys<i16, HashSet<i16>>> {
-        self.dirtied.keys().copied()
+    pub fn get_dirty_lines(&self) -> HashSet<i16> {
+        self.dirtied.keys().copied().collect()
     }
 
     // All methods use ABSOLUTE positions unless otherwise stated
-    pub fn get_c(&self, pos: TermPos) -> Option<LayerCell>{
+    pub fn get_c(&self, pos: TermPos) -> LayerCell {
         self.get_c_rel(pos - self.anchor)
     }
 
-    pub fn get_c_rel(&self, pos: TermPos) -> Option<LayerCell>{
-        self.panel.get(pos)
+    pub fn get_c_rel(&self, pos: TermPos) -> LayerCell {
+        if self.display {
+            self.panel.get(pos).unwrap_or_default()
+        } else {
+            Transparent
+        }
     }
 
     pub fn set_c(&mut self, pos: TermPos, cel: LayerCell) -> Result<()> {
@@ -204,30 +389,20 @@ impl Layer {
         let (tl, br) = TermPos::bounding_box(corners);
 
         // result is just as wide as necessary to cover both input layers
-        let mut lay = Self::new_by_bounds(None, tl, br, Transparent);
-
-        // info!("other height: {:?}", other.height());
-        // info!("other width: {:?}", other.width());
-        // info!("other anchor: {:?}", other.get_anchor());
-        // info!("other corners: {:?}", other.corners());
-        // info!("other bounds: {:?}", TermPos::bounding_box(other.corners()));
+        let mut lay = Self::new_by_bounds(String::new(), tl, br, Transparent);
 
         // For each position in this new layer...
         for pos in tl.range_to(br) {
-            // if !pos.onscreen() { continue; };
-            // let covering = (self.covers(pos), other.covers(pos));
-            // info!("pos: {:?}", pos);
-            // info!("covering: {:?}", covering);
             let ch: LayerCell = match (self.covers(pos), other.covers(pos)) {
                 // if self is opaque at this position, use the self cell. Otherwise, use other.
                 (true, true) =>
-                    if let Some(Opaque(x)) = self.get_c(pos) {
-                        Opaque(x)
+                    if let cel @ Opaque(_) = self.get_c(pos) {
+                        cel
                     } else {
-                        other.get_c(pos).unwrap_or_default()
+                        other.get_c(pos)
                     },
-                (true, false) => self.get_c(pos).unwrap_or_default(),
-                (false, true) => other.get_c(pos).unwrap_or_default(),
+                (true, false) => self.get_c(pos),
+                (false, true) => other.get_c(pos),
                 (false, false) => Transparent
             };
 
@@ -241,7 +416,7 @@ impl Layer {
         other.over(self)
     }
 
-    pub fn new_by_bounds(id: Option<Card>, tl: TermPos, br: TermPos, cel: LayerCell) -> Self {
+    pub fn new_by_bounds(id: String, tl: TermPos, br: TermPos, cel: LayerCell) -> Self {
         Self::new(id, (br.y() - tl.y())+1, (br.x() - tl.x())+1, tl, cel)
     }
 
@@ -314,27 +489,3 @@ impl Layer {
     // pub fn resize(&mut self, height: usize, width: usize) {
     //     self.panel.resize(height, width, Some(TermChar::default()));
     // }
-
-// impl Index<TermPos> for Layer {
-//     type Output = LayerCell;
-
-//     fn index(&self, pos: TermPos) -> &Self::Output {
-//         &self.panel[pos]
-//     }
-// }
-
-// impl IndexMut<TermPos> for Layer {
-//     fn index_mut(&mut self, pos: TermPos) -> &mut Self::Output {
-//         &mut self.panel[pos]
-//     }
-// }
-
-// impl Index<(i16, i16)> for Layer {
-//     type Output = LayerCell;
-
-//     fn index(&self, pos: (i16, i16)) -> &Self::Output {
-//         let y = usize::try_from(pos.0).unwrap();
-//         let x = usize::try_from(pos.1).unwrap();
-//         &self.panel[(y, x)]
-//     }
-// }

@@ -1,13 +1,15 @@
 use std::{thread, io, time, sync, collections};
-use io::Write;
 
+use io::Write;
 use time::{Instant, Duration};
 use sync::{Arc, Mutex, mpsc::{self, RecvTimeoutError}};
+use collections::{HashMap};
+use std::hash::{Hash, Hasher};
 
 use crossterm::{terminal, execute, style};
 use log::{info};
 
-use crate::game::*;
+use crate::game::{*, ChangeAtom::*};
 use crate::pos::*;
 // use crate::printing;
 // use crate::pos::*;
@@ -34,9 +36,11 @@ static anim_dur: Duration = Duration::from_millis(500);
 
 pub enum Msg {
     QuitMsg,
-    Collide(TermPos),
-    // ChangeMsg(ChangeSet)
+    Nop,
+    ChangeMsg(ChangeSet)
 }
+
+pub struct ClickMsg(TermPos);
 
 pub enum BackMsg {
     QuitMsg,
@@ -270,7 +274,11 @@ pub fn sleep_until(i: Instant) {
 
 
 
-pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Result<()> {
+pub fn animate(
+    game_rcv: mpsc::Receiver<Msg>,
+    click_rcv: mpsc::Receiver<ClickMsg>,
+    back_snd: mpsc::Sender<BackMsg>
+) -> Result<()> {
 
     // lock standard out to avoid lock thrashing. Already converted to raw mouse terminal by main
     let mut stdout = io::stdout();//.lock();
@@ -287,7 +295,7 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
 
     // mut cuz we need to adapt to size changes
     let (mut width, mut height) = TS.update();
-    debug_assert!(width != 0 && height != 0);
+    debug_assert!(width > 0 && height > 0);
 
     let mut start = Instant::now();
 
@@ -300,12 +308,16 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     let mut deck = repo7.get_deck();
     let mut deck_active = repo7.get_deck_active();
 
-    deck.deactivate();
+    let mut deck_id = 0;
+    let mut deck_active_id = 1;
+    // let mut card_ids: HashMap<(Card, bool), u64> = HashMap::new();
+
+    deck_active.deactivate();
     deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
-    deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
+    deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
 
     buf.push_layer(deck);
-    buf.push_layer(deck);
+    buf.push_layer(deck_active);
 
     info!("animation loop starting");
 
@@ -313,20 +325,45 @@ pub fn animate(rx: mpsc::Receiver<Msg>, sx_back: mpsc::Sender<BackMsg> ) -> Resu
     // What should this behavior be like?
     // Obviously if we quit because of a quitmsg, we should complete the rest of the exit
     // procedure. But what about an error? 
+    
     loop {
-        let msg = rx.recv_timeout(Duration::from_millis(200));
-        match msg {
+        let game_msg = game_rcv.recv_timeout(Duration::from_millis(200));
+        let click_msg = click_rcv.try_recv();
+        
+        if let Ok(click_msg) = click_msg {
+            // Do collision calculations
+            // continue so we can handle more possible clicks
+            // backx.send(collidemsg);
+            continue;
+        }
+
+        match game_msg {
             Err(RecvTimeoutError::Disconnected) | Ok(Msg::QuitMsg) => break,
             Err(RecvTimeoutError::Timeout) => (),
-            Ok(Msg::Collide(_)) => continue,
+            Ok(Msg::Nop) => continue,
+            Ok(Msg::ChangeMsg(cs)) => {
+                let ChangeSet { changes, stamp } = cs;
+                for change in changes {
+                    match change {
+                        Deal(card, pos) => {
+                            // let mut card_lay = repo7.get_card_active(card);
+                            let mut card_lay = repo7.get_card(card);
+                            card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)) + TermPos::ffrom((1, 0)));
+                            buf.push_layer(card_lay);
+                        },
+                        _ => ()
+                    }
+                }
+            }
         }
+
         buf.flush();
     }
 
     info!("animation loop over");
 
     // Necessary if we exited loop due to error, rather than forward quitmsg
-    sx_back.send(BackMsg::QuitMsg);
+    back_snd.send(BackMsg::QuitMsg);
 
     // gamestate shows all statically visible cards.
     // I think, it might make sense later for GameSTate to be keeping an internal record of all
