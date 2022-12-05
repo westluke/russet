@@ -15,12 +15,12 @@ use crate::pos::*;
 // use crate::pos::*;
 use crate::util::*;
 use crate::termchar::*;
-use crate::framebuf::{FrameBuf, layer::Layer, LayerCell::{self, *}};
+use crate::framebuf::{FrameBuf, LayerCell::{self, *}};
 use crate::deck::*;
 
 
 mod cardrepo;
-use cardrepo::CardRepo;
+// use cardrepo::CardRepo;
 
 
 
@@ -302,22 +302,22 @@ pub fn animate(
     // GONNA NEED A BETTER SYSTEM FOR KEEPING TRACK OF WHICH KAYER IS WHICH
     // ALSO NEED TO RMEMEBER TO FIX UP LAYER DISPLAY SYSTEM
     
-    let repo7 = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
-    let repo9 = CardRepo::new(SIZE_9, TERM_BG, CARD_BG);
-    let mut buf = FrameBuf::new(stdout); 
-    let mut deck = repo7.get_deck();
-    let mut deck_active = repo7.get_deck_active();
+    // let repo7 = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
+    // let repo9 = CardRepo::new(SIZE_9, TERM_BG, CARD_BG);
+    // let mut buf = FrameBuf::new(stdout); 
+    // let mut deck = repo7.get_deck();
+    // let mut deck_active = repo7.get_deck_active();
 
     let mut deck_id = 0;
     let mut deck_active_id = 1;
     // let mut card_ids: HashMap<(Card, bool), u64> = HashMap::new();
 
-    deck_active.deactivate();
-    deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
-    deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
+    // deck_active.deactivate();
+    // deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
+    // deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
 
-    buf.push_layer(deck);
-    buf.push_layer(deck_active);
+    // buf.push_layer(deck);
+    // buf.push_layer(deck_active);
 
     info!("animation loop starting");
 
@@ -347,9 +347,9 @@ pub fn animate(
                     match change {
                         Deal(card, pos) => {
                             // let mut card_lay = repo7.get_card_active(card);
-                            let mut card_lay = repo7.get_card(card);
-                            card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)) + TermPos::ffrom((1, 0)));
-                            buf.push_layer(card_lay);
+                            // let mut card_lay = repo7.get_card(card);
+                            // card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)) + TermPos::ffrom((1, 0)));
+                            // buf.push_layer(card_lay);
                         },
                         _ => ()
                     }
@@ -357,7 +357,7 @@ pub fn animate(
             }
         }
 
-        buf.flush();
+        // buf.flush();
     }
 
     info!("animation loop over");
