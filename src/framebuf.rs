@@ -13,13 +13,12 @@ use crate::util::*;
 use log::{info, warn, error};
 
 mod grid;
-pub mod frametree;
+mod line_update;
+mod termable;
+pub mod frame_tree;
 
 use grid::Grid;
-use frametree::FrameTree;
-// use layer::{Layer, LayerGroup};
-
-// pub type LayerCell = Option<TermChar>;
+use frame_tree::FrameTree;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerCell {
@@ -61,6 +60,14 @@ pub struct FrameBuf<T: Write> {
 impl<T: Write> FrameBuf<T> {
     pub fn new(under: T, frame_tree: FrameTree) -> Self {
         Self { under, frame_tree }
+    }
+
+    pub fn get_tree(&self) -> &FrameTree {
+        &self.frame_tree
+    }
+
+    pub fn get_tree_mut(&mut self) -> &mut FrameTree {
+        &mut self.frame_tree
     }
 
 
@@ -215,192 +222,4 @@ impl<T: Write> FrameBuf<T> {
 
     //     self.under.flush();
     // }
-}
-
-// this is stupid and wrong, it's not actually optimizing at all
-pub struct LineUpdate {
-    cs: Vec<LayerCell>
-}
-
-impl Default for LineUpdate {
-    fn default() -> Self {
-        Self { cs: Default::default() }
-    }
-}
-
-impl LineUpdate {
-    pub fn new(length: i16) -> Self {
-        Self { cs: vec![Transparent; usize::try_from(length).unwrap()] }
-    }
-
-    pub fn set(&mut self, i: i16, c: LayerCell) {
-        self.cs[usize::try_from(i).unwrap()] = c;
-    }
-
-    // Returns number of characters consumed to find start, Termable produced (if any)
-    fn first_termable(&mut self) -> (i16, Option<Termable>) {
-        let mut term = None;
-        let mut cons = 0;
-
-        for i in 0..self.cs.len() {
-            let c_opt = self.cs[i];
-
-            match (&mut term, c_opt) {
-                (None, Transparent) => {
-                    cons += 1;
-                },
-                (None, Opaque(c)) => {
-                    term = Some(Termable::from(c));
-                },
-                (Some(_), Transparent) => {
-                    self.cs.drain(0..i);
-                    return (cons, term);
-                },
-                (Some(t), Opaque(c)) => {
-                    if !t.push(c) {
-                        self.cs.drain(0..i);
-                        return (cons, term);
-                    };
-                }
-            };
-        };
-
-        self.cs.drain(0..);
-        (cons, term)
-    }
-
-    // Outputs a vector of pairs (i, cont) where cont is a StyledContent ready to be Print'd,
-    // and i is the column where cont should be printed
-    pub fn finalize(mut self) -> Vec<(i16, StyledContent<Termable>)> {
-        let mut out = Vec::new();
-
-        let (mut cons, mut term) = self.first_termable();
-        let mut last = 0;
-
-        while let Some(t) = term {
-            let len = t.len();
-            out.push((last + cons, t.finalize()));
-            last += cons + len;
-            (cons, term) = self.first_termable();
-        };
-
-        out
-    }
-}
-
-// Termable is a TermChar sequence that can be printed as a single command.
-pub enum Termable {
-    Bg { n: usize, bg: Color }, // n is just the number of spaces to use
-    Fg { s: String, fg: Color, bg: Color }
-}
-
-impl std::fmt::Display for Termable {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match *self {
-            Termable::Bg { n, .. } =>
-                write!(f, "{}", " ".repeat(n)),
-            Termable::Fg { ref s, .. } =>
-                {info!("S{}E", s);
-                write!(f, "{}", s)}
-        }
-    }
-}
-
-impl From<TermChar> for Termable {
-    fn from(c: TermChar) -> Self {
-        match c {
-            TermChar::Bg { bg } =>
-                Self::Bg { n: 1, bg },
-            TermChar::Fg { c, bg, fg } =>
-                Self::Fg { s: String::from(c), fg, bg }
-        }
-    }
-}
-
-impl Termable {
-
-    pub fn len(&self) -> i16 {
-        let i = match self {
-            Self::Bg { n, .. } => *n,
-            Self::Fg { s, .. } => s.chars().count()
-        };
-        i16::try_from(i).unwrap()
-    }
-
-    // None cells MUST BE HANDLED EXTERNALLY. This is for adding visible, printable characters,
-    // NOT for handling transparency. Returns true iff tc was compatible and added successfully.
-    // Therefore returns false iff tc will need a new Termable to be added to.
-    pub fn push(&mut self, mut tc: TermChar) -> bool {
-        // match tc {
-        //     TermChar::Fg { ref mut c, .. } => {
-        //         if *c == 'X' {
-        //             *c = '┗';
-        //         }
-        //     },
-        //     _ => ()
-        // };
-
-        match (self, tc) {
-            (Termable::Fg { s, bg: bg0, .. }, TermChar::Bg { bg }) => {
-                if *bg0 == bg {
-                    s.push(' ');
-                    true
-                } else { false }
-            },
-            (Termable::Fg { s, fg: fg0, bg: bg0 }, TermChar::Fg { c, fg, bg }) => {
-                if (*bg0 == bg) && (*fg0 == fg) {
-                    s.push(c);
-                    true
-                } else { false }
-            }
-            (Termable::Bg { n, bg: bg0 }, TermChar::Bg { bg }) => {
-                if *bg0 == bg {
-                    *n += 1;
-                    true
-                } else { false }
-            },
-            (self_, TermChar::Fg { c, fg, bg }) => {
-                let (n, bg0) = match self_.borrow() {
-                    Termable::Bg { n, bg } => (*n, *bg),
-                    _ => panic!("should not be able to reach this arm")
-
-                };
-
-                if bg0 == bg {
-                    let mut s = " ".repeat(n);
-                    s.push(c);
-                    *self_ = Self::Fg { s, fg, bg };
-                    true
-                } else { false }
-            },
-        }
-    }
-
-    pub fn bg(&self) -> Color {
-        match *self {
-            Termable::Bg {bg, ..} => bg,
-            Termable::Fg {bg, ..} => bg,
-        }
-    }
-
-    pub fn fg(&self) -> Option<Color> {
-        match *self {
-            Termable::Bg {..} => None,
-            Termable::Fg {fg, ..} => Some(fg),
-        }
-    }
-
-    fn n(&self) -> usize {
-        match *self {
-            Termable::Bg { n, .. } => n,
-            _ => panic!("this function should never be called on a non-Bg variant!!")
-        }
-    }
-
-    pub fn finalize(self) -> StyledContent<Termable> {
-        let mut style = ContentStyle::new();
-        style.foreground_color = self.fg();
-        style.background_color = Some(self.bg());
-        StyledContent::new(style, self)
-    }
 }
