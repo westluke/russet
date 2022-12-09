@@ -1,3 +1,8 @@
+use super::LayerCell::{*, self};
+use super::DirtyBit::{*, self};
+use super::termable::*;
+use crossterm::style::StyledContent;
+
 // this is stupid and wrong, it's not actually optimizing at all
 pub struct LineUpdate {
     cs: Vec<LayerCell>

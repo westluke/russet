@@ -22,13 +22,13 @@ mod util;
 
 pub mod pos;
 pub mod deck;
-pub mod framebuf;
+pub mod frame_buf;
 pub mod layout;
-pub mod termchar;
+pub mod term_char;
 
 use game::{*, ChangeAtom::*};
 use animation::*;
-use framebuf::*;
+use frame_buf::*;
 use util::*;
 use pos::*;
 use deck::*;

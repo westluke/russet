@@ -1,3 +1,7 @@
+use crate::term_char::*;
+use crossterm::style::{Color, StyledContent, ContentStyle};
+use log::info;
+use std::borrow::Borrow;
 
 // Termable is a TermChar sequence that can be printed as a single command.
 pub enum Termable {

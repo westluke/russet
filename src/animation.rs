@@ -14,13 +14,15 @@ use crate::pos::*;
 // use crate::printing;
 // use crate::pos::*;
 use crate::util::*;
-use crate::termchar::*;
-use crate::framebuf::{FrameBuf, LayerCell::{self, *}};
+use crate::term_char::*;
+use crate::frame_buf::{FrameBuf, LayerCell::{self, *}, FrameTree};
 use crate::deck::*;
 
+// use crate::framebuf::termable;
 
-mod cardrepo;
-// use cardrepo::CardRepo;
+
+mod card_repo;
+use card_repo::CardRepo;
 
 
 
@@ -302,11 +304,11 @@ pub fn animate(
     // GONNA NEED A BETTER SYSTEM FOR KEEPING TRACK OF WHICH KAYER IS WHICH
     // ALSO NEED TO RMEMEBER TO FIX UP LAYER DISPLAY SYSTEM
     
-    // let repo7 = CardRepo::new(SIZE_7, TERM_BG, CARD_BG);
-    // let repo9 = CardRepo::new(SIZE_9, TERM_BG, CARD_BG);
-    // let mut buf = FrameBuf::new(stdout); 
-    // let mut deck = repo7.get_deck();
-    // let mut deck_active = repo7.get_deck_active();
+    let repo7 = CardRepo::new(SIZE_7);
+    let repo9 = CardRepo::new(SIZE_9);
+    let mut buf = FrameBuf::new(stdout, FrameTree::default()); 
+    let mut deck = repo7.get_deck();
+    let mut deck_active = repo7.get_deck_active();
 
     let mut deck_id = 0;
     let mut deck_active_id = 1;
@@ -316,8 +318,8 @@ pub fn animate(
     // deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
     // deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
 
-    // buf.push_layer(deck);
-    // buf.push_layer(deck_active);
+    buf.tree_mut().push_tree(deck);
+    buf.tree_mut().push_tree(deck_active);
 
     info!("animation loop starting");
 
@@ -357,7 +359,7 @@ pub fn animate(
             }
         }
 
-        // buf.flush();
+        buf.flush();
     }
 
     info!("animation loop over");

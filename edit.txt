@@ -1,7 +1,7 @@
 src/animation.rs
-src/animation/cardrepo.rs
-src/framebuf.rs
-src/framebuf/frame_tree.rs
-src/framebuf/grid.rs
-src/framebuf/line_update.rs
-src/framebuf/termable.rs
+src/animation/card_repo.rs
+src/frame_buf.rs
+src/frame_buf/frame_tree.rs
+src/frame_buf/grid.rs
+src/frame_buf/line_update.rs
+src/frame_buf/termable.rs

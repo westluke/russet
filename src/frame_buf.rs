@@ -1,13 +1,12 @@
 use std::io::{Write};
-use std::borrow::Borrow;
-use std::collections::{HashSet};
+use std::collections::{HashSet, HashMap};
 use std::ops::BitOr;
 
 use crossterm::style::{self, Color, ContentStyle, StyledContent, PrintStyledContent};
 use crossterm::{queue, cursor};
 
 use crate::pos::*;
-use crate::termchar::*;
+use crate::term_char::*;
 use crate::util::*;
 
 use log::{info, warn, error};
@@ -15,15 +14,22 @@ use log::{info, warn, error};
 mod grid;
 mod line_update;
 mod termable;
-pub mod frame_tree;
+mod frame_tree;
 
 use grid::Grid;
-use frame_tree::FrameTree;
+pub use frame_tree::FrameTree;
+use line_update::LineUpdate;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LayerCell {
     Opaque(TermChar),
     Transparent,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DirtyBit {
+    Dirty,
+    Clean
 }
 
 impl LayerCell {
@@ -62,11 +68,11 @@ impl<T: Write> FrameBuf<T> {
         Self { under, frame_tree }
     }
 
-    pub fn get_tree(&self) -> &FrameTree {
+    pub fn tree(&self) -> &FrameTree {
         &self.frame_tree
     }
 
-    pub fn get_tree_mut(&mut self) -> &mut FrameTree {
+    pub fn tree_mut(&mut self) -> &mut FrameTree {
         &mut self.frame_tree
     }
 
@@ -113,7 +119,29 @@ impl<T: Write> FrameBuf<T> {
     //     None
     // }
 
-    // pub fn flush(&mut self)  {
+    pub fn flush(&mut self)  {
+        self.frame_tree.propagate_dirt();
+        let dirt: &HashMap<i16, HashSet<i16>> = self.frame_tree.dirt();
+
+        for (&row, cols) in dirt {
+            let mut lnup = LineUpdate::new(TS.width());
+
+            for &col in cols {
+                let cel = self.frame_tree.cell((row, col).finto());
+                lnup.set(col, cel);
+            }
+
+            queue!(self.under, cursor::MoveTo(row.finto(), 0));
+
+            for (col, styled) in lnup.finalize() {
+                queue!(
+                    self.under,
+                    cursor::MoveToColumn(col.finto()),
+                    PrintStyledContent(styled)
+                );
+            }
+        }
+    }
 
         // but i feel like im missing some possible benefits associated just with using this new
         // tree structure...
@@ -150,76 +178,5 @@ impl<T: Write> FrameBuf<T> {
                 // fill in the line update
                 //
 
-    // }
-
-    // Writes all new changes out to the underlying buffer
-    // pub fn flush(&mut self)  {
-
-    //     // can optimize by pre-fetching dirtied line numbers
-    //     let mut dirty_lines = HashSet::new();
-
-    //     for lay_i in 0..self.layer_groups.len() {
-    //         let keys: HashSet<i16> = self.layer_groups[lay_i].get_dirty_lines();
-    //         dirty_lines = dirty_lines.bitor(&keys);
-    //     }
-
-    //     // for every dirty line...
-    //     for row_i in dirty_lines {
-
-    //         // start a new line update
-    //         let mut lnup = LineUpdate::new(TS.width());
-
-            
-    //         // note: i don't actually need to check every cell, can optimize this out
-    //         // for every cell in this line...
-    //         for col_i in 0..TS.width() {
-
-    //             // for every layer...
-    //             for layg_i in 0..self.layer_groups.len() {
-    //                 let layg = self.layer_groups.get(layg_i).unwrap();
-    //                 let pos = TermPos::ffrom((row_i, col_i)).chk();
-    //                 let (cel, change) = layg.get_c(pos);
-
-    //                 match (change, cel) {
-    //                 // how doew this algorithm extend to layergroups?
-    //                     // If we hit an opaque cell, we're done -- we won't see changes past this
-    //                     // stupid and wrong, not actuall optimizing
-    //                     (_, cel @ Opaque(_)) => {
-    //                         lnup.set(col_i, cel);
-    //                         break;
-    //                     },
-
-    //                     // If we hit a newly transparent cell, we have to keep going,
-    //                     // waiting for the next opaque cell. But in case we fall ALL the way
-    //                     // through, we put in the default value (terminal background)
-    //                     (true, Transparent) => lnup.set(col_i, Opaque(Default::default())),
-
-    //                     // If we hit an old transparent cell, we just fall through
-    //                     (false, Transparent) => (),
-    //                 };
-    //             };
-    //         };
-
-    //         queue!(
-    //             self.under,
-    //             cursor::MoveToRow(u16::try_from(row_i).unwrap())
-    //         );
-            
-    //         for (col_i, cont) in lnup.finalize() {
-    //             queue!(
-    //                 self.under, 
-    //                 cursor::MoveToColumn(
-    //                     u16::try_from(col_i).unwrap()),
-    //                 PrintStyledContent(cont)
-    //             );
-    //         };
-    //     };
-
-    //     // clear all layers
-    //     for lay in &mut self.layer_groups {
-    //         lay.clean();
-    //     }
-
-    //     self.under.flush();
     // }
 }
