@@ -1,0 +1,26 @@
+animation:
+    - deck
+    - actual moving animations
+    - improved good/bad outlines
+    - enforcing z-order on lastfoundsets
+    - implementing fades on lastfoundsets
+    - time counter
+    - set counter
+    - score counter
+    - auto-adjusting for screen size changes
+
+game mechanics:
+    - "reveal" button
+    - "add cards" button
+    - keybindings
+    - restart game button
+
+general:
+    - improved logging
+    - code cleanup
+    - more thorough commenting
+
+future:
+    - menu mode for settings
+    - witness optimization on frame trees
+

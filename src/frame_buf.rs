@@ -34,7 +34,7 @@ pub enum DirtyBit {
 }
 
 impl LayerCell {
-    fn is_opaque(&self) -> bool {
+    pub fn is_opaque(&self) -> bool {
         if let Transparent = self {
             false
         } else {
@@ -42,8 +42,12 @@ impl LayerCell {
         }
     }
 
-    fn is_transparent(&self) -> bool {
+    pub fn is_transparent(&self) -> bool {
         !self.is_opaque()
+    }
+
+    pub fn bg() -> Self {
+        Self::Opaque(TermChar::new(' ', TERM_BG, TERM_BG))
     }
 }
 
@@ -132,11 +136,6 @@ impl<T: Write> FrameBuf<T> {
             k >= 0 && k < TS.height()
         });
 
-        // info!("len: {}", self.frame_tree.len());
-
-        // OH EXTEND IS WRONG LOL
-        // SHOULDNT BE EXTEND< SHOULD BE COMBINING
-
         // info!("{:?}", dirt);
         // info!("height: {:?}", TS.height());
 
@@ -150,6 +149,7 @@ impl<T: Write> FrameBuf<T> {
                 let cel = self.frame_tree.cell((row, col).finto());
                 // info!("{:?}", cel);
                 lnup.set(col, cel);
+                // info!("just set in linupdate: {:?}, {:?}", col, cel);
             }
 
             queue!(self.under, cursor::MoveTo(0, row.finto()));

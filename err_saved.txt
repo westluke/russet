@@ -230,17 +230,17 @@ warning: unused import: `io::Write`
   |     ^^^^^^^^^
 
 warning: unused variable: `start`
-   --> src/animation.rs:370:13
+   --> src/animation.rs:349:13
     |
-370 |     let mut start = Instant::now();
+349 |     let mut start = Instant::now();
     |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
     |
     = note: `#[warn(unused_variables)]` on by default
 
 warning: unused variable: `repo9`
-   --> src/animation.rs:376:9
+   --> src/animation.rs:355:9
     |
-376 |     let repo9 = CardRepo::new(SIZE_9);
+355 |     let repo9 = CardRepo::new(SIZE_9);
     |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_repo9`
 
 warning: unused variable: `err`
@@ -322,25 +322,25 @@ warning: variable does not need to be mutable
     |         help: remove this `mut`
 
 warning: variable does not need to be mutable
-   --> src/animation.rs:367:10
+   --> src/animation.rs:346:10
     |
-367 |     let (mut width, mut height) = TS.update();
+346 |     let (mut width, mut height) = TS.update();
     |          ----^^^^^
     |          |
     |          help: remove this `mut`
 
 warning: variable does not need to be mutable
-   --> src/animation.rs:367:21
+   --> src/animation.rs:346:21
     |
-367 |     let (mut width, mut height) = TS.update();
+346 |     let (mut width, mut height) = TS.update();
     |                     ----^^^^^^
     |                     |
     |                     help: remove this `mut`
 
 warning: variable does not need to be mutable
-   --> src/animation.rs:370:9
+   --> src/animation.rs:349:9
     |
-370 |     let mut start = Instant::now();
+349 |     let mut start = Instant::now();
     |         ----^^^^^
     |         |
     |         help: remove this `mut`
@@ -390,22 +390,28 @@ warning: function `show_outline` is never used
 292 | fn show_outline(ft: &mut FrameTree, card: Card) {
     |    ^^^^^^^^^^^^
 
-warning: function `hide_shadow` is never used
-   --> src/animation.rs:304:4
+warning: function `hide_outline` is never used
+   --> src/animation.rs:296:4
     |
-304 | fn hide_shadow(ft: &mut FrameTree, card: Card) {
-    |    ^^^^^^^^^^^
+296 | fn hide_outline(ft: &mut FrameTree, card: Card) {
+    |    ^^^^^^^^^^^^
+
+warning: function `show_good` is never used
+   --> src/animation.rs:300:4
+    |
+300 | fn show_good(ft: &mut FrameTree, card: Card) {
+    |    ^^^^^^^^^
 
 warning: function `hide_good` is never used
-   --> src/animation.rs:312:4
+   --> src/animation.rs:304:4
     |
-312 | fn hide_good(ft: &mut FrameTree, card: Card) {
+304 | fn hide_good(ft: &mut FrameTree, card: Card) {
     |    ^^^^^^^^^
 
 warning: function `hide_bad` is never used
-   --> src/animation.rs:320:4
+   --> src/animation.rs:312:4
     |
-320 | fn hide_bad(ft: &mut FrameTree, card: Card) {
+312 | fn hide_bad(ft: &mut FrameTree, card: Card) {
     |    ^^^^^^^^
 
 warning: field `deck` is never read
@@ -458,9 +464,9 @@ warning: associated function `has_changes` is never used
     |            ^^^^^^^^^^^
 
 warning: associated function `last_set_found` is never used
-   --> src/game.rs:218:12
+   --> src/game.rs:224:12
     |
-218 |     pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
+224 |     pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
     |            ^^^^^^^^^^^^^^
 
 warning: constant `QUESTION_BG` is never used
@@ -609,19 +615,19 @@ warning: static variable `anim_dur` should have an upper case name
    = note: `#[warn(non_upper_case_globals)]` on by default
 
 warning: unused `std::result::Result` that must be used
-   --> src/animation.rs:441:17
+   --> src/animation.rs:420:17
     |
-441 | /                 back_snd.send(
-442 | |                     BackMsg::Collisions(buf.tree().collide(pos))
-443 | |                 );
+420 | /                 back_snd.send(
+421 | |                     BackMsg::Collisions(buf.tree().collide(pos))
+422 | |                 );
     | |__________________^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 
 warning: unused `std::result::Result` that must be used
-   --> src/animation.rs:507:5
+   --> src/animation.rs:482:5
     |
-507 |     back_snd.send(BackMsg::QuitMsg);
+482 |     back_snd.send(BackMsg::QuitMsg);
     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     |
     = note: this `Result` may be an `Err` variant, which should be handled
@@ -672,6 +678,23 @@ warning: unused `std::result::Result` that must be used
     |
     = note: this `Result` may be an `Err` variant, which should be handled
 
-warning: `set` (bin "set") generated 101 warnings
-    Finished dev [unoptimized + debuginfo] target(s) in 0.87s
+warning: `set` (bin "set") generated 102 warnings
+    Finished dev [unoptimized + debuginfo] target(s) in 0.84s
      Running `target/debug/set`
+thread 'main' panicked at 'assertion failed: self.enumerate_cards().find(|(_, c)|\n            c.is_some() && c.unwrap() == card).is_some()', src/game.rs:138:9
+stack backtrace:
+   0: rust_begin_unwind
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/std/src/panicking.rs:584:5
+   1: core::panicking::panic_fmt
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:142:14
+   2: core::panicking::panic
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:48:5
+   3: set::game::GameState::select
+             at ./src/game.rs:138:9
+   4: set::handle_back_msg
+             at ./src/main.rs:189:21
+   5: set::main
+             at ./src/main.rs:265:15
+   6: core::ops::function::FnOnce::call_once
+             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/ops/function.rs:248:5
+note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.

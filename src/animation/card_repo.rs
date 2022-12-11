@@ -275,14 +275,14 @@ pub fn make(scale: Scale) -> CardRepo {
         .map(
             |(k, mut inactive)| {
                 let mut active = cards_active.get(&k).unwrap().clone();
+                active.set_anchor((1, -1).finto());
                 active.deactivate();
                 active.set_id("active".into());
                 inactive.set_id("inactive".into());
                 let mut mom = FrameTree::new_branch(
                     vec![outline_bad.clone(), outline_good.clone(), active, inactive, outline_thin.clone(), shadow.clone()],
-                    "default".into(),
+                    k.into(),
                     true, (0, 0).finto());
-                mom.set_id(k.into());
                 mom.activate();
                 (k, mom)
             }

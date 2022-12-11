@@ -144,7 +144,7 @@ impl FrameTree {
                 // info!("bounds: {:?}", (tl, br));
                 for p in tl.range_to(br) {
                     // info!("{:?}", p);
-                    if let Some(Opaque(_)) = self._cell(p, true) { self.set_dirty(p); }
+                    if let Some(Opaque(_)) = self._cell(p, true) { self.set_dirty(p + self.anchor); }
                 }
             }
             FrameTreeKind::Branch {ref mut children} => {
@@ -180,7 +180,7 @@ impl FrameTree {
         match self.kind {
             FrameTreeKind::Leaf{..} => self.dirt.clone(),
             FrameTreeKind::Branch{ref children} => {
-                let mut result = HashMap::new();
+                let mut result = self.dirt.clone();
 
                 for child in children {
                     for (k, v) in child.dirt() {
@@ -270,13 +270,13 @@ impl FrameTree {
     }
 
     pub fn activate(&mut self) {
-        self.active = true;
         self.dirty_opaq();
+        self.active = true;
     }
 
     pub fn deactivate(&mut self) {
-        self.active = false;
         self.dirty_opaq();
+        self.active = false;
     }
 
     pub fn find(&self, id: &Id) -> Option<&Self> {
@@ -399,11 +399,11 @@ impl FrameTree {
     // }
 
     pub fn cell(&self, pos: TermPos) -> LayerCell {
-        if let Some(c) = self._cell(pos, false) { c } else { LayerCell::default() }
+        if let Some(c) = self._cell(pos, false) { c } else { LayerCell::bg() }
     }
 
-    fn _cell(&self, pos: TermPos, ignore_active: bool) -> Option<LayerCell> {
-        if !self.active && !ignore_active { return None; };
+    fn _cell(&self, pos: TermPos, ignore_active_status: bool) -> Option<LayerCell> {
+        if !self.active && !ignore_active_status { return None; };
         match self.kind {
             FrameTreeKind::Leaf {ref frame} => 
                 match frame.get(pos - self.anchor) {
@@ -412,7 +412,7 @@ impl FrameTree {
                 },
             FrameTreeKind::Branch {ref children} => {
                 for child in children {
-                    match child._cell(pos - self.anchor, ignore_active) {
+                    match child._cell(pos - self.anchor, ignore_active_status) {
                         None | Some(Transparent) => continue,
                         c => return c
                     };

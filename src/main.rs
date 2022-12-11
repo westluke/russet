@@ -181,9 +181,10 @@ fn handle_back_msg(state: &mut GameState, msg: std::result::Result<BackMsg, TryR
         Err(TryRecvError::Empty) => return FrameResult::Nop,
         Ok(BackMsg::Collisions(None)) => return FrameResult::Nop,
         Ok(BackMsg::Collisions(Some(v))) => {
-            info!("HANDLING COLLISIONS IN MAIN");
+            // info!("HANDLING COLLISIONS IN MAIN");
+            // info!("Collision IDs
             for id in v {
-                info!("ID: {}", id);
+                // info!("ID: {}", id);
                 if let Some(c) = id.card {
                     state.select(c);
                     let csets = state.changes();
@@ -220,7 +221,7 @@ fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) ->
                 modifiers: KeyModifiers::NONE
             }
         ) => {
-            info!("CLICK DETECTED!!");
+            // info!("CLICK DETECTED!!");
             Click(ClickMsg((row, column).finto()))
         }
 

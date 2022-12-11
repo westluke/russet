@@ -162,9 +162,9 @@ impl GameState {
             );
 
             let (p0, p1, p2) = (
-                self.remove_card(c0),
-                self.remove_card(c1),
-                self.remove_card(c2),
+                self.find(c0),
+                self.find(c1),
+                self.find(c2),
             );
 
             if is_a_set(c0, c1, c2) {
@@ -197,12 +197,6 @@ impl GameState {
 
         self.changesets.push(ChangeSet::new(chs, self.id_counter));
         self.id_counter += 1;
-    }
-
-    fn remove_card(&mut self, card: Card) -> DealtPos {
-        let pos = self.find(card);
-        self.layout.remove(pos);
-        pos
     }
 
     fn find(&self, card: Card) -> DealtPos {

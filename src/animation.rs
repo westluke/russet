@@ -285,7 +285,7 @@ fn change_activation(ft: &mut FrameTree, card: Card, name: &'static str, active:
     if active {
         layer.activate();
     } else {
-        layer.activate();
+        layer.deactivate();
     };
 }
 
@@ -297,6 +297,14 @@ fn hide_outline(ft: &mut FrameTree, card: Card) {
     change_activation(ft, card, "outline", false);
 }
 
+fn show_shadow(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "outline", false);
+    change_activation(ft, card, "shadow", true);
+}
+fn hide_shadow(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "shadow", false);
+}
+
 fn show_good(ft: &mut FrameTree, card: Card) {
     change_activation(ft, card, "good", true);
     change_activation(ft, card, "bad", false);
@@ -306,8 +314,8 @@ fn hide_good(ft: &mut FrameTree, card: Card) {
 }
 
 fn show_bad(ft: &mut FrameTree, card: Card) {
-    change_activation(ft, card, "bad", true);
     change_activation(ft, card, "good", false);
+    change_activation(ft, card, "bad", true);
 }
 fn hide_bad(ft: &mut FrameTree, card: Card) {
     change_activation(ft, card, "bad", false);
@@ -318,9 +326,22 @@ fn make_active(ft: &mut FrameTree, card: Card) {
     change_activation(ft, card, "inactive", false);
 }
 fn make_inactive(ft: &mut FrameTree, card: Card) {
-    change_activation(ft, card, "inactive", true);
     change_activation(ft, card, "active", false);
+    change_activation(ft, card, "inactive", true);
 }
+
+// JUST HAD A BRAINWAVE. CAN SEPARATE OUT CACHING BY HAVING EVERY SUBTREE STORE A WITNESS (ALL THE SAME WITNESS, THROUGH AN ARC/MUTEX).
+// CHILDREN INHERIT WITNESS OF PARENT.
+// EVERY UPDATE GETS REGISTERED WITH THE WITNESS. FLUSHING PULLS DATA FROM WITNESS, ONLY EXTRACTS FROM THE NECESSARY TREES.
+// CAN CACHE DIRT AND BOUNDS THIS WAY.
+// WITNESS KEEPS A LOCAL "DIGITAL DUPLICATE" OF THE ENTIRE TREE, UPDATES WITH EACH REGISTRATION OF CHANGE
+//
+// Also, this game is russet, but rendering engine should be called russetry
+
+
+// fn write_time(ft: &mut FrameTree) {
+    // find time layer and write to it
+// }
 
 
 pub fn animate(
@@ -407,9 +428,17 @@ pub fn animate(
     // What should this behavior be like?
     // Obviously if we quit because of a quitmsg, we should complete the rest of the exit
     // procedure. But what about an error? 
+    //
+    // How do I enforce ordering on layers?
+    // well, ordering works by place in the tree.
+    // so that suggests i should just manage the tree more carefully.
+    //
+    // Ok well now I'm really curious. How well does my algorithm (with witnesses)
+    // scale to pixel graphics? 3d? gaming? i gotta try.
+    // ok but focus. one thing at a time. ugh i need a todo file for this.
     
     loop {
-        let game_msg = game_rcv.recv_timeout(Duration::from_millis(200));
+        let game_msg = game_rcv.recv_timeout(Duration::from_millis(10));
         let click_msg = click_rcv.try_recv();
 
         match click_msg {
@@ -433,44 +462,34 @@ pub fn animate(
 
                 for change in changes {
                     match change {
-                        Reflow(c, _, dst) => {
-                            info!("REFLOW");
+                        // Reflow(c, _, dst) => {
+                        //     info!("REFLOW");
+                        //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                        //     card_buf.set_anchor((&dst, &SIZE_7).finto());
+                        // },
+                       
+                        GoodMove(c, _, dst) => {
+                            info!("GOODMOVE");
+                            show_good(buf.tree_mut(), c);
+                            show_shadow(buf.tree_mut(), c);
+                            hide_outline(buf.tree_mut(), c);
+                            make_inactive(buf.tree_mut(), c);
                             let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
                             card_buf.set_anchor((&dst, &SIZE_7).finto());
                         },
-                        GoodMove(c, _, dst) => {
-                            info!("GOODMOVE");
-                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                            let good = card_buf.find_mut(&("good".into())).unwrap();
-                            good.activate();
-                            let bad = card_buf.find_mut(&("bad".into())).unwrap();
-                            bad.deactivate();
-                        },
+                        
                         BadOutline(c, _) => {
                             info!("BADOUTLINE");
-                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                            let good = card_buf.find_mut(&("good".into())).unwrap();
-                            good.deactivate();
-                            let bad = card_buf.find_mut(&("bad".into())).unwrap();
-                            bad.activate();
+                            show_bad(buf.tree_mut(), c);
+                            make_inactive(buf.tree_mut(), c);
                         },
                         Select(c, _) => {
                             info!("SELECT: {:?}", c);
-                            // info!("TREE: {}", buf.tree_mut());
-                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                            let active = card_buf.find_mut(&("active".into())).unwrap();
-                            active.activate();
-                            let inactive = card_buf.find_mut(&("inactive".into())).unwrap();
-                            inactive.deactivate();
-                            let 
+                            make_active(buf.tree_mut(), c);
                         },
                         Deselect(c, _) => {
                             info!("DESELECT");
-                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                            let active = card_buf.find_mut(&("active".into())).unwrap();
-                            active.deactivate();
-                            let inactive = card_buf.find_mut(&("inactive".into())).unwrap();
-                            inactive.activate();
+                            make_inactive(buf.tree_mut(), c);
                         },
 
                         // Fade(Card, DealtPos),
