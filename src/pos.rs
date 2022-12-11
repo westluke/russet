@@ -2,7 +2,7 @@ use std::convert::From;
 use std::ops::{Add, Sub};
 use std::iter;
 use std::cmp::{min, max};
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::collections::HashSet;
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
@@ -53,6 +53,13 @@ impl From<DealtPos> for GamePos {
 pub struct TermPos {
     y: i16,
     x: i16
+}
+
+impl Display for TermPos {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(fmt, "TPos({}, {})", self.y(), self.x())?;
+        Ok(())
+    }
 }
 
 impl TermPos {
@@ -133,7 +140,7 @@ impl TermPos {
     // Visits every pos in the rectangle defined by self as top left, and bottomright, inclusive.
     fn pos_range(self, bottomright: Self) -> impl Iterator<Item=TermPos> {
         // log::info!("self: {:?}, br: {:?}", self, bottomright);
-        let mut pos = self;
+        let mut pos = self + (0, -1).finto();
 
         // we'll pass this into from_fn, so it'll be called over and over to produce iterator.
         let clos = move || {
@@ -217,7 +224,7 @@ impl From<(&DealtPos, &Scale)> for TermPos {
 impl From<(&GamePos, &Scale)> for TermPos {
     fn from((sp, s): (&GamePos, &Scale)) -> Self {
 
-        // these are accurate, i just messed up calculations I think
+        // these are accurate, i just messed up later calculations I think
         let (height, width) = TS.update();
 
         // Ignoring outline for now:

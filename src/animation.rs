@@ -2,7 +2,7 @@ use std::{thread, io, time, sync, collections};
 
 use io::Write;
 use time::{Instant, Duration};
-use sync::{Arc, Mutex, mpsc::{self, RecvTimeoutError}};
+use sync::{Arc, Mutex, mpsc::{self, TryRecvError, RecvTimeoutError}};
 use collections::{HashMap};
 use std::hash::{Hash, Hasher};
 
@@ -17,6 +17,7 @@ use crate::util::*;
 use crate::term_char::*;
 use crate::frame_buf::{FrameBuf, LayerCell::{self, *}, FrameTree};
 use crate::deck::*;
+use crate::Id;
 
 // use crate::framebuf::termable;
 
@@ -42,11 +43,15 @@ pub enum Msg {
     ChangeMsg(ChangeSet)
 }
 
-pub struct ClickMsg(TermPos);
+pub struct ClickMsg(pub TermPos);
 
 pub enum BackMsg {
     QuitMsg,
-    // Collisions(
+    // hm ok actually this id system is kinda gross for collisions.
+    // Can I fix it easily? How do I know what got collided?
+    // I think I need a better ID system yeah.
+    // So what should an ID be? I think a struct of Option<Card> and Option<String>
+    Collisions(Option<Vec<Id>>)
 }
 
 // struct AnimationState {
@@ -274,6 +279,48 @@ pub fn sleep_until(i: Instant) {
 // }
 
 
+fn change_activation(ft: &mut FrameTree, card: Card, name: &'static str, active: bool) {
+    let card_buf = ft.find_mut(&(card.into())).unwrap();
+    let layer = card_buf.find_mut(&(name.into())).unwrap();
+    if active {
+        layer.activate();
+    } else {
+        layer.activate();
+    };
+}
+
+fn show_outline(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "outline", true);
+    change_activation(ft, card, "shadow", false);
+}
+fn hide_outline(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "outline", false);
+}
+
+fn show_good(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "good", true);
+    change_activation(ft, card, "bad", false);
+}
+fn hide_good(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "good", false);
+}
+
+fn show_bad(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "bad", true);
+    change_activation(ft, card, "good", false);
+}
+fn hide_bad(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "bad", false);
+}
+
+fn make_active(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "active", true);
+    change_activation(ft, card, "inactive", false);
+}
+fn make_inactive(ft: &mut FrameTree, card: Card) {
+    change_activation(ft, card, "inactive", true);
+    change_activation(ft, card, "active", false);
+}
 
 
 pub fn animate(
@@ -306,20 +353,53 @@ pub fn animate(
     
     let repo7 = CardRepo::new(SIZE_7);
     let repo9 = CardRepo::new(SIZE_9);
-    let mut buf = FrameBuf::new(stdout, FrameTree::default()); 
-    let mut deck = repo7.get_deck();
-    let mut deck_active = repo7.get_deck_active();
 
-    let mut deck_id = 0;
-    let mut deck_active_id = 1;
+    let mut buf = FrameBuf::new(stdout, FrameTree::default()); 
+    // let mut deck = repo7.get_deck();
+    // let mut deck_active = repo7.get_outline_thin();
+    // let mut deck_active = repo7.get_deck_active();
+
+    // use crate::deck::*;
+    // use CardColor::*;
+    // use CardShape::*;
+    // use CardFill::*;
+    // use CardNumber::*;
+
+    // let color = Color1;
+    // let shape = Squiggle;
+    // let fill = Solid;
+    // let number = Three;
+    // let mut c0 = repo7.card(Card {color, shape, fill, number});
+
+    // let color = Color2;
+    // let shape = Oval;
+    // let fill = Striped;
+    // let number = Two;
+    // let mut c1 = repo7.card(Card {color, shape, fill, number});
+
+    // c0.set_anchor((10, 10).finto());
+    // buf.tree_mut().push_tree(c0);
+    // c1.set_anchor((20, 40).finto());
+    // buf.tree_mut().push_tree(c1);
+
+
+    // deck.set_anchor((10, 10).finto());
+    // deck_active.set_anchor((20, 20).finto());
+    // deck_active.set_anchor((20, 40).finto());
+    // deck_active.set_anchor((20, 40).finto());
+
+    // let mut deck_id = 0;
+    // let mut deck_active_id = 1;
     // let mut card_ids: HashMap<(Card, bool), u64> = HashMap::new();
 
     // deck_active.deactivate();
     // deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
     // deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
 
-    buf.tree_mut().push_tree(deck);
-    buf.tree_mut().push_tree(deck_active);
+    // buf.tree_mut().push_tree(deck);
+    // buf.tree_mut().push_tree(c1);
+    // buf.tree_mut().push_tree(c0);
+    // buf.tree_mut().push_tree(repo7.get_outline_thin());
 
     info!("animation loop starting");
 
@@ -331,27 +411,75 @@ pub fn animate(
     loop {
         let game_msg = game_rcv.recv_timeout(Duration::from_millis(200));
         let click_msg = click_rcv.try_recv();
-        
-        if let Ok(click_msg) = click_msg {
-            // Do collision calculations
-            // continue so we can handle more possible clicks
-            // backx.send(collidemsg);
-            continue;
-        }
 
+        match click_msg {
+            Err(TryRecvError::Disconnected) => break,
+            Err(TryRecvError::Empty) => (),
+            Ok(ClickMsg(pos)) => {
+                info!("CLICK MSG RECEIVED");
+                back_snd.send(
+                    BackMsg::Collisions(buf.tree().collide(pos))
+                );
+            }
+        }
+        
         match game_msg {
             Err(RecvTimeoutError::Disconnected) | Ok(Msg::QuitMsg) => break,
             Err(RecvTimeoutError::Timeout) => (),
             Ok(Msg::Nop) => continue,
+
             Ok(Msg::ChangeMsg(cs)) => {
-                let ChangeSet { changes, stamp } = cs;
+                let ChangeSet { changes, stamp: _ } = cs;
+
                 for change in changes {
                     match change {
+                        Reflow(c, _, dst) => {
+                            info!("REFLOW");
+                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                            card_buf.set_anchor((&dst, &SIZE_7).finto());
+                        },
+                        GoodMove(c, _, dst) => {
+                            info!("GOODMOVE");
+                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                            let good = card_buf.find_mut(&("good".into())).unwrap();
+                            good.activate();
+                            let bad = card_buf.find_mut(&("bad".into())).unwrap();
+                            bad.deactivate();
+                        },
+                        BadOutline(c, _) => {
+                            info!("BADOUTLINE");
+                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                            let good = card_buf.find_mut(&("good".into())).unwrap();
+                            good.deactivate();
+                            let bad = card_buf.find_mut(&("bad".into())).unwrap();
+                            bad.activate();
+                        },
+                        Select(c, _) => {
+                            info!("SELECT: {:?}", c);
+                            // info!("TREE: {}", buf.tree_mut());
+                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                            let active = card_buf.find_mut(&("active".into())).unwrap();
+                            active.activate();
+                            let inactive = card_buf.find_mut(&("inactive".into())).unwrap();
+                            inactive.deactivate();
+                            let 
+                        },
+                        Deselect(c, _) => {
+                            info!("DESELECT");
+                            let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                            let active = card_buf.find_mut(&("active".into())).unwrap();
+                            active.deactivate();
+                            let inactive = card_buf.find_mut(&("inactive".into())).unwrap();
+                            inactive.activate();
+                        },
+
+                        // Fade(Card, DealtPos),
+                        
                         Deal(card, pos) => {
-                            // let mut card_lay = repo7.get_card_active(card);
-                            // let mut card_lay = repo7.get_card(card);
-                            // card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)) + TermPos::ffrom((1, 0)));
-                            // buf.push_layer(card_lay);
+                            info!("DEAL");
+                            let mut card_lay = repo7.card(card);
+                            card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)));
+                            buf.tree_mut().push_tree(card_lay);
                         },
                         _ => ()
                     }
@@ -367,12 +495,6 @@ pub fn animate(
     // Necessary if we exited loop due to error, rather than forward quitmsg
     back_snd.send(BackMsg::QuitMsg);
 
-    // gamestate shows all statically visible cards.
-    // I think, it might make sense later for GameSTate to be keeping an internal record of all
-    // changes, all of which get sent to animation, tagged with their timestamps?
-    // But should I do that now?
-
-
     // Create a new instance, let original stdout get dropped (and therefore unlocked)
     // thanks to Non-Lexical Lifetimes
     let mut stdout2 = io::stdout().lock();
@@ -384,6 +506,4 @@ pub fn animate(
     ).unwrap();
 
     Ok(())
-
-    // res
 }

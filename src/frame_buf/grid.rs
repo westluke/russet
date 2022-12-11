@@ -1,4 +1,5 @@
 use std::ops::{Index, IndexMut};
+use std::iter::Map;
 use crate::pos::TermPos;
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
@@ -20,6 +21,11 @@ impl<T: Copy> Grid<T> {
     pub fn new(height: usize, width: usize, fill: T) -> Self {
         debug_assert!(height >= 1 && width >= 1);
         Self{ grid: vec![vec![fill; width]; height], height, width }
+    }
+
+    pub fn enumerate(&self) -> impl Iterator<Item=(TermPos, T)> + '_ {
+        let under = TermPos::new(0, 0).range_to((self.height-1, self.width-1).finto());
+        under.map(|p| (p, self.get(p).unwrap()))
     }
 
     pub fn height(&self) -> usize {

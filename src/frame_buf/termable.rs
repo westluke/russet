@@ -15,7 +15,8 @@ impl std::fmt::Display for Termable {
             Termable::Bg { n, .. } =>
                 write!(f, "{}", " ".repeat(n)),
             Termable::Fg { ref s, .. } =>
-                {info!("S{}E", s);
+                {
+                // info!("S{}E", s);
                 write!(f, "{}", s)}
         }
     }

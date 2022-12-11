@@ -81,7 +81,7 @@ pub struct GameState {
     deck: Deck,
     layout: Layout,
     last_set_found: Option<(Card, Card, Card)>,
-    selects: Vec<DealtPos>,
+    selects: Vec<Card>,
     changesets: Vec<ChangeSet>,
     id_counter: u32
 }
@@ -123,8 +123,8 @@ impl Default for GameState {
 }
 
 impl GameState {
-    pub fn pop_changeset(&mut self) -> ChangeSet {
-        self.changesets.pop().unwrap()
+    pub fn changes(&mut self) -> Vec<ChangeSet> {
+        std::mem::take(&mut self.changesets)
     }
 
     pub fn has_changes(&self) -> bool {
@@ -133,38 +133,38 @@ impl GameState {
 
     /// given a user's selection of cards, adjusts game state and self.changes to indicate
     /// necessary next steps
-    pub fn select(&mut self, pos: DealtPos) {
+    pub fn select(&mut self, card: Card) {
 
-        let card_at = match self.layout[pos] {
-            None => return,
-            Some(x) => x
-        };
+        debug_assert!(
+            self.enumerate_cards()
+                .find(|(_, c)| c.is_some() && c.unwrap() == card)
+                .is_some());
 
         let mut chs = HashSet::new();
 
-        if self.selects.contains(&pos) {
-            self.selects.retain(|&x| x != pos);
-            chs.insert(ChangeAtom::Deselect(card_at, pos));
+        if self.selects.contains(&card) {
+            self.selects.retain(|&x| x != card);
+            chs.insert(ChangeAtom::Deselect(card, self.find(card)));
         }
 
         else if self.selects.len() <= 1 {
-            self.selects.push(pos);
-            chs.insert(ChangeAtom::Select(card_at, pos));
+            self.selects.push(card);
+            chs.insert(ChangeAtom::Select(card, self.find(card)));
         }
 
         else if self.selects.len() == 2 {
-            self.selects.push(pos);
+            self.selects.push(card);
 
-            let (p0, p1, p2) = (
+            let (c0, c1, c2) = (
                 self.selects.pop().unwrap(),
                 self.selects.pop().unwrap(),
                 self.selects.pop().unwrap()
             );
 
-            let (c0, c1, c2) = (
-                self.layout[p0].unwrap(),
-                self.layout[p1].unwrap(),
-                self.layout[p2].unwrap()
+            let (p0, p1, p2) = (
+                self.remove_card(c0),
+                self.remove_card(c1),
+                self.remove_card(c2),
             );
 
             if is_a_set(c0, c1, c2) {
@@ -199,13 +199,27 @@ impl GameState {
         self.id_counter += 1;
     }
 
+    fn remove_card(&mut self, card: Card) -> DealtPos {
+        let pos = self.find(card);
+        self.layout.remove(pos);
+        pos
+    }
+
+    fn find(&self, card: Card) -> DealtPos {
+        let (pos, _) = self.enumerate_cards()
+            .filter(|(_, c)| c.is_some() && c.unwrap() == card)
+            .next()
+            .unwrap();
+        pos
+    }
+
     pub fn enumerate_cards(&self) -> impl Iterator<Item=(DealtPos, Option<Card>)> {
         self.layout.enumerate_2d()
     }
 
-    pub fn selected(&self, pos: DealtPos) -> bool {
-        self.selects.contains(&pos)
-    }
+    // pub fn selected(&self, pos: DealtPos) -> bool {
+    //     self.selects.contains(&pos)
+    // }
 
     pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
         self.last_set_found

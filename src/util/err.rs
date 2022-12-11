@@ -24,7 +24,7 @@ pub struct SetError {
 
 impl SetError {
     pub fn new(kind: SetErrorKind, msg: &str) -> Self {
-        Self{ kind, msg: String::new() }
+        Self{ kind, msg: msg.into() }
     }
 }
 

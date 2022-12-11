@@ -79,7 +79,7 @@ pub const WIN_MARGIN_VERT: i16 = 1;
 pub const WIN_MARGIN_HORIZ: i16 = 1;
 
 pub const CARD_INTERNAL_MARGIN_VERT: i16 = 1;
-pub const CARD_SPACING_VERT: i16 = 2;
+pub const CARD_SPACING_VERT: i16 = 1;
 pub const CARD_SPACING_HORIZ: i16 = 2;
 pub const SHAPE_SPACING: i16 = 1;
 

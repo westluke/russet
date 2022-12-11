@@ -2,6 +2,7 @@ use crate::deck::{Card, CardShape, CardColor, CardFill, CardNumber, all_cards};
 use crate::term_char::TermChar;
 use crate::pos::TermPos;
 use crate::util::*;
+use crate::Id;
 
 use crate::frame_buf::{LayerCell::{self, *}, FrameTree};
 
@@ -18,15 +19,17 @@ use crossterm::style::Color;
 //     hasher.finish()
 // }
 
+
+// GIVE EVERY CARD EVERY LAYER IT WILL EVER Need, WITH DESCRIPTIVE IDs AND TURNED INACTIVE
+
 pub struct CardRepo {
     deck: FrameTree,
-    deck_active: FrameTree,
+    // deck_active: FrameTree,
     cards: HashMap<Card, FrameTree>,
-    cards_active: HashMap<Card, FrameTree>,
-    shadow: FrameTree,
-    outline_thin: FrameTree,
-    outline_good: FrameTree,
-    outline_bad: FrameTree
+    // cards_active: HashMap<Card, FrameTree>,
+    // outline_thin: FrameTree,
+    // outline_good: FrameTree,
+    // outline_bad: FrameTree
 }
 
 impl CardRepo {
@@ -34,48 +37,49 @@ impl CardRepo {
         make(scale)
     }
 
-    pub fn get_card(&self, c: Card) -> FrameTree {
+    pub fn card(&self, c: Card) -> FrameTree {
         self.cards
             .get(&c)
             .unwrap()
             .clone()
     }
 
-    pub fn get_card_active(&self, c: Card) -> FrameTree {
-        self.cards_active
-            .get(&c)
-            .unwrap()
-            .clone()
-    }
+    // pub fn card_active(&self, c: Card) -> FrameTree {
+    //     self.cards_active
+    //         .get(&c)
+    //         .unwrap()
+    //         .clone()
+    // }
 
-    pub fn get_deck(&self) -> FrameTree {
+    pub fn deck(&self) -> FrameTree {
         self.deck.clone()
     }
 
-    pub fn get_deck_active(&self) -> FrameTree {
-        self.deck_active.clone()
-    }
+    // pub fn deck_active(&self) -> FrameTree {
+    //     self.deck_active.clone()
+    // }
 
-    pub fn get_shadow(&self) -> FrameTree {
-        self.shadow.clone()
-    }
+    // pub fn outline_thin(&self) -> FrameTree {
+    //     self.outline_thin.clone()
+    // }
 
-    pub fn get_outline_thin(&self) -> FrameTree {
-        self.outline_thin.clone()
-    }
+    // pub fn outline_good(&self) -> FrameTree {
+    //     self.outline_good.clone()
+    // }
 
-    pub fn get_outline_good(&self) -> FrameTree {
-        self.outline_good.clone()
-    }
-
-    pub fn get_outline_bad(&self) -> FrameTree {
-        self.outline_bad.clone()
-    }
+    // pub fn outline_bad(&self) -> FrameTree {
+    //     self.outline_bad.clone()
+    // }
 }
 
 pub fn stamp_shape(scale: Scale, buf: FrameTree, card: Card, bg: Color) -> FrameTree {
     let num: i16 = card.number.into();
     let mut card_lay = buf.clone();
+
+    // DIRTY HACK TO MAKE IT LOOK NICER
+    let mut shape_spacing = if card.shape == CardShape::Squiggle && card.number == CardNumber::Three {
+        SHAPE_SPACING - 1
+    } else {SHAPE_SPACING};
 
     // This is basically the left-margin on the first shape
     // Justification: We're gonna take the full card width, and subtract the combined width of
@@ -83,7 +87,7 @@ pub fn stamp_shape(scale: Scale, buf: FrameTree, card: Card, bg: Color) -> Frame
     // divide the result by 2 since there's a margin on the right side too.
     let mut offset = scale.CARD_WIDTH;
     offset -= scale.SHAPE_WIDTH * num;
-    offset -= SHAPE_SPACING * (num-1);
+    offset -= shape_spacing * (num-1);
     offset /= 2;
 
     // same kinda thing - how far is the top of the shape from the top of the card?
@@ -98,7 +102,7 @@ pub fn stamp_shape(scale: Scale, buf: FrameTree, card: Card, bg: Color) -> Frame
         let shape_pos = i*scale.SHAPE_WIDTH;
 
         // there is a small amount of minimum spacing between adjacent shapes
-        let spacing = i * SHAPE_SPACING;
+        let spacing = i * shape_spacing;
 
         // add these to the base offset
         set_shape_rel(scale, &mut card_lay, card, (drop, offset + shape_pos + spacing).finto(), bg);
@@ -191,6 +195,10 @@ pub fn make_card_shape(
 ) -> Result<FrameTree> {
 
     let mut buf;
+    // buf = FrameTree::new_leaf(
+    //     (scale.CARD_HEIGHT, scale.CARD_WIDTH),
+    //     Opaque(TermChar::new('X', Color::Red, Color::Red)), "".into(), true, (0, 0).finto());
+
     if let Some(colr) = interior_bg {
         buf = FrameTree::new_leaf(
             (scale.CARD_HEIGHT, scale.CARD_WIDTH),
@@ -198,6 +206,7 @@ pub fn make_card_shape(
         buf.set_cell((0, scale.CARD_WIDTH-1).finto(), Transparent);
         buf.set_cell((scale.CARD_HEIGHT-1, scale.CARD_WIDTH-1).finto(), Transparent);
         buf.set_cell((scale.CARD_HEIGHT-1, 0).finto(), Transparent);
+        // buf.set_cell((0, 0).finto(), Opaque(TermChar::new(' ', Color::Green, Color::Green)));
         buf.set_cell((0, 0).finto(), Transparent);
     } else {
         buf = FrameTree::new_leaf(
@@ -207,10 +216,11 @@ pub fn make_card_shape(
 
     // Corners have to be drawn with clear spaces, since they are irregularly shaped.
     // Luckily, they have no real effect on the interior
-    set_s(&mut buf, (0, 0).finto(), String::from(CARD_TL), border_fg, border_bg)?;
-    set_s(&mut buf, (0, scale.CARD_WIDTH-2).finto(), String::from(CARD_TR), border_fg, border_bg)?;
-    set_s(&mut buf, (scale.CARD_HEIGHT-2, 0).finto(), String::from(CARD_BL), border_fg, border_bg)?;
-    set_s(&mut buf, (scale.CARD_HEIGHT-2, scale.CARD_WIDTH-2).finto(), String::from(CARD_BR), border_fg, border_bg)?;
+    set_s_clear(&mut buf, (0, 0).finto(), String::from(CARD_TL), border_fg, border_bg)?;
+    set_s_clear(&mut buf, (0, scale.CARD_WIDTH-2).finto(), String::from(CARD_TR), border_fg, border_bg)?;
+    set_s_clear(&mut buf, (scale.CARD_HEIGHT-2, 0).finto(), String::from(CARD_BL), border_fg, border_bg)?;
+    set_s_clear(&mut buf, (scale.CARD_HEIGHT-2, scale.CARD_WIDTH-2).finto(), String::from(CARD_BR), border_fg, border_bg)?;
+    // buf.set_cell((0, 0).finto(), Opaque(TermChar::new(' ', Color::Green, Color::Green)));
 
     for row in 2..(scale.CARD_HEIGHT-2) {
         buf.set_cell((row, 0).finto(), Opaque(TermChar::new('┃', border_fg, border_bg)));
@@ -241,10 +251,20 @@ pub fn make_card_shape(
 pub fn make(scale: Scale) -> CardRepo {
     let mut outline_thin = make_card_shape(scale, CARD_BORDER, TERM_BG, None).unwrap();
     outline_thin.set_anchor((1, -1).finto());
+    outline_thin.set_id("outline".into());
+    // outline_thin.deactivate();
 
     let mut shadow = make_card_shape(scale, TERM_BG, TERM_BG, Some(TERM_BG)).unwrap();
+    shadow.set_anchor((1, 1).finto());
+    shadow.set_id("shadow".into());
+    shadow.deactivate();
+
     let mut outline_good = make_card_shape(scale, GOOD_SET, GOOD_SET, None).unwrap();
     let mut outline_bad = make_card_shape(scale, BAD_SET, BAD_SET, None).unwrap();
+    outline_good.set_id("good".into());
+    outline_good.deactivate();
+    outline_bad.set_id("bad".into());
+    outline_bad.deactivate();
 
     let card_active = make_card_shape(scale, ACTIVE_BG, ACTIVE_BG, Some(ACTIVE_BG)).unwrap();
     let card = make_card_shape(scale, CARD_BG, CARD_BG, Some(CARD_BG)).unwrap();
@@ -253,49 +273,31 @@ pub fn make(scale: Scale) -> CardRepo {
     let mut cards = stamp_shapes(scale, card.clone(), CARD_BG);
     cards = cards.into_iter()
         .map(
-            |(k, mut c0)| {
-                let mut c1 = c0.over(&mut outline_thin);
-                c1.set_id(k.to_string());
-                (k, c1)
-            }
-        ).collect();
-
-    cards_active = cards_active.into_iter()
-        .map(
-            |(k, mut c0)| {
-                let mut c1 = c0.over(&mut outline_thin);
-                c1.set_id(k.to_string());
-                (k, c1)
+            |(k, mut inactive)| {
+                let mut active = cards_active.get(&k).unwrap().clone();
+                active.deactivate();
+                active.set_id("active".into());
+                inactive.set_id("inactive".into());
+                let mut mom = FrameTree::new_branch(
+                    vec![outline_bad.clone(), outline_good.clone(), active, inactive, outline_thin.clone(), shadow.clone()],
+                    "default".into(),
+                    true, (0, 0).finto());
+                mom.set_id(k.into());
+                mom.activate();
+                (k, mom)
             }
         ).collect();
 
     let deck_active = stamp_question(scale, card_active.clone(), TERM_BG, TERM_BG);
     let mut deck = stamp_question(scale, card.clone(), TERM_BG, TERM_BG);
 
-    deck = deck.over(&mut outline_thin);
-
+    deck.shup_tree(outline_thin.clone());
+    deck.push_tree(deck_active.clone());
 
     CardRepo {
         cards,
-        cards_active,
         deck,
-        deck_active,
-        shadow,
-        outline_thin,
-        outline_good,
-        outline_bad,
     }
-
-    // CardRepo {
-    //     cards: HashMap::new(),
-    //     cards_active: HashMap::new(),
-    //     deck: FrameTree::default(),
-    //     deck_active: FrameTree::default(),
-    //     shadow: FrameTree::default(),
-    //     outline_thin: FrameTree::default(),
-    //     outline_good: FrameTree::default(),
-    //     outline_bad: FrameTree::default()
-    // }
 }
 
 fn get_raw_shape(c:Card, s:Scale) -> &'static str {

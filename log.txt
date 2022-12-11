@@ -1,2 +1,86 @@
 INFO [set::animation] animation loop starting
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color3DiamondThreeEmpty}
+INFO [set::animation] SELECT: Card { color: Color3, shape: Diamond, number: Three, fill: Empty }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color3DiamondThreeEmpty}
+INFO [set::animation] DESELECT
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color2OvalOneEmpty}
+INFO [set::animation] SELECT: Card { color: Color2, shape: Oval, number: One, fill: Empty }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color2OvalOneEmpty}
+INFO [set::animation] DESELECT
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color1SquiggleTwoEmpty}
+INFO [set::animation] SELECT: Card { color: Color1, shape: Squiggle, number: Two, fill: Empty }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color1SquiggleTwoEmpty}
+INFO [set::animation] DESELECT
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color2SquiggleTwoSolid}
+INFO [set::animation] SELECT: Card { color: Color2, shape: Squiggle, number: Two, fill: Solid }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color1SquiggleTwoEmpty}
+INFO [set::animation] SELECT: Card { color: Color1, shape: Squiggle, number: Two, fill: Empty }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color1SquiggleTwoEmpty}
+INFO [set::animation] DESELECT
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color2SquiggleTwoSolid}
+INFO [set::animation] DESELECT
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(inactive)
+INFO [set] ID: Id(Card{Color2OvalOneEmpty}
+INFO [set::animation] SELECT: Card { color: Color2, shape: Oval, number: One, fill: Empty }
+INFO [set] CLICK DETECTED!!
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set] HANDLING COLLISIONS IN MAIN
+INFO [set] ID: Id(active)
+INFO [set] ID: Id(Card{Color2OvalOneEmpty}
+INFO [set::animation] DESELECT
 INFO [set::animation] animation loop over

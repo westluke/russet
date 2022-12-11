@@ -1,5 +1,6 @@
 use std::{io, thread, time};
 use std::env;
+use std::fmt::{Display, Formatter};
 
 use std::sync::{Arc, Mutex, mpsc, mpsc::TryRecvError};
 use time::{Duration};
@@ -13,6 +14,29 @@ use crossterm::{terminal, execute};
 
 use log::{info};
 use flexi_logger::{FileSpec, Logger, WriteMode};
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////
+/// SEPARATE CLICKABILITY AND VISIBILITY!!!! WHILE MOVING CARDS SHOULD NOT BE CLICKABLE
+/// OR THERE SPOT SHOULD BE CLICKABLE? IDK THINK ABOUIT IT
+////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
 
 
 mod animation;
@@ -32,6 +56,48 @@ use frame_buf::*;
 use util::*;
 use pos::*;
 use deck::*;
+
+#[derive(Clone, Eq, PartialEq, Hash, Debug)]
+pub struct Id {
+    card: Option<Card>,
+    name: Option<String>
+}
+
+impl Display for Id {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        write!(fmt, "Id")?;
+        if let Some(c) = self.card {
+            write!(fmt, "({}", c)?;
+
+            if let Some(n) = self.name.clone() {
+                write!(fmt, ", {})", n)?;
+            };
+        } else if let Some(n) = self.name.clone() {
+            write!(fmt, "({})", n)?;
+        };
+
+        Ok(())
+    }
+}
+
+impl From<Card> for Id {
+    fn from(c: Card) -> Self {
+        Self {card: Some(c), name: None}
+    }
+}
+
+impl From<String> for Id {
+    fn from(s: String) -> Self {
+        Self {card: None, name: Some(s)}
+    }
+}
+
+impl From<&str> for Id {
+    fn from(s: &str) -> Self {
+        Self {card: None, name: Some(s.into())}
+    }
+}
+
 // use pos::*;
 // use deck::*;
 
@@ -94,51 +160,75 @@ use deck::*;
                 // };
             // },
 
-fn handle_key_event(kc: KeyCode) -> Result<FrameResult>{
-    match kc {
-        KeyCode::Backspace | KeyCode::Delete => Ok(FrameResult::Quit),
-        _ => Ok(FrameResult::Nop)
-    }
-}
-
-fn handle_mouse_event(column: u16, row: u16) -> Result<FrameResult>{
-    Ok(FrameResult::Nop)
-}
-
 enum FrameResult {
     Quit,
     Nop,
-    Msgs(Vec<Msg>)
+    Msgs(Vec<Msg>),
+    Click(ClickMsg)
 }
 
-fn input_frame(state: &GameState) -> Result<FrameResult> {
-    if poll(Duration::from_millis(200))? {
-        return match read()? {
-            Event::Key(
-                KeyEvent {
-                    code: kc,
-                    modifiers: KeyModifiers::NONE,
-                    kind: KeyEventKind::Press,
-                    ..
+fn handle_key_event(kc: KeyCode) -> FrameResult {
+    match kc {
+        KeyCode::Backspace | KeyCode::Delete => FrameResult::Quit,
+        _ => FrameResult::Nop
+    }
+}
+
+fn handle_back_msg(state: &mut GameState, msg: std::result::Result<BackMsg, TryRecvError>) -> FrameResult {
+    match msg {
+        Err(TryRecvError::Disconnected)
+        | Ok(BackMsg::QuitMsg) => return FrameResult::Quit,
+        Err(TryRecvError::Empty) => return FrameResult::Nop,
+        Ok(BackMsg::Collisions(None)) => return FrameResult::Nop,
+        Ok(BackMsg::Collisions(Some(v))) => {
+            info!("HANDLING COLLISIONS IN MAIN");
+            for id in v {
+                info!("ID: {}", id);
+                if let Some(c) = id.card {
+                    state.select(c);
+                    let csets = state.changes();
+                    let msgs = csets.into_iter().map(|c| Msg::ChangeMsg(c)).collect();
+                    return FrameResult::Msgs(msgs);
                 }
-            ) => handle_key_event(kc),
-            Event::Mouse(
-                MouseEvent {
-                    kind: MouseEventKind::Down(MouseButton::Left),
-                    column,
-                    row,
-                    modifiers: KeyModifiers::NONE
-                }
-            ) => handle_mouse_event(column, row),
-            _ => Ok(FrameResult::Nop),
-        };
+            };
+            return FrameResult::Nop;
+        }
+    }
+}
+
+fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) -> FrameResult {
+    use FrameResult::*;
+    use Event::*;
+
+    if let Err(_) = input { return Quit; };
+    let input = input.unwrap();
+
+    return match input {
+        Key(
+            KeyEvent {
+                code: kc,
+                modifiers: KeyModifiers::NONE,
+                kind: KeyEventKind::Press, ..
+            }
+        ) => handle_key_event(kc),
+
+        Mouse(
+            MouseEvent {
+                kind: MouseEventKind::Down(MouseButton::Left),
+                column,
+                row,
+                modifiers: KeyModifiers::NONE
+            }
+        ) => {
+            info!("CLICK DETECTED!!");
+            Click(ClickMsg((row, column).finto()))
+        }
+
+        Resize(y, x) => FrameResult::Quit,
+
+        _ => FrameResult::Nop
     };
-
-    Ok(FrameResult::Nop)
 }
-
-
-
 
 fn main() -> Result<()> {
     env::set_var("RUST_BACKTRACE", "1");
@@ -156,32 +246,45 @@ fn main() -> Result<()> {
         .start()?;
 
     let mut gs = GameState::default();
-    let (y, x) = TS.dims();
 
     let handle = thread::spawn(|| {
         animation::animate(game_rcv, click_rcv, back_snd)
     });
 
-    let initsend = game_snd.send(
-        Msg::ChangeMsg(
-            gs.pop_changeset()
-        )
-    );
+    for chng in gs.changes() {
+        game_snd.send(Msg::ChangeMsg(chng));
+    }
 
     // idea: to avoid excessive buffering on holding keydown, 
     // impose time limit on pressing the same key twice.
+    //
+    // Also, I think maybe screen size changes should be detected HERE, rather than in animation.
 
     loop {
-        match back_rcv.try_recv() {
-           Err(TryRecvError::Disconnected) | Ok(BackMsg::QuitMsg) => break, 
-           Err(TryRecvError::Empty) => (),
-           // Ok(BackMsg::Collide()) => ()
-        }
+        match handle_back_msg(&mut gs, back_rcv.try_recv()) {
+            FrameResult::Quit => break,
+            FrameResult::Nop => (),
+            FrameResult::Msgs (msgs) => {
+                for msg in msgs {
+                    game_snd.send(msg);
+                };
+            }
+            FrameResult::Click (cmsg) => {
+                click_snd.send(cmsg);
+            }
+        };
 
-        match input_frame(&gs) {
-            Err(_) => break,
-            Ok(FrameResult::Quit) => break,
-            _ => ()
+        if poll(Duration::from_millis(10))? {
+            match handle_input_frame(&mut gs, read()) {
+                FrameResult::Quit => break,
+                FrameResult::Msgs(msgs) => {
+                    for msg in msgs {
+                        game_snd.send(msg);
+                    }
+                }
+                FrameResult::Click(cmsg) => { click_snd.send(cmsg); }
+                _ => ()
+            }
         }
     };
 

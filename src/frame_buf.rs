@@ -3,11 +3,12 @@ use std::collections::{HashSet, HashMap};
 use std::ops::BitOr;
 
 use crossterm::style::{self, Color, ContentStyle, StyledContent, PrintStyledContent};
-use crossterm::{queue, cursor};
+use crossterm::{queue, execute, cursor};
 
 use crate::pos::*;
 use crate::term_char::*;
 use crate::util::*;
+use crate::Id;
 
 use log::{info, warn, error};
 
@@ -119,19 +120,39 @@ impl<T: Write> FrameBuf<T> {
     //     None
     // }
 
+    // Hmm. theoretically, if this wasn't performing well enough,
+    // I could use several work-stealing threads to parallelize it pretty easily.
+    // That would be pretty cool if I ever split this out into a separate rendering engine.
     pub fn flush(&mut self)  {
-        self.frame_tree.propagate_dirt();
-        let dirt: &HashMap<i16, HashSet<i16>> = self.frame_tree.dirt();
+        // self.frame_tree.propagate_dirt();
+        
+        let mut dirt: HashMap<i16, HashSet<i16>> = self.frame_tree.dirt();
+        dirt.retain(|&k, mut v| {
+            v.retain(|&e| e >= 0 && e < TS.width());
+            k >= 0 && k < TS.height()
+        });
 
-        for (&row, cols) in dirt {
+        // info!("len: {}", self.frame_tree.len());
+
+        // OH EXTEND IS WRONG LOL
+        // SHOULDNT BE EXTEND< SHOULD BE COMBINING
+
+        // info!("{:?}", dirt);
+        // info!("height: {:?}", TS.height());
+
+        for (row, cols) in dirt {
+            // info!("{:?}", row);
+            // if row < 0 || row >= TS.height() { continue; };
             let mut lnup = LineUpdate::new(TS.width());
 
-            for &col in cols {
+            for col in cols {
+                // if col < 0 || col >= TS.width() { continue; };
                 let cel = self.frame_tree.cell((row, col).finto());
+                // info!("{:?}", cel);
                 lnup.set(col, cel);
             }
 
-            queue!(self.under, cursor::MoveTo(row.finto(), 0));
+            queue!(self.under, cursor::MoveTo(0, row.finto()));
 
             for (col, styled) in lnup.finalize() {
                 queue!(
@@ -141,6 +162,9 @@ impl<T: Write> FrameBuf<T> {
                 );
             }
         }
+
+        self.frame_tree.clean();
+        self.under.flush();
     }
 
         // but i feel like im missing some possible benefits associated just with using this new
