@@ -12,44 +12,59 @@ INFO [set::animation] DEAL
 INFO [set::animation] DEAL
 INFO [set::animation] DEAL
 INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color2, shape: Oval, number: Two, fill: Striped }
+INFO [set::animation] SELECT: Card { color: Color1, shape: Diamond, number: Three, fill: Striped }
 INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color2, shape: Diamond, number: Two, fill: Solid }
-INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] DEAL
-INFO [set::animation] DEAL
-INFO [set::animation] GOODMOVE
-INFO [set::animation] DEAL
-INFO [set::animation] GOODMOVE
-INFO [set::animation] GOODMOVE
-INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color3, shape: Oval, number: Three, fill: Solid }
-INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color1, shape: Squiggle, number: Two, fill: Solid }
+INFO [set::animation] SELECT: Card { color: Color3, shape: Squiggle, number: Two, fill: Striped }
 INFO [set::animation] CLICK MSG RECEIVED
 INFO [set::animation] GOODMOVE
+INFO [set::animation] GOODMOVE
 INFO [set::animation] DEAL
 INFO [set::animation] GOODMOVE
 INFO [set::animation] DEAL
 INFO [set::animation] DEAL
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color1, shape: Diamond, number: One, fill: Solid }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color1, shape: Oval, number: Two, fill: Striped }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] DEAL
 INFO [set::animation] GOODMOVE
+INFO [set::animation] GOODMOVE
+INFO [set::animation] GOODMOVE
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
 INFO [set::animation] CLICK MSG RECEIVED
 INFO [set::animation] SELECT: Card { color: Color2, shape: Squiggle, number: One, fill: Solid }
 INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color3, shape: Oval, number: Two, fill: Solid }
+INFO [set::animation] DESELECT
 INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color2, shape: Squiggle, number: One, fill: Solid }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color3, shape: Diamond, number: Three, fill: Solid }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] DEAL
+INFO [set::animation] GOODMOVE
 INFO [set::animation] GOODMOVE
 INFO [set::animation] DEAL
-INFO [set::animation] DEAL
-INFO [set::animation] GOODMOVE
 INFO [set::animation] DEAL
 INFO [set::animation] GOODMOVE
 INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color3, shape: Diamond, number: Three, fill: Empty }
+INFO [set::animation] SELECT: Card { color: Color1, shape: Squiggle, number: One, fill: Empty }
 INFO [set::animation] CLICK MSG RECEIVED
 INFO [set::animation] DESELECT
 INFO [set::animation] CLICK MSG RECEIVED
-INFO [set::animation] SELECT: Card { color: Color1, shape: Oval, number: Three, fill: Solid }
+INFO [set::animation] SELECT: Card { color: Color3, shape: Diamond, number: Two, fill: Striped }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color3, shape: Diamond, number: Three, fill: Striped }
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] GOODMOVE
+INFO [set::animation] GOODMOVE
+INFO [set::animation] DEAL
+INFO [set::animation] GOODMOVE
+INFO [set::animation] DEAL
+INFO [set::animation] DEAL
+INFO [set::animation] CLICK MSG RECEIVED
+INFO [set::animation] SELECT: Card { color: Color1, shape: Diamond, number: Three, fill: Empty }
 INFO [set::animation] CLICK MSG RECEIVED
 INFO [set::animation] DESELECT
 INFO [set::animation] animation loop over

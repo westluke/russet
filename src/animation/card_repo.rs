@@ -202,7 +202,7 @@ pub fn make_card_shape(
     if let Some(colr) = interior_bg {
         buf = FrameTree::new_leaf(
             (scale.CARD_HEIGHT, scale.CARD_WIDTH),
-            Opaque(TermChar::new(' ', colr, colr)), "".into(), true, (0, 0).finto());
+            Opaque(TermChar::new(' ', colr, colr)), "".into(), true, (0, 0).finto(), 0);
         buf.set_cell((0, scale.CARD_WIDTH-1).finto(), Transparent);
         buf.set_cell((scale.CARD_HEIGHT-1, scale.CARD_WIDTH-1).finto(), Transparent);
         buf.set_cell((scale.CARD_HEIGHT-1, 0).finto(), Transparent);
@@ -211,7 +211,7 @@ pub fn make_card_shape(
     } else {
         buf = FrameTree::new_leaf(
             (scale.CARD_HEIGHT, scale.CARD_WIDTH),
-            Transparent, "".into(), true, (0, 0).finto());
+            Transparent, "".into(), true, (0, 0).finto(), 0);
     }
 
     // Corners have to be drawn with clear spaces, since they are irregularly shaped.
@@ -282,7 +282,7 @@ pub fn make(scale: Scale) -> CardRepo {
                 let mut mom = FrameTree::new_branch(
                     vec![outline_bad.clone(), outline_good.clone(), active, inactive, outline_thin.clone(), shadow.clone()],
                     k.into(),
-                    true, (0, 0).finto());
+                    true, (0, 0).finto(), 0);
                 mom.activate();
                 (k, mom)
             }

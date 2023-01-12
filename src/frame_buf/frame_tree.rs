@@ -16,8 +16,6 @@ use log::{info};
 
 use super::Grid;
 
-use crossterm::style::Color;
-
 pub use super::LayerCell::{self, *};
 pub use super::DirtyBit::{self, *};
 
@@ -35,12 +33,30 @@ pub struct FrameTree {
     id: Id,
     active: bool,
     anchor: TermPos,
-    dirt: HashMap<i16, HashSet<i16>>
+    dirt: HashMap<i16, HashSet<i16>>,
+    zmark: i32
+}
+
+#[derive(Debug, Clone)]
+enum FrameTreeKind {
+    Leaf {
+        frame: Grid<LayerCell>,
+    },
+
+    Branch {
+        children: Vec<FrameTree>,
+    }
 }
 
 impl Default for FrameTree {
     fn default() -> Self {
-        Self::new_leaf((1, 1), Transparent, "default".into(), true, (0, 0).finto())
+        Self::new_leaf((1, 1), Transparent, "default".into(), true, (0, 0).finto(), 0)
+    }
+}
+
+impl Default for FrameTreeKind {
+    fn default() -> Self {
+        Self::Leaf { frame: Grid::default() }
     }
 }
 
@@ -51,6 +67,8 @@ impl Display for FrameTree {
 }
 
 impl FrameTree {
+
+    // To make Display trait work properly.
     fn _fmt(&self, fmt: &mut Formatter<'_>, indent_level: usize) -> std::result::Result<(), std::fmt::Error> {
         match self.kind {
             FrameTreeKind::Leaf {..} => {
@@ -68,38 +86,15 @@ impl FrameTree {
         }
         Ok(())
     }
-}
 
-#[derive(Debug, Clone)]
-enum FrameTreeKind {
-    Leaf {
-        frame: Grid<LayerCell>,
-    },
-
-    Branch {
-        children: Vec<FrameTree>,
-    }
-}
-
-impl Default for FrameTreeKind {
-    fn default() -> Self {
-        Self::Leaf { frame: Grid::default() }
-    }
-}
-
-
-// How does this get flushed?
-// how do cells get set?
-// how do cells get read?
-// Ok, for reading cells, we advance along the branches of the root until we reach one that's opaque at that cell,
-// or until we fall through. Falling all the way through is expensive, though, which is where caching comes in I think.
-// I mean, it's not much more expensive than it was before. So skip caching for now, but keep in mind that it's very possible here.
-
-// impl FrameTreeKind {
-// }
-
-impl FrameTree {
-    pub fn new_leaf((height, width): (i16, i16), fill: LayerCell, id: Id, active: bool, anchor: TermPos) -> Self {
+    pub fn new_leaf(
+        (height, width): (i16, i16),
+        fill: LayerCell,
+        id: Id,
+        active: bool,
+        anchor: TermPos,
+        zmark: i32,
+    ) -> Self {
         debug_assert!(height >= 1 && width >= 1);
         let mut res = Self {
             kind: FrameTreeKind::Leaf {
@@ -108,14 +103,21 @@ impl FrameTree {
             id,
             active,
             anchor,
-            dirt: HashMap::new()
+            dirt: HashMap::new(),
+            zmark
         };
 
         res.dirty_opaq();
         res
     }
 
-    pub fn new_branch(children: Vec<FrameTree>, id: Id, active: bool, anchor: TermPos) -> Self {
+    pub fn new_branch(
+        children: Vec<FrameTree>,
+        id: Id,
+        active: bool,
+        anchor: TermPos,
+        zmark: i32,
+    ) -> Self {
         let mut res = Self {
             kind: FrameTreeKind::Branch {
                 children
@@ -123,7 +125,8 @@ impl FrameTree {
             id,
             active,
             anchor,
-            dirt: HashMap::new()
+            dirt: HashMap::new(),
+            zmark
         };
 
         res.dirty_opaq();
@@ -500,7 +503,8 @@ impl FrameTree {
                     anchor: (0, 0).finto(),
                     // tl: self.tl,
                     // br: self.br,
-                    dirt: HashMap::new()
+                    dirt: HashMap::new(),
+                    zmark: 0
                 };
                 self.kind = FrameTreeKind::Branch {children: vec![newleaf]};
             }
@@ -511,7 +515,6 @@ impl FrameTree {
     pub fn over(&mut self, other: &mut Self) -> Self {
         // self.propagate_bounds();
         // other.propagate_bounds();
-        // info!("self.height: {:20?},\tself.width: {:20?}", self.frame.height(), self.frame.width());
 
         let (tl0, br0) = self.bounds();
         let (tl1, br1) = other.bounds();
@@ -521,14 +524,10 @@ impl FrameTree {
 
         let mut tree = Self::new_leaf(
             (1 + br.y() - tl.y(), 1 + br.x() - tl.x()),
-            Transparent, "from over".into(), true, tl
+            Transparent, "from over".into(), true, tl, 0
         );
 
         for pos in tl.range_to(br) {
-            // info!("self.tl: {:20?},\tself.br: {:20?}", format!("{:?}", self.tl), format!("{:?}", self.br));
-            // info!("oth.tl:  {:20?},\toth.br : {:20?}", format!("{:?}", other.tl), format!("{:?}", other.br));
-            // info!("tl:      {:20?},\tbr:      {:20?}", format!("{:?}", tl), format!("{:?}", br));
-            // info!("pos in over: {:?}", pos);
             match (self.cell(pos), other.cell(pos)) {
                 (c @ Opaque(_), _) => tree.set_cell(pos, c),
                 (_, c) => tree.set_cell(pos, c)

@@ -14,6 +14,7 @@ game mechanics:
     - "add cards" button
     - keybindings
     - restart game button
+    - option to prevent layouts with no sets
 
 general:
     - improved logging
