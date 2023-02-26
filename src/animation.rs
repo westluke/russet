@@ -463,47 +463,6 @@ pub fn animate(
                             hide_outline(buf.tree_mut(), c);
                             make_inactive(buf.tree_mut(), c);
 
-                            // gotta find the old cards in the lastfoundset and make them
-                            // disappear. How to do that?
-                            //
-                            // But bigger question: how to enforce ordering on these cards?
-                            // I could make the changeset actually a vector. But that doesn't quite
-                            // seem right. There is always an implicit ordering based on their
-                            // location i nthe lastfoundset. And the game mechanics shouldn't need
-                            // to care about that.
-                            //
-                            // So, what to do? Should separate the tree into dealt and lastfound,
-                            // and write a function for inserting into lastfound based on position?
-                            // Ah but this also gets slightly more complicated when we consider
-                            // adding in animations.
-                            // The z-vals of the last found cards shouldn't change as they move
-                            // over to the lastfound positions. So that means the animations can't
-                            // just assign z-vals randomly.
-                            //
-                            // I think near-next step should be making placeholder "animations"
-                            // that are actually just permanent, basically no animations at all,
-                            // preserving what happens now.
-                            //
-                            // A system for generating z-values for tree elements, that draws from
-                            // a pool of available integers, marking ones as used when necessary.
-                            // Can have special functions for special cases, i.e. lastfound groups.
-                            // Can use a huge integer range, too, minimize chance of collisions.
-                            // And can dedicate cerrtain portions of that range to certain kinds of
-                            // trees.
-                            //
-                            //
-                            // Hmmm. And so maybe occlusion here would be determined by that
-                            // z-value rather than place in the tree?
-                            //
-                            // Would that be doable? It would be annoying though, cuz you'd have to
-                            // do a full run-through every time... Makes more sense to use z-values
-                            // to INDEX into the tree when doing a placement.
-                            //
-                            // So how would that work. Well, then each panel needs to store some
-                            // z-value. But it's kinda... fake. It doesn't actually determine 
-                            // occlusion, just speeds up insertions. Also tricky cuz then entire
-                            // trees need z-values. Let's call them zmarks actually, cuz they're
-                            // kinda fake.
                             
                             let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
                             card_buf.set_anchor((&dst, &SIZE_7).finto());

@@ -5,6 +5,7 @@ use iter::Copied;
 use std::ops::BitOr;
 use std::cmp::{min, max};
 use std::fmt::{Display, Formatter};
+use std::cell::RefCell;
 
 use crate::deck::Card;
 use crate::term_char::TermChar;
@@ -19,6 +20,24 @@ use super::Grid;
 pub use super::LayerCell::{self, *};
 pub use super::DirtyBit::{self, *};
 
+#[derive(Debug, Clone)]
+pub struct Sprite {
+    img: Grid<LayerCell>,
+    id: Id,
+    z: i32
+}
+
+pub struct ZVec<'a> ( Vec<&'a RefCell<Sprite>> );
+
+impl<'a> ZVec<'a> {
+    pub fn new() -> Self {
+        Self (Vec::new())
+    }
+
+    pub fn insert(&mut self) {
+    }
+}
+
 // pub struct TreeID {
 //     ids: Vec<String>
 // }
@@ -28,8 +47,8 @@ pub use super::DirtyBit::{self, *};
 // COULD CACHE STRING QUERIES. THAT WAY BOUNDS DONT NEED TO BE CACHED
 
 #[derive(Debug, Clone)]
-pub struct FrameTree {
-    kind: FrameTreeKind,
+pub struct SpriteTree {
+    kind: SpriteTreeKind,
     id: Id,
     active: bool,
     anchor: TermPos,
@@ -38,14 +57,9 @@ pub struct FrameTree {
 }
 
 #[derive(Debug, Clone)]
-enum FrameTreeKind {
-    Leaf {
-        frame: Grid<LayerCell>,
-    },
-
-    Branch {
-        children: Vec<FrameTree>,
-    }
+enum SpriteTreeKind {
+    Leaf(RefCell<Sprite>),
+    Branch(Vec<SpriteTree>)
 }
 
 impl Default for FrameTree {
@@ -67,25 +81,6 @@ impl Display for FrameTree {
 }
 
 impl FrameTree {
-
-    // To make Display trait work properly.
-    fn _fmt(&self, fmt: &mut Formatter<'_>, indent_level: usize) -> std::result::Result<(), std::fmt::Error> {
-        match self.kind {
-            FrameTreeKind::Leaf {..} => {
-                write!(fmt, "{}", "    ".repeat(indent_level))?;
-                write!(fmt, "Leaf (id= {}, active= {}, anchor= {})\n", self.id, self.active, self.anchor)?;
-            }
-            FrameTreeKind::Branch {ref children} => {
-                write!(fmt, "{}", "    ".repeat(indent_level))?;
-                write!(fmt, "Branch (id= {}, active= {}, anchor= {}) {{\n", self.id, self.active, self.anchor)?;
-                for child in children {
-                    child._fmt(fmt, indent_level + 1)?;
-                };
-                write!(fmt, "{}}}\n", "    ".repeat(indent_level))?;
-            }
-        }
-        Ok(())
-    }
 
     pub fn new_leaf(
         (height, width): (i16, i16),
@@ -133,6 +128,54 @@ impl FrameTree {
         res
     }
 
+    pub fn anchor(&self) -> TermPos {
+        self.anchor
+    }
+
+    pub fn set_anchor(&mut self, anchor: TermPos) {
+        self.dirty_opaq();
+        self.anchor = anchor;
+        self.dirty_opaq();
+    }
+
+    pub fn id(&self) -> Id {
+        self.id.clone()
+    }
+
+    pub fn set_id(&mut self, id: Id) {
+        self.id = id;
+    }
+
+    pub fn activate(&mut self) {
+        self.dirty_opaq();
+        self.active = true;
+    }
+
+    pub fn deactivate(&mut self) {
+        self.dirty_opaq();
+        self.active = false;
+    }
+
+    // To make Display trait work properly.
+    fn _fmt(&self, fmt: &mut Formatter<'_>, indent_level: usize) -> std::result::Result<(), std::fmt::Error> {
+        match self.kind {
+            FrameTreeKind::Leaf {..} => {
+                write!(fmt, "{}", "    ".repeat(indent_level))?;
+                write!(fmt, "Leaf (id= {}, active= {}, anchor= {})\n", self.id, self.active, self.anchor)?;
+            }
+            FrameTreeKind::Branch {ref children} => {
+                write!(fmt, "{}", "    ".repeat(indent_level))?;
+                write!(fmt, "Branch (id= {}, active= {}, anchor= {}) {{\n", self.id, self.active, self.anchor)?;
+                for child in children {
+                    child._fmt(fmt, indent_level + 1)?;
+                };
+                write!(fmt, "{}}}\n", "    ".repeat(indent_level))?;
+            }
+        }
+        Ok(())
+    }
+
+
     pub fn set_dirty(&mut self, p: TermPos) {
         self.dirt
             .entry(p.y())
@@ -158,6 +201,8 @@ impl FrameTree {
         };
     }
 
+    /// Recursively calculates the bounding box of this tree by calculating the bounding boxes of
+    /// all children. May want to investigate caching this at some point (but profile first.)
     pub fn bounds(&self) -> (TermPos, TermPos) {
         match self.kind {
             FrameTreeKind::Leaf{ref frame} =>
@@ -179,6 +224,8 @@ impl FrameTree {
     }
 
 
+    /// Recursively calculates the dirty cells of this tree by calculating the dirty cells of all
+    /// children and taking the union. Again, consider caching (but profile first!)
     pub fn dirt(&self) -> HashMap<i16, HashSet<i16>> {
         match self.kind {
             FrameTreeKind::Leaf{..} => self.dirt.clone(),
@@ -200,6 +247,8 @@ impl FrameTree {
         }
     }
 
+    /// Recursively marks all cells of this tree, and therefore all cells of all children, as
+    /// clean. Note that the same cell could still be considered dirty by a different tree.
     pub fn clean(&mut self) {
         match self.kind {
             FrameTreeKind::Leaf {..} => self.dirt.clear(),
@@ -210,78 +259,7 @@ impl FrameTree {
         }
     }
 
-    // pub fn propagate_bounds(&mut self) {
-    //     match self.kind {
-    //         FrameTreeKind::Leaf{ref frame} => {
-    //             self.tl = self.anchor;
-    //             self.br = self.anchor + (frame.height(), frame.width()).finto();
-    //         }
-    //         FrameTreeKind::Branch{ref mut children} => {
-    //             let (mut top, mut left, mut bot, mut right) = 
-    //                 (i16::MIN, i16::MIN, i16::MAX, i16::MAX);
-    //             for ref mut child in children {
-    //                 child.propagate_bounds();
-    //                 let (t, l) = child.tl.finto();
-    //                 let (b, r) = child.br.finto();
-    //                 top = min(top, t);
-    //                 left = min(left, l);
-    //                 bot = max(bot, b);
-    //                 right = max(right, r);
-    //             }
-    //             self.tl = (top, left).finto();
-    //             self.br = (bot, right).finto();
-    //         }
-    //     }
-    // }
-    //
-    // pub fn propagate_dirt(&mut self) {
-    //     match &mut self.kind {
-    //         FrameTreeKind::Leaf {..} => (),
-    //         FrameTreeKind::Branch {children, ..} => {
-    //             for child in children {
-    //                 child.propagate_dirt();
-    //                 self.dirt.extend(std::mem::take(&mut child.dirt));
-    //             };
-    //         }
-    //     };
-    // }
-
-    pub fn anchor(&self) -> TermPos {
-        self.anchor
-    }
-
-    pub fn set_anchor(&mut self, anchor: TermPos) {
-        self.dirty_opaq();
-        self.anchor = anchor;
-        self.dirty_opaq();
-    }
-
-    // pub fn dirt(&self) -> &HashMap<i16, HashSet<i16>> {
-    //     &self.dirt
-    // }
-    //
-    // pub fn clean(&mut self) {
-    //     self.dirt.clear();
-    // }
-
-    pub fn id(&self) -> Id {
-        self.id.clone()
-    }
-
-    pub fn set_id(&mut self, id: Id) {
-        self.id = id;
-    }
-
-    pub fn activate(&mut self) {
-        self.dirty_opaq();
-        self.active = true;
-    }
-
-    pub fn deactivate(&mut self) {
-        self.dirty_opaq();
-        self.active = false;
-    }
-
+    /// Return a reference to the descendant tree with given id. Recursively searches all children.
     pub fn find(&self, id: &Id) -> Option<&Self> {
         match self.kind {
             FrameTreeKind::Leaf {..} => 
@@ -377,30 +355,6 @@ impl FrameTree {
         }
     }
 
-    // pub fn is_dirty(&self, pos: TermPos) -> DirtyBit {
-    //     match self.dirt().get(&pos.y()) {
-    //         Some(set) => if set.contains(&pos.x()) { Dirty } else { Clean },
-    //         None => Clean
-    //     }
-    // }
-
-    // does the whole cell recovery algorithm
-    // if dirt propagates with std::mem::take, then can't get dirty status of cells as we go, cuz
-    // that requires per-leaf dirt. So maybe I should just accept that, yeah, I think that's the move.
-    // pub fn cell(&self, pos: TermPos) -> LayerCell {
-    //     for (off, act, leaf) in self.leaves() {
-    //         match &leaf.kind {
-    //             FrameTreeKind::Leaf {frame} =>
-    //                 match frame.get(pos - off) {
-    //                     Some(c @ Opaque(_)) => return c,
-    //                     _ => ()
-    //                 },
-    //             _ => unreachable!()
-    //         };
-    //     };
-    //     LayerCell::default()
-    // }
-
     pub fn cell(&self, pos: TermPos) -> LayerCell {
         if let Some(c) = self._cell(pos, false) { c } else { LayerCell::bg() }
     }
@@ -470,6 +424,10 @@ impl FrameTree {
             },
             FrameTreeKind::Branch {..} => panic!("set_cell should only be called on leaves")
         }
+    }
+
+    /// Uses the zmarks of self.children and tr to determine where to put tr.
+    pub fn z_insert_tree(&mut self, tr: FrameTree) {
     }
 
     pub fn push_tree(&mut self, tr: FrameTree) {

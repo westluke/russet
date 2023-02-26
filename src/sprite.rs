@@ -59,6 +59,10 @@ impl Default for LayerCell {
     }
 }
 
+Doesn't need to be a struct, can just be a set of functions. Actually, could just make these functions attached to zvec? Don't need to consult tree at all.
+Also the writing process could conceivably be parallelized. That would be pretty cool. But very unnecessary for now.
+
+
 pub struct FrameBuf<T: Write> {
     // The underlying Write object (should be a terminal, probably stdout)
     under: T,

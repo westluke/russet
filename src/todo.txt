@@ -128,3 +128,110 @@ in, do we?so a hash from line number to hashset of row number.
             // It's not like it's affecting their functionality at all. No double presses,
             // no stuck keys. They're still totally fine, they just feel slightly mushier.
             // Probably a normal part of the wearing-in process.
+                            // gotta find the old cards in the lastfoundset and make them
+                            // disappear. How to do that?
+                            //
+                            // But bigger question: how to enforce ordering on these cards?
+                            // I could make the changeset actually a vector. But that doesn't quite
+                            // seem right. There is always an implicit ordering based on their
+                            // location i nthe lastfoundset. And the game mechanics shouldn't need
+                            // to care about that.
+                            //
+                            // So, what to do? Should separate the tree into dealt and lastfound,
+                            // and write a function for inserting into lastfound based on position?
+                            // Ah but this also gets slightly more complicated when we consider
+                            // adding in animations.
+                            // The z-vals of the last found cards shouldn't change as they move
+                            // over to the lastfound positions. So that means the animations can't
+                            // just assign z-vals randomly.
+                            //
+                            // I think near-next step should be making placeholder "animations"
+                            // that are actually just permanent, basically no animations at all,
+                            // preserving what happens now.
+                            //
+                            // A system for generating z-values for tree elements, that draws from
+                            // a pool of available integers, marking ones as used when necessary.
+                            // Can have special functions for special cases, i.e. lastfound groups.
+                            // Can use a huge integer range, too, minimize chance of collisions.
+                            // And can dedicate cerrtain portions of that range to certain kinds of
+                            // trees.
+                            //
+                            //
+                            // Hmmm. And so maybe occlusion here would be determined by that
+                            // z-value rather than place in the tree?
+                            //
+                            // Would that be doable? It would be annoying though, cuz you'd have to
+                            // do a full run-through every time... Makes more sense to use z-values
+                            // to INDEX into the tree when doing a placement.
+                            //
+                            // So how would that work. Well, then each panel needs to store some
+                            // z-value. But it's kinda... fake. It doesn't actually determine 
+                            // occlusion, just speeds up insertions. Also tricky cuz then entire
+                            // trees need z-values. Let's call them zmarks actually, cuz they're
+                            // kinda fake.
+                            //
+                            // So maybe i can specify it like this? The tree has, as an invariant,
+                            // the fact that all leaves are ordered by z-index in a depth-first
+                            // traversal
+                            //
+                            // Do trees themsselves have indices? Or maybe index ranges? And do
+                            // these indices need to get updated ever?
+                            //
+                            // ugh. do I even need to check which areas a panel covers? Could I
+                            // simplify to just, find the first opaque pixel? Less optimized, but
+                            // optimize later?
+                            //
+                            // Currently I handle "z-values" by actually storing things in orderr.
+                            // That makes occlusion fairly easy, but scene insertion difficult.
+                            //
+                            // The alternative is storing objects in just a big bag, and figuring
+                            // out occlusion from stored z-values at render phase.
+                            //
+                            // Which option makes more sense?
+                            //
+                            // Well, I have to store things as a tree anyways, for the movement.
+                            //
+                            // Could also mark portions of the display as being drawn with a
+                            // certain z-val, skip ones with lwoer?
+
+
+My eventual realization was that the purpose of the tree structure (unified movement) is conceptually VERY different from the need for a z-buffer. In that the tree structure does not correspond to the z structure necessarily at all. So these should be separate objects.
+
+// Ah. No, there's a fundamental issue here, if I'm trying to make this
+// engine extensible. The fundamental issue is that the movement tree
+// is an entirely separate problem from occlusion, since different
+// leaves in a subtree could span a z-range that contains the zmark of
+// an unrelated leaf in a different tree.
+// 
+// so how to actually do it? I feel like trees should be stored in
+// separate places, using refcells.
+//
+// And how to model occlusion?
+//
+// simplest way would just be storing those refcells in a big vector,
+// sorted by z-index. Ok, but that's a fairly hefty change. What do I
+// chagne first....
+//
+// Well, what's actually going in the refcells? Just panels, I think.
+// yeah. Tree stores panel rcs, zvec stores panel rcs.
+//
+// Wait im confusing RCs and refcells. I think I just need RCs for
+// this. Maybe ARCs.
+//
+// Confusion: couldn't RefCell be implemented with just Rc? Lol no.
+//
+// Ok so the FrameTree stores the actual RefCells, and the zvec just
+// stores references to those RefCells? 
+//
+// I'm wondering if there's a more Rust-y way to do this, that doesn't
+// involve RefCellls at all. But I don't think there is...
+// Oh wait. Unless the panels are immutable? Would that make sense?
+// Maybe the panels are only mutable for construction?
+// That's pretty limiting though...
+// Means everything is sprite-based. Yeah fuck that.
+
+No, panels are mutable, which means tree is the actual owner, storing immutable refcells,
+and they are borrowed by zbuf. Borrowed? Or something fancier? Try borrowing for now, need the practice.
+
+Can still call them sprites, they're just mutable sprites.
+

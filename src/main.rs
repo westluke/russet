@@ -61,6 +61,7 @@ use deck::*;
 pub struct Id {
     card: Option<Card>,
     name: Option<String>
+    // uuid: u128
 }
 
 impl Display for Id {
