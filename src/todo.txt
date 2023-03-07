@@ -235,3 +235,11 @@ and they are borrowed by zbuf. Borrowed? Or something fancier? Try borrowing for
 
 Can still call them sprites, they're just mutable sprites.
 
+
+https://stackoverflow.com/questions/32079730/whats-the-fastest-method-of-outputting-text-to-console-in-python3
+
+Suggests a third thread? Or reorganizing thread responsibilities again. Main thread manages movetree as well, printing thread only touches zvec
+
+
+
+Idea for independent graphics library name: rustalka

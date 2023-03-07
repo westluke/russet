@@ -14,6 +14,7 @@ use crossterm::{terminal, execute};
 
 use log::{info};
 use flexi_logger::{FileSpec, Logger, WriteMode};
+use uuid::Uuid;
 
 
 
@@ -46,56 +47,71 @@ mod util;
 
 pub mod pos;
 pub mod deck;
-pub mod frame_buf;
+pub mod sprite;
 pub mod layout;
 pub mod term_char;
 
-use game::{*, ChangeAtom::*};
+use game::*;
 use animation::*;
-use frame_buf::*;
 use util::*;
-use pos::*;
 use deck::*;
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 pub struct Id {
+    uuid: Uuid,
     card: Option<Card>,
     name: Option<String>
-    // uuid: u128
+}
+
+impl Default for Id {
+    fn default() -> Self {
+        Self { uuid: Uuid::new_v4(), ..Default::default() }
+    }
 }
 
 impl Display for Id {
     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(fmt, "Id")?;
-        if let Some(c) = self.card {
-            write!(fmt, "({}", c)?;
+        write!(fmt, "Id({}", self.uuid)?;
 
-            if let Some(n) = self.name.clone() {
-                write!(fmt, ", {})", n)?;
-            };
-        } else if let Some(n) = self.name.clone() {
-            write!(fmt, "({})", n)?;
+        if let Some(c) = self.card {
+            write!(fmt, ", {}", c)?;
+        }
+
+        if let Some(n) = self.name.clone() {
+            write!(fmt, ", {}", n)?;
         };
 
-        Ok(())
+        write!(fmt, ")")
     }
 }
 
 impl From<Card> for Id {
     fn from(c: Card) -> Self {
-        Self {card: Some(c), name: None}
+        Self {
+            uuid: Uuid::new_v4(),
+            card: Some(c),
+            name: None
+        }
     }
 }
 
-impl From<String> for Id {
-    fn from(s: String) -> Self {
-        Self {card: None, name: Some(s)}
-    }
-}
+// impl From<String> for Id {
+//     fn from(s: String) -> Self {
+//         Self {
+//             uuid: Uuid::new_v4(),
+//             card: None,
+//             name: Some(s)
+//         }
+//     }
+// }
 
 impl From<&str> for Id {
     fn from(s: &str) -> Self {
-        Self {card: None, name: Some(s.into())}
+        Self {
+            uuid: Uuid::new_v4(),
+            card: None,
+            name: Some(s.into())
+        }
     }
 }
 

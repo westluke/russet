@@ -4,7 +4,7 @@ use crate::pos::TermPos;
 use crate::util::*;
 use crate::Id;
 
-use crate::frame_buf::{LayerCell::{self, *}, FrameTree};
+use crate::sprite;
 
 use std::hash::{Hash, Hasher};
 
