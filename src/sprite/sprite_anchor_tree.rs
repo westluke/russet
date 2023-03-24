@@ -20,10 +20,19 @@ use super::SpriteTree;
 #[derive(Default)]
 pub struct SpriteAnchorTree<'a> (SpriteTree<'a>);
 
+// pub struct SpriteAnchorRef<'a> {
+//     sprite: &'a RefCell<Sprite<'a>>,
+//     tree: &'a SpriteAnchorTree<'a>
+// }
+
 use SpriteAnchorTree as SAT;
+// use SpriteAnchorRef as SAR;
 
 impl<'a> SAT<'a> {
     // distributive
     pub fn reanchor() {}
+    pub fn push_sprite(&mut self, sp: &'a RefCell<Sprite<'a>>) {
+        self.0.push_sprite(sp)
+    }
 }
 

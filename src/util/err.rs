@@ -14,6 +14,7 @@ pub enum SetErrorKind {
     Logging,
     Conversion,
     PanelOob,
+    IdNotFound,
 }
 
 #[derive(Debug)]

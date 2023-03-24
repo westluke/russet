@@ -1,16 +1,20 @@
 use std::collections::{HashSet, HashMap};
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref, RefMut};
+use std::ops::Range;
 
 use crate::pos::*;
 use crate::term_char::*;
 use crate::util::*;
 use crate::Id;
+use crate::bounds::Bounds;
 
 use uuid::Uuid;
 
-mod grid;
 // mod line_update;
-mod termable;
+// mod termable;
+mod grid;
+pub mod img;
+pub use img::Img;
 
 mod sprite_anchor_tree;
 mod sprite_order_tree;
@@ -21,15 +25,15 @@ pub use sprite_manager::SpriteManager;
 use grid::Grid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum LayerCell {
+pub enum SpriteCell {
     Opaque(TermChar),
     #[default]
     Transparent,
 }
 
-pub use LayerCell::*;
+pub use SpriteCell::*;
 
-impl LayerCell {
+impl SpriteCell {
     pub fn is_opaque(&self) -> bool {
         return !(*self == Transparent)
     }
@@ -45,8 +49,8 @@ impl LayerCell {
 
 #[derive(Debug, Clone)]
 pub struct PreSprite {
-    img: Grid<LayerCell>,
-    anchor: (i16, i16),
+    img: Img,
+    anchor: TermPos,
     id: Id,
 
     // Only in the case of ties do we advance to additional entries
@@ -59,36 +63,43 @@ pub struct PreSprite {
 impl PreSprite {
     pub fn new(height: usize, width: usize) -> Self {
         Self {
-            img: Grid::new(height, width, LayerCell::default()),
-            anchor: (0, 0),
+            img: Img::rect(height, width, SpriteCell::default()),
+            anchor: (0, 0).finto(),
             id: Id::default(),
             zs: Vec::<i16>::default()
         }
     }
 
-    pub fn mk(img: Grid<LayerCell>, anchor: (i16, i16), id: Id, zs: Vec<i16>) -> Self {
+    pub fn mk(img: Img, anchor: TermPos, id: Id, zs: Vec<i16>) -> Self {
         Self { img, anchor, id, zs }
     }
 
+    pub fn bounds(&self) -> Bounds<i16> {
+        return (
+            self.anchor
+            ..(self.anchor + (self.img.height()-1, self.img.width()-1).finto())
+        ).finto()
+    }
+
     // pub fn with_size(height: usize, width: usize)
-    pub fn get(&self, pos: TermPos) -> Result<LayerCell> {
+    pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
         self.img.get(pos)
     }
 
-    pub fn set(&mut self, pos: TermPos, cel: LayerCell) -> Result<LayerCell> {
+    pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
         self.img.set(pos, cel)
     }
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct PreSpriteBuilder {
-    anchor: (i16, i16),
+    anchor: TermPos,
     id: Id,
     zs: Vec<i16>
 }
 
 impl PreSpriteBuilder {
-    pub fn anchor(&mut self, anchor: (i16, i16)) -> &mut Self {
+    pub fn anchor(&mut self, anchor: TermPos) -> &mut Self {
         self.anchor = anchor;
         self
     }
@@ -103,9 +114,9 @@ impl PreSpriteBuilder {
         self
     }
 
-    // Grid doesn't have a sensible default, so we require img at the final step
-    pub fn build(&self, img: Grid<LayerCell>) -> PreSprite {
-        PreSprite::mk(img, self.anchor, self.id, self.zs)
+    // Img doesn't have a sensible default, so we require img at the final step
+    pub fn build(&self, img: Img) -> PreSprite {
+        PreSprite::mk(img, self.anchor, self.id.clone(), self.zs.clone())
     }
 }
 
@@ -123,6 +134,20 @@ pub struct Sprite<'a> {
     dirt: &'a RefCell<HashMap<i16, HashSet<i16>>>,
 }
 
+fn set_dirty(mut dirt: RefMut<HashMap<i16, HashSet<i16>>>, p: TermPos) {
+    dirt.entry(p.y())
+        .or_insert(HashSet::new())
+        .insert(p.x());
+}
+
+fn dirty_all(mut dirt: RefMut<HashMap<i16, HashSet<i16>>>, bnd: Bounds<i16>) {
+    for y in bnd.y_range() {
+        dirt.entry(y)
+            .or_insert(HashSet::new())
+            .extend(bnd.x_range())
+    }
+}
+
 impl<'a> Sprite<'a> {
     pub fn new(pre_sprite: PreSprite, dirt: &'a RefCell<HashMap<i16, HashSet<i16>>>, zs: Vec<i16>) -> Self {
         // Actually, should Sprites always be initialized with maximal dirt? Lol wait this dirt is
@@ -131,35 +156,192 @@ impl<'a> Sprite<'a> {
         // sprites don't rly need to be wrapped in Rcs either, the manager vector will own them.
         // Modification methods could also pass out custom ref objects to sprites?
         // That or operate using IDs
-        Self { pre_sprite, dirt, zs }
+        Self { pre_sprite, dirt }
     }
 
-    pub fn reanchor(&mut self) {
+    pub fn reanchor(&mut self, anchor: TermPos) {
+        self.pre_sprite.anchor = anchor
     }
 
-    pub fn reorder(&mut self) {
+    pub fn reorder(&mut self, zs: Vec<i16>) {
+        self.pre_sprite.zs = zs
     }
 
     pub fn destroy(&mut self) {
+        self.dirty_all()
     }
 
     pub fn dirty_all(&self) {
+        dirty_all(self.dirt.borrow_mut(), self.pre_sprite.bounds())
     }
 
-    pub fn get(&self, pos: TermPos) -> Result<LayerCell> {
-        self.img.get(pos)
+    pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
+        self.pre_sprite.img.get(pos)
     }
-    pub fn set(&mut self, pos: TermPos, cel: LayerCell) -> Result<LayerCell> {
-        self.img.set(pos, cel)
+
+    pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
+        let result = self.pre_sprite.img.set(pos, cel);
+        set_dirty(self.dirt.borrow_mut(), pos);
+        result
     }
+
+    pub fn bounds(&self) -> Bounds<i16> {
+        self.pre_sprite.bounds()
+    }
+
+    pub fn id(&self) -> Id {
+        self.pre_sprite.id.clone()
+    }
+}
+
+
+pub trait SpriteTreeLike where Self:Sized {
+    type SpriteRef: SpriteRefLike;
+
+    fn mk(sp: Option<&RefCell<Sprite>>, children: Vec<Self>, id: Id) -> Self;
+    fn bounds(&self) -> Option<Bounds<i16>>;
+
+    fn node(&self) -> Option<&RefCell<Sprite>>;
+    fn set_node(&mut self, node: Option<&RefCell<Sprite>>);
+    // fn node_mut(&mut self) -> &
+
+    fn children(&self) -> &Vec<Self>;
+    fn children_mut(&mut self) -> &mut Vec<Self>;
+    fn id(&self) -> &Id;
+
+    fn new(sp: Option<&RefCell<Sprite>>) -> Self {
+        Self::mk(sp, Default::default(), Default::default())
+    }
+
+    fn sprite(&self, id: &Id) -> Option<&RefCell<Sprite>> {
+        if let Some(node) = self.node() {
+            if node.borrow().id() == *id {
+                return Some(node)
+            }
+        };
+
+        for child in self.children() {
+            if let Some(sp) = child.sprite(id) {
+                return Some(sp)
+            }
+        };
+
+        None
+    }
+
+    fn tree(&self, id: &Id) -> Option<&Self> {
+        if *self.id() == *id {
+            return Some(self)
+        }
+
+        for child in self.children() {
+            if let Some(tr) = child.tree(id) {
+                return Some(tr)
+            }
+        }
+
+        None
+    }
+
+    fn tree_mut(&mut self, id: &Id) -> Option<&mut Self> {
+        if *self.id() == *id {
+            return Some(self)
+        }
+
+        for child in self.children_mut() {
+            if let Some(tr) = child.tree_mut(id) {
+                return Some(tr)
+            }
+        }
+
+        None
+    }
+
+    fn add_tree(&mut self, tr: Self, parent: Option<&Id>) -> Result<()> {
+        if let Some(id) = parent {
+            let parent_tr_opt = self.tree_mut(id);
+            if let Some(parent_tr) = parent_tr_opt {
+                parent_tr.children_mut().push(tr);
+                Ok(())
+            } else {
+                Err(SetError::new(SetErrorKind::IdNotFound, &format!("No tree found with id {}", id)))
+            }
+        } else {
+            self.children_mut().push(tr);
+            Ok(())
+        }
+    }
+
+    fn push_sprite(&mut self, sp: &RefCell<Sprite>) {
+        self.children_mut().push(
+            Self::new(Some(sp))
+        );
+    }
+
+    // fn insert_sprite(){}
 }
 
 #[derive(Default)]
 pub struct SpriteTree<'a> {
     node: Option<&'a RefCell<Sprite<'a>>>,
     children: Vec<SpriteTree<'a>>,
-    id: Uuid
+    id: Id
 }
+
+pub trait SpriteRefLike{}
+pub struct SpriteRef {}
+
+impl SpriteRefLike for SpriteRef {}
+
+impl<'a> SpriteTreeLike for SpriteTree<'a> {
+    type SpriteRef = SpriteRef;
+
+    fn mk(sp: Option<&RefCell<Sprite>>, children: Vec<SpriteTree<'a>>, id: Id) -> Self {
+        Self { node: sp, children, id }
+    }
+
+    fn node(&self) -> Option<&RefCell<Sprite>> {
+        self.node
+    }
+
+    fn set_node(&mut self, node: Option<&RefCell<Sprite>>) {
+        self.node = node;
+    }
+
+    fn children(&self) -> &Vec<Self> {
+        &self.children
+    }
+
+    fn children_mut(&mut self) -> &mut Vec<Self> {
+        &mut self.children
+    }
+
+    fn id(&self) -> &Id {
+        &self.id
+    }
+    
+    fn bounds(&self) -> Option<Bounds<i16>> {
+        if let Some(rc) = self.node {
+            let mut bounds = rc.borrow().bounds();
+            for child in &self.children {
+                let child_bounds = child.bounds();
+                bounds = child_bounds.map_or(bounds, |b| b.merge(bounds));
+            }
+            Some(bounds)
+        } else {
+            None
+        }
+    }
+}
+
+// impl From<
+
+impl<'a> SpriteTree<'a> {
+}
+
+// SHOULD BE ABLE TO TEMPORARILY HAND OUT MUTABLE REFERENCES TO INTERNALS
+
+
 
 // Who should get the IDs? Sprites, or the nodes that contain them?
 // The thing is, nodes DON'T contain them, they just contain references to them.

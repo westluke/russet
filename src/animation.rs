@@ -6,7 +6,7 @@ use sync::{Arc, Mutex, mpsc::{self, TryRecvError, RecvTimeoutError}};
 use collections::{HashMap};
 use std::hash::{Hash, Hasher};
 
-use crossterm::{terminal, execute, style};
+use crossterm::{terminal, execute, style::{self, Color}};
 use log::{info};
 
 use crate::game::{*, ChangeAtom::*};
@@ -425,7 +425,16 @@ pub fn animate(
     // scale to pixel graphics? 3d? gaming? i gotta try.
     // ok but focus. one thing at a time. ugh i need a todo file for this.
 
-    let man = SpriteManager::default();
+    let fill = SpriteCell::Opaque(TermChar::Bg(Color::Red));
+    let img = Img::horiz(3, fill);
+    let mut sprite = PreSpriteBuilder::default()
+        .anchor((0, 0).finto())
+        .id("test".into())
+        .zs(vec![0])
+        .build(img);
+    let mut man = SpriteManager::default();
+    man.push_sprite(sprite);
+
     
     loop {
         let game_msg = game_rcv.recv_timeout(Duration::from_millis(10));
@@ -442,7 +451,7 @@ pub fn animate(
             }
         }
 
-        man.write(&mut stdout);
+        // man.write(&mut stdout);
 
         // SpriteManager should maybe spin up its own thread? Or no, that should be a different object, cuz we might have many sprite managers...
         // Actually, we could pretend that SpriteManager just writes straight to stdout, and even implement it that way at first, but later on

@@ -1,4 +1,4 @@
-use std::{io, thread, time};
+use std::{io, thread, time, marker};
 use std::env;
 use std::fmt::{Display, Formatter};
 
@@ -14,7 +14,7 @@ use crossterm::{terminal, execute};
 
 use log::{info};
 use flexi_logger::{FileSpec, Logger, WriteMode};
-use uuid::Uuid;
+
 
 
 
@@ -50,70 +50,14 @@ pub mod deck;
 pub mod sprite;
 pub mod layout;
 pub mod term_char;
+pub mod bounds;
+pub mod id;
 
 use game::*;
 use animation::*;
 use util::*;
-use deck::*;
+pub use id::*;
 
-#[derive(Clone, Eq, PartialEq, Hash, Debug)]
-pub struct Id {
-    uuid: Uuid,
-    card: Option<Card>,
-    name: Option<String>
-}
-
-impl Default for Id {
-    fn default() -> Self {
-        Self { uuid: Uuid::new_v4(), ..Default::default() }
-    }
-}
-
-impl Display for Id {
-    fn fmt(&self, fmt: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        write!(fmt, "Id({}", self.uuid)?;
-
-        if let Some(c) = self.card {
-            write!(fmt, ", {}", c)?;
-        }
-
-        if let Some(n) = self.name.clone() {
-            write!(fmt, ", {}", n)?;
-        };
-
-        write!(fmt, ")")
-    }
-}
-
-impl From<Card> for Id {
-    fn from(c: Card) -> Self {
-        Self {
-            uuid: Uuid::new_v4(),
-            card: Some(c),
-            name: None
-        }
-    }
-}
-
-// impl From<String> for Id {
-//     fn from(s: String) -> Self {
-//         Self {
-//             uuid: Uuid::new_v4(),
-//             card: None,
-//             name: Some(s)
-//         }
-//     }
-// }
-
-impl From<&str> for Id {
-    fn from(s: &str) -> Self {
-        Self {
-            uuid: Uuid::new_v4(),
-            card: None,
-            name: Some(s.into())
-        }
-    }
-}
 
 // use pos::*;
 // use deck::*;
@@ -202,8 +146,10 @@ fn handle_back_msg(state: &mut GameState, msg: std::result::Result<BackMsg, TryR
             // info!("Collision IDs
             for id in v {
                 // info!("ID: {}", id);
-                if let Some(c) = id.card {
-                    state.select(c);
+                // TODO: FIX THIS
+                if let 0 = 0 {
+                // if let Some(c) = id.card {
+                    // state.select(c);
                     let csets = state.changes();
                     let msgs = csets.into_iter().map(|c| Msg::ChangeMsg(c)).collect();
                     return FrameResult::Msgs(msgs);
@@ -249,6 +195,10 @@ fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) ->
 }
 
 fn main() -> Result<()> {
+
+    // let id0: Id<i8> = Default::default();
+    // let id1: Id<u8> = Default::default();
+
     env::set_var("RUST_BACKTRACE", "1");
 
     let (game_snd, game_rcv) = mpsc::channel::<animation::Msg>();

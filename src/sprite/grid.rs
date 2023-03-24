@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut};
 use std::iter::Map;
-use crate::pos::TermPos;
+use crate::bounds::{Bounds, BoundsIter};
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
 
@@ -11,15 +11,30 @@ pub struct Grid<T: Copy> {
     width: usize
 }
 
+pub struct GridEnumerator<'a, T: Copy> {
+    grid: &'a Grid<T>,
+    iter: BoundsIter<usize>
+}
+
+impl<'a, T: Copy> Iterator for GridEnumerator<'a, T> {
+    type Item = ((usize, usize), T);
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some((y, x)) = self.iter.next() {
+            if let Ok(t) = self.grid.get((y, x)) {
+                Some(((y, x), t))
+            } else {
+                None
+            }
+        } else {
+            None
+        }
+    }
+}
+
 impl<T: Copy> Grid<T> {
     pub fn new(height: usize, width: usize, fill: T) -> Self {
         debug_assert!(height >= 1 && width >= 1);
         Self{ grid: vec![vec![fill; width]; height], height, width }
-    }
-
-    pub fn enumerate(&self) -> impl Iterator<Item=(TermPos, T)> + '_ {
-        let under = TermPos::new(0, 0).range_to((self.height-1, self.width-1).finto());
-        under.map(|p| (p, self.get(p).unwrap()))
     }
 
     pub fn height(&self) -> usize {
@@ -30,28 +45,26 @@ impl<T: Copy> Grid<T> {
         self.width
     }
 
-    pub fn get(&self, pos: TermPos) -> Result<T> {
-        let pos_tup: Result<(usize, usize)> = pos.try_into();
-        if let Ok((row_i, col_i)) = pos_tup {
-            if let Some(row) = self.grid.get(row_i) {
-                if let Some(cell) = row.get(col_i) {
-                    Ok(*cell)
-                } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::get")) }
-            } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::get")) }
-        } else { Err(SE::new(SEK::PanelOob, "TermPos has negative components in Grid::get")) }
+    pub fn enumerate(&self) -> GridEnumerator<T> {
+        GridEnumerator { grid: self, iter: ((0, 0)..(self.height-1, self.width-1)).into() }
     }
 
-    pub fn set(&mut self, pos: TermPos, cel: T) -> Result<T> {
-        let pos_tup: Result<(usize, usize)> = pos.try_into();
-        if let Ok((row_i, col_i)) = pos_tup {
-            if let Some(row) = self.grid.get_mut(row_i) {
-                if let Some(cell) = row.get_mut(col_i) {
-                    let ret = *cell;
-                    *cell = cel;
-                    Ok(ret)
-                } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::set")) }
-            } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::set")) }
-        } else { Err(SE::new(SEK::PanelOob, "TermPos has negative components in Grid::set")) }
+    pub fn get(&self, (row_i, col_i): (usize, usize)) -> Result<T> {
+        if let Some(row) = self.grid.get(row_i) {
+            if let Some(cell) = row.get(col_i) {
+                Ok(*cell)
+            } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::get")) }
+        } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::get")) }
+    }
+
+    pub fn set(&mut self, (row_i, col_i): (usize, usize), cel: T) -> Result<T> {
+        if let Some(row) = self.grid.get_mut(row_i) {
+            if let Some(cell) = row.get_mut(col_i) {
+                let ret = *cell;
+                *cell = cel;
+                Ok(ret)
+            } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::set")) }
+        } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::set")) }
     }
 
     // fn resize(&mut self, height: usize, width: usize, fill: T){

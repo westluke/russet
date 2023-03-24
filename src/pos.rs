@@ -7,7 +7,7 @@ use std::collections::HashSet;
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Default)]
 pub struct DealtPos {
     row: u8,
     col: u8
@@ -27,8 +27,9 @@ impl DealtPos {
     pub fn col(self) -> u8 { self.col }
 }
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Default)]
 pub enum GamePos {
+    #[default]
     Deck,
     LastFound0,
     LastFound1,
@@ -49,7 +50,7 @@ impl From<DealtPos> for GamePos {
 }
 
 
-#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Hash, Copy, Clone, Debug, Default)]
 pub struct TermPos {
     y: i16,
     x: i16
