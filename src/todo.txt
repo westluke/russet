@@ -243,3 +243,15 @@ Suggests a third thread? Or reorganizing thread responsibilities again. Main thr
 
 
 Idea for independent graphics library name: rustalka
+
+
+
+
+
+Interesting: rust wont tell you straight up that two lifetimes have to be the same for matching up invariant type construction.
+Instead it'll say they have to outlive each other. Kinda confusing but I guess makes sense.
+
+Also, the lifetime annotations on structs aren't about the struct as a whole, it's just about the fields.
+It's about what to do when you start extracting and using those fields in functions.
+
+Interesting question: can a struct contain a dead reference as long as you don't touch it?

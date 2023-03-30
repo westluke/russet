@@ -47,7 +47,7 @@ mod util;
 
 pub mod pos;
 pub mod deck;
-pub mod sprite;
+pub mod sprites;
 pub mod layout;
 pub mod term_char;
 pub mod bounds;

@@ -13,7 +13,11 @@ use crate::game::{*, ChangeAtom::*};
 use crate::pos::*;
 use crate::util::*;
 use crate::term_char::*;
-use crate::sprite::*;
+// use crate::sprites::*;
+use crate::sprites::pre_sprite::{PreSprite, PreSpriteBuilder};
+use crate::sprites::sprite_manager::SpriteManager;
+use crate::sprites::img::Img;
+use crate::sprites::*;
 use crate::deck::*;
 use crate::Id;
 
@@ -433,7 +437,7 @@ pub fn animate(
         .zs(vec![0])
         .build(img);
     let mut man = SpriteManager::default();
-    man.push_sprite(sprite);
+    // man.push_sprite(sprite);
 
     
     loop {

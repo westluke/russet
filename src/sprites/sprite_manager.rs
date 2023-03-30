@@ -3,10 +3,11 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
-use super::{Sprite, PreSprite};
+use super::{sprite::Sprite, pre_sprite::PreSprite};
 use super::sprite_anchor_tree::SpriteAnchorTree as SAT;
 use super::sprite_onto_tree::SpriteOntoTree as SOnT;
 use super::sprite_order_tree::SpriteOrderTree as SOrT;
+use super::sprite_traits::SpriteTreeLike;
 
 use crossterm::queue;
 use crossterm::cursor;
@@ -40,9 +41,6 @@ pub struct SpriteManager<'a> {
 // But mostly should be done through SpriteManager
 
 
-NEED TO PUT SOME OF THIS SHIT IN TRAITS, TOO MUCH DUPLICATION
-How do I do that?
-
 impl<'a> Default for SpriteManager<'a> {
     fn default() -> Self {
         Self {
@@ -65,8 +63,8 @@ impl<'a> SpriteManager<'a> {
 
     // Adds sprite to the top level of every tree
     pub fn push_sprite(&mut self, sp: RefCell<Sprite<'a>>){
-        self.anchors.push_sprite(&sp);
         self.sprites.push(sp);
+        self.anchors.push_sprite(&sp);
     }
 
     // Adds sprite as child of the same node in every tree
