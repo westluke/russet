@@ -6,7 +6,7 @@ use crate::bounds::Bounds;
 use crate::pos::TermPos;
 
 use super::sprite::Sprite;
-use super::sprite_traits::*;
+use super::sprite_traits::{*, SpriteTreeNode as STN};
 
 // Do branches need names?
 // Well, otherwise, what's the point of this thing?
@@ -29,15 +29,17 @@ use super::sprite_traits::*;
 // The other option would be to just have one type, like "DistributiveSpriteTree", but that
 // wouldn't feel right really cuz then it has the reanchor, and delete, and everything?
 
-#[derive(Default)]
-pub struct SpriteAnchorTree<'a> {
-    node: Option<Rc<RefCell<Sprite<'a>>>>,
+// Stands for SpriteAnchorTree
+
+#[derive(Default, Clone, Debug)]
+pub struct SpriteAnchorTree {
+    node: Option<Rc<RefCell<Sprite>>>,
     children: Vec<Self>,
-    id: Id
+    id: Id<Self>
 }
 
 
-use SpriteAnchorTree as SAT;
+pub use SpriteAnchorTree as SanTree;
 
 // pub struct SpriteAnchorRef {
 //     // sprite: &'a RefCell<Sprite<'a>>,
@@ -56,25 +58,25 @@ use SpriteAnchorTree as SAT;
 
 // How should reanchoring actually work? Whole tree? just one sprite? Through ref?
 // SHIFT through whole tree, or through ref. REANCHOR only through ref.
-impl<'a> SAT<'a> {
+impl SanTree {
     pub fn shift(&self, shift: TermPos) {
         // shift node
         // recurse through children
     }
 }
 
-impl<'a> SpriteTreeLike<'a> for SAT<'a> {
+impl SpriteTreeLike for SanTree {
     // type SpriteRef = SpriteAnchorRef;
 
-    fn mk(sp: Option<&'a RefCell<Sprite<'a>>>, children: Vec<Self>, id: Id) -> Self {
-        Self { node: sp, children, id }
+    fn mk(sp: Option<STN>, children: Vec<Self>) -> Self {
+        Self { node: sp, children, id: Id::default()}
     }
 
-    fn node(&self) -> Option<&'a RefCell<Sprite<'a>>> {
-        self.node
+    fn node(&self) -> Option<&STN> {
+        self.node.as_ref()
     }
 
-    fn set_node(&mut self, node: Option<&'a RefCell<Sprite<'a>>>) {
+    fn set_node(&mut self, node: Option<STN>) {
         self.node = node;
     }
 
@@ -86,12 +88,12 @@ impl<'a> SpriteTreeLike<'a> for SAT<'a> {
         &mut self.children
     }
 
-    fn id(&self) -> &Id {
-        &self.id
+    fn id(&self) -> Id<Self> {
+        self.id.clone()
     }
     
     fn bounds(&self) -> Option<Bounds<i16>> {
-        if let Some(rc) = self.node {
+        if let Some(ref rc) = self.node {
             let mut bounds = rc.borrow().bounds();
             for child in &self.children {
                 let child_bounds = child.bounds();

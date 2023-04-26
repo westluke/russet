@@ -24,41 +24,37 @@ use crate::pos::TermPos;
 use crate::term_char::TermChar;
 use crate::util::FInto;
 
-// Ok, this idea of triple tree is surprisingly complicated. Maybe unsurprisingly.
-// I need to think about invariants, and how to preserve them.
-// Stuff like, can the same sprite appear twice in the same tree? Should each tree
-// have the same contents, as a set, as every other tree? and the sprites vec?
+// struct Sync {
+//     node: Option<STN>,
+//     children: Vec<Self>,
+//     id: Id<Self>
+// }
 
-// Should users be able to manipulate trees on their own, or only through SpriteForests?
-// If only through SpriteForests, maintaining invariants might not be too hard. Otherwise...
-// all bets are off, really.
+// struct Desync {
+// }
 
-// And do we manipulate forests susing the IDs on Sprites, or the ids on trees?
+// Is this really the best way? Should they choose ahead of time whether they're using one or the
+// other? Eh. All that matters for now is that I know this is possible, as long as SpriteManager
+// can work with anything that implements SpriteTreeLike. Don't need it for this project, so ignore
+// for now.
+enum SpriteForestActual {
+    Sync(SpriteTree),
+    Desync {
+        anchor: SanTree,
+        onto: SonTree,
+        order: SorTree,
+    }
+}
 
-// I think we only use TreeIds, but we provide a method to conveniently transform sprite ids into tree ids.
-//
-// Also, it would be REALLY NICE to be able to use this as if its only a single tree, for when I
-// don't want fancy hierarchical stuff. How can I do that?
-//
-// Maybe I could have it implement SpriteTreeLike?
-// Ach, no, cuz conceptually its al ot more than just a tree, and it's not recursive.
-// I COULD split out SpriteForest into its own type, make this SpriteManager again,
-// and have SpriteForest implement SpriteTreeLike? Although, no, again that doesn't work.
-// because the recursion causes issues. Wait no, that DOES work, as long as you don't use
-// the splitting features. Just have to internally keep track of which trees are "the same".
-// And then, kinda funky, need to make it so that once its split, it stays split.
-//
-// Really those should just be different types, huh. Except no, they shouldn't be different
-// types, cuz that's a pain and then I'm duplicating work.
-//
-// Ok, so this new type dynamically switches between the two? clones internally when it switches to complex
-// version, to avoid 3x space consumption. Could make alternate version later.
-
-pub struct SpriteManagerRefMut<'a> {
+pub struct SpriteForest {
+    node: Option<Rc<RefCell<Sprite>>>,
+    children: Vec<Self>,
+    id: Id<Self>
 }
 
 #[derive(Default, Clone, Debug)]
-pub struct SpriteManager {
+pub struct SpriteForest {
+    under: 
     anchors: SanTree,
     onto: SonTree,
     order: SorTree,

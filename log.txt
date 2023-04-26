@@ -1,1 +1,0 @@
-INFO [set::animation] animation loop starting

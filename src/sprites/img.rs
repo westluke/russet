@@ -18,20 +18,20 @@ use crate::util::FInto as _;
 pub struct Img(Grid<SpriteCell>);
 
 impl Img {
-    pub fn horiz(len: usize, px: SpriteCell) -> Self {
-        Self (Grid::new(1, len, px))
+    pub fn horiz(len: i16, px: SpriteCell) -> Self {
+        Self (Grid::new(1, len.finto(), px))
     }
 
-    pub fn vert(len: usize, px: SpriteCell) -> Self {
-        Self (Grid::new(len, 1, px))
+    pub fn vert(len: i16, px: SpriteCell) -> Self {
+        Self (Grid::new(len.finto(), 1, px))
     }
 
-    pub fn square(side_len: usize, px: SpriteCell) -> Self {
-        Self (Grid::new(side_len, side_len, px))
+    pub fn square(side_len: i16, px: SpriteCell) -> Self {
+        Self (Grid::new(side_len.finto(), side_len.finto(), px))
     }
 
-    pub fn rect(height: usize, width: usize, px: SpriteCell) -> Self {
-        Self (Grid::new(height, width, px))
+    pub fn rect(height: i16, width: i16, px: SpriteCell) -> Self {
+        Self (Grid::new(height.finto(), width.finto(), px))
     }
 
     pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
@@ -41,6 +41,8 @@ impl Img {
     pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
         self.0.set(pos.finto(), cel)
     }
+
+    // pub fn set_string(&mut self, 
 
     pub fn enumerate(&self) -> GridEnumerator<SpriteCell> {
         self.0.enumerate()
@@ -52,5 +54,21 @@ impl Img {
 
     pub fn height(&self) -> usize {
         self.0.height()
+    }
+
+    pub fn top_left(&self) -> TermPos {
+        (0, 0).finto()
+    }
+
+    pub fn top_right(&self) -> TermPos {
+        (0, self.0.width()-1).finto()
+    }
+
+    pub fn bottom_left(&self) -> TermPos {
+        (self.0.height()-1, 0).finto()
+    }
+
+    pub fn bottom_right(&self) -> TermPos {
+        (self.0.height()-1, self.0.width()-1).finto()
     }
 }

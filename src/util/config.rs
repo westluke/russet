@@ -57,7 +57,7 @@ pub const SIZE_7: Scale = Scale::new(
     include_str!("../../txt/7x7/question.txt")
 );
 
-pub const TERM_BG: Color = Color::Black;
+pub const TERM_BG: Color = Color::Reset;
 
 pub const MIN_HEIGHT: i16 = SIZE_7.CARD_HEIGHT * 4 + CARD_SPACING_VERT * 5;
 pub const MIN_WIDTH: i16 = SIZE_7.CARD_WIDTH * 4 + CARD_SPACING_HORIZ * 5;

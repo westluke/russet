@@ -7,74 +7,110 @@ use crate::util::*;
 use super::SpriteCell;
 use super::img::Img;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct PreSprite {
-    pub(super) img: Img,
-    pub(super) anchor: TermPos,
-    pub(super) id: Id,
+    img: Img,
+    anchor: TermPos,
+    id: Id<Self>,
+    z: i16,
 
-    // Only in the case of ties do we advance to additional entries
-    pub(super) zs: Vec<i16>
+    visible: bool,
+    clickable: bool
+}
+
+impl Clone for PreSprite {
+    fn clone(&self) -> Self {
+        Self {
+            img: self.img.clone(),
+            anchor: self.anchor,
+            id: Id::default(),
+            z: self.z,
+            visible: true,
+            clickable: true
+        }
+    }
+}
+
+impl From<Img> for PreSprite {
+    fn from(img: Img) -> Self {
+        Self {
+            img,
+            anchor: Default::default(),
+            id: Default::default(),
+            z: Default::default(),
+            visible: true,
+            clickable: true
+        }
+    }
 }
 
 // There is no reason we should be making up default values when getters/setters fail! We can just
 // report them, legitimately, as errors. Defaulting can always be done in the calling code.
 impl PreSprite {
-    pub fn new(height: usize, width: usize) -> Self {
+    pub fn new(height: i16, width: i16) -> Self {
         Self {
             img: Img::rect(height, width, SpriteCell::default()),
             anchor: (0, 0).finto(),
             id: Id::default(),
-            zs: Vec::<i16>::default()
+            z: Default::default(),
+            visible: true,
+            clickable: true
         }
     }
 
-    pub fn mk(img: Img, anchor: TermPos, id: Id, zs: Vec<i16>) -> Self {
-        Self { img, anchor, id, zs }
+    pub fn mk(img: Img, anchor: TermPos, z: i16, visible: bool, clickable: bool) -> Self {
+        Self { img, anchor, id: Id::default(), z, visible, clickable}
     }
 
     pub fn bounds(&self) -> Bounds<i16> {
-        return (
-            self.anchor
-            ..(self.anchor + (self.img.height()-1, self.img.width()-1).finto())
-        ).finto()
+        Bounds::mk(
+            self.anchor.finto(),
+            (self.anchor + (self.img.height()-1, self.img.width()-1).finto()).finto()
+        )
     }
 
     // pub fn with_size(height: usize, width: usize)
-    pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
+    pub fn get_rel(&self, pos: TermPos) -> Result<SpriteCell> {
         self.img.get(pos)
     }
 
-    pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
+    pub fn set_rel(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
         self.img.set(pos, cel)
     }
-}
 
-#[derive(Debug, Clone, Default)]
-pub struct PreSpriteBuilder {
-    anchor: TermPos,
-    id: Id,
-    zs: Vec<i16>
-}
-
-impl PreSpriteBuilder {
-    pub fn anchor(&mut self, anchor: TermPos) -> &mut Self {
-        self.anchor = anchor;
-        self
+    pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
+        self.get_rel(pos - self.anchor)
     }
 
-    pub fn id(&mut self, id: Id) -> &mut Self {
-        self.id = id;
-        self
+    pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
+        self.set_rel(pos - self.anchor, cel)
     }
 
-    pub fn zs(&mut self, zs: Vec<i16>) -> &mut Self {
-        self.zs = zs;
-        self
+    pub fn reanchor(&mut self, pos: TermPos) {
+        self.anchor = pos
     }
 
-    // Img doesn't have a sensible default, so we require img at the final step
-    pub fn build(&self, img: Img) -> PreSprite {
-        PreSprite::mk(img, self.anchor, self.id.clone(), self.zs.clone())
+    pub fn reorder(&mut self, z: i16) {
+        self.z = z
+    }
+
+    pub fn id(&self) -> Id<Self> {
+        self.id.clone()
+    }
+
+    pub fn visible(&self) -> bool {
+        self.visible
+    }
+
+    pub fn clickable(&self) -> bool {
+        self.clickable
+    }
+
+    pub fn set_visible(&mut self, v: bool) {
+        self.visible = v
+    }
+
+    pub fn set_clickable(&mut self, c: bool) {
+        self.clickable = c
     }
 }

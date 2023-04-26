@@ -2,9 +2,13 @@ use crate::deck::{Card, CardShape, CardColor, CardFill, CardNumber, all_cards};
 use crate::term_char::TermChar;
 use crate::pos::TermPos;
 use crate::util::*;
-use crate::Id;
+use crate::{Id, IdManager};
 
-use crate::sprite;
+use crate::sprites::{sprite::Sprite, pre_sprite::PreSprite};
+use crate::sprites::sprite_forest::SpriteForest;
+use crate::sprites::{sprite_anchor_tree::SanTree, sprite_onto_tree::SonTree, sprite_order_tree::SorTree};
+use crate::sprites::img::Img;
+use crate::sprites::SpriteCell::{self, *};
 
 use std::hash::{Hash, Hasher};
 
@@ -22,10 +26,31 @@ use crossterm::style::Color;
 
 // GIVE EVERY CARD EVERY LAYER IT WILL EVER Need, WITH DESCRIPTIVE IDs AND TURNED INACTIVE
 
+
+// Should SpriteForests contain IdManagers?
+// Idk if that makes much sense.
+// Maybe later, the integration would be complicated.
+// What we COULD do, though, is tags.
+// What should get tagged, the tree or the sprite?
+// Hmm. Trees are cheap and ephemeral. I think it makes more sense to tag the Sprite.
+// Ugh but, no, that doesn't make much sense. I want to be able to disable whole trees at a time,
+// and those trees might not have a sprite at root.
+//
+// So the trees should be tagged, either by adding a field or possibly incorporating them
+// into the id manager? Could also maybe have SpriteForest keep track of their tags?
+// I just don't like the idea of tagging trees internally. Just IdManagers then.
+//
+// Divyam and Zack say: type those Ids!
+// So: how do I manage them?
+// Could use multiple IdManagers. Could use dynamic typing of some sort, but I don't like that.
+// Perhaps the most appropriate thing would be using tuples for the values of the hashmap,
+// three-tuples, one spot for each tree. and try to work under the assumption that the trees may
+// get combined together, but we  never really go back in and modify trees, except in very very
+// special circumstances.
+
 pub struct CardRepo {
-    deck: FrameTree,
-    // deck_active: FrameTree,
-    cards: HashMap<Card, FrameTree>,
+    deck: (SpriteForest, IdManager<SanTree>),
+    cards: HashMap<Card, (SpriteForest, IdManager<SanTree>)>,
     // cards_active: HashMap<Card, FrameTree>,
     // outline_thin: FrameTree,
     // outline_good: FrameTree,
@@ -37,7 +62,7 @@ impl CardRepo {
         make(scale)
     }
 
-    pub fn card(&self, c: Card) -> FrameTree {
+    pub fn card(&self, c: Card) -> (SpriteForest, IdManager<SanTree>) {
         self.cards
             .get(&c)
             .unwrap()
@@ -51,7 +76,7 @@ impl CardRepo {
     //         .clone()
     // }
 
-    pub fn deck(&self) -> FrameTree {
+    pub fn deck(&self) -> (SpriteForest, IdManager<SanTree>) {
         self.deck.clone()
     }
 
@@ -72,9 +97,8 @@ impl CardRepo {
     // }
 }
 
-pub fn stamp_shape(scale: Scale, buf: FrameTree, card: Card, bg: Color) -> FrameTree {
+pub fn stamp_shape(scale: Scale, img: &mut Img, card: Card, bg: Color) {
     let num: i16 = card.number.into();
-    let mut card_lay = buf.clone();
 
     // DIRTY HACK TO MAKE IT LOOK NICER
     let mut shape_spacing = if card.shape == CardShape::Squiggle && card.number == CardNumber::Three {
@@ -105,15 +129,11 @@ pub fn stamp_shape(scale: Scale, buf: FrameTree, card: Card, bg: Color) -> Frame
         let spacing = i * shape_spacing;
 
         // add these to the base offset
-        set_shape_rel(scale, &mut card_lay, card, (drop, offset + shape_pos + spacing).finto(), bg);
+        set_shape(scale, img, card, (drop, offset + shape_pos + spacing).finto(), bg);
     };
-
-    card_lay
 }
 
-pub fn stamp_question(scale: Scale, buf: FrameTree, fg: Color, bg: Color) -> FrameTree {
-    let mut card_lay = buf.clone();
-
+pub fn stamp_question(scale: Scale, img: &mut Img, fg: Color, bg: Color) {
     let mut offset = scale.CARD_WIDTH;
     offset -= scale.SHAPE_WIDTH;
     offset /= 2;
@@ -122,22 +142,22 @@ pub fn stamp_question(scale: Scale, buf: FrameTree, fg: Color, bg: Color) -> Fra
     drop -= scale.SHAPE_HEIGHT;
     drop /= 2;
 
-    set_s_clear(&mut card_lay, (drop, offset).finto(), String::from(scale.RAW_QUESTION), fg, bg);
-
-    card_lay
+    set_s_clear(img, (drop, offset).finto(), String::from(scale.RAW_QUESTION), fg, bg);
 }
 
-pub fn stamp_shapes(scale: Scale, buf: FrameTree, bg: Color) -> HashMap<Card, FrameTree> {
-    let mut card_bufs: HashMap<Card, FrameTree> = HashMap::new();
+pub fn stamp_shapes(scale: Scale, img: &Img, bg: Color) -> HashMap<Card, Img> {
+    let mut card_bufs = HashMap::new();
 
     for card in all_cards() {
-        card_bufs.insert(card, stamp_shape(scale, buf.clone(), card, bg));
+        let mut clon = img.clone();
+        stamp_shape(scale, &mut clon, card, bg);
+        card_bufs.insert(card, clon);
     }
 
     card_bufs
 }
 
-fn set_s(tree: &mut FrameTree, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+fn set_s(img: &mut Img, mut pos: TermPos, s: String, fg: Color, bg: Color) {
     let start_x = pos.x();
     let chars: Vec<char> = s.chars().collect();
 
@@ -151,15 +171,13 @@ fn set_s(tree: &mut FrameTree, mut pos: TermPos, s: String, fg: Color, bg: Color
 
         // otherwise, we set the cell to this character and advance one step to the right.
         } else {
-            tree.set_cell(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+            img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
             pos = pos + (0, 1).finto();
         };
     };
-
-    Ok(())
 }
 
-fn set_s_clear(tree: &mut FrameTree, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
+fn set_s_clear(img: &mut Img, mut pos: TermPos, s: String, fg: Color, bg: Color) {
     let start_x = pos.x();
     let chars: Vec<char> = s.chars().collect();
 
@@ -177,126 +195,136 @@ fn set_s_clear(tree: &mut FrameTree, mut pos: TermPos, s: String, fg: Color, bg:
 
         // otherwise, we set the cell to this character and advance one step to the right.
         } else {
-            tree.set_cell(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+            img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
             pos = pos + (0, 1).finto();
         };
     };
-
-    Ok(())
 }
 
-// If you want a solid background card, just set fg = bg
-pub fn make_card_shape(
-    scale: Scale, 
-    border_fg: Color,
-    border_bg: Color,
-    interior_bg: Option<Color>,
-    // "outer_bg" is always None
-) -> Result<FrameTree> {
+//// This is kinda a variant of set_s method, necessary cuz we need to do special stuff depending on
+//// shape contents
+pub fn set_shape(
+    scale: Scale,
+    img: &mut Img,
+    card: Card,
+    mut pos: TermPos,
+    bg: Color,
+) {
 
-    let mut buf;
-    // buf = FrameTree::new_leaf(
-    //     (scale.CARD_HEIGHT, scale.CARD_WIDTH),
-    //     Opaque(TermChar::new('X', Color::Red, Color::Red)), "".into(), true, (0, 0).finto());
+    let shape = get_raw_shape(card, scale);
+    let colr = get_raw_color(card);
 
-    if let Some(colr) = interior_bg {
-        buf = FrameTree::new_leaf(
-            (scale.CARD_HEIGHT, scale.CARD_WIDTH),
-            Opaque(TermChar::new(' ', colr, colr)), "".into(), true, (0, 0).finto(), 0);
-        buf.set_cell((0, scale.CARD_WIDTH-1).finto(), Transparent);
-        buf.set_cell((scale.CARD_HEIGHT-1, scale.CARD_WIDTH-1).finto(), Transparent);
-        buf.set_cell((scale.CARD_HEIGHT-1, 0).finto(), Transparent);
-        // buf.set_cell((0, 0).finto(), Opaque(TermChar::new(' ', Color::Green, Color::Green)));
-        buf.set_cell((0, 0).finto(), Transparent);
-    } else {
-        buf = FrameTree::new_leaf(
-            (scale.CARD_HEIGHT, scale.CARD_WIDTH),
-            Transparent, "".into(), true, (0, 0).finto(), 0);
-    }
+    let start = pos;
+    let start_x = start.x();
+    let chars: Vec<char> = shape.chars().collect();
 
-    // Corners have to be drawn with clear spaces, since they are irregularly shaped.
-    // Luckily, they have no real effect on the interior
-    set_s_clear(&mut buf, (0, 0).finto(), String::from(CARD_TL), border_fg, border_bg)?;
-    set_s_clear(&mut buf, (0, scale.CARD_WIDTH-2).finto(), String::from(CARD_TR), border_fg, border_bg)?;
-    set_s_clear(&mut buf, (scale.CARD_HEIGHT-2, 0).finto(), String::from(CARD_BL), border_fg, border_bg)?;
-    set_s_clear(&mut buf, (scale.CARD_HEIGHT-2, scale.CARD_WIDTH-2).finto(), String::from(CARD_BR), border_fg, border_bg)?;
-    // buf.set_cell((0, 0).finto(), Opaque(TermChar::new(' ', Color::Green, Color::Green)));
+    for i in 0..chars.len() {
 
+        // If we hit a newline, advance pos one row down
+        if chars[i] == '\n' {
+            pos = pos + (1, 0).finto();
+            pos = pos.set_x(start_x);
+
+        // Spaces are skipped
+        } else if chars[i] == ' ' {
+            pos = pos + (0, 1).finto();
+
+        // chars are interpreted and set
+        } else {
+            let c = get_raw_char(card, chars[i], colr, bg);
+            img.set(pos, c);
+            pos = pos + (0, 1).finto();
+        };
+    };
+}
+
+// Should outline be optional?
+pub fn card_base(
+    scale: Scale,
+    edge_fg: Color,
+    edge_bg: Color,
+    bg: Option<Color>
+) -> Img {
+    let bg = bg.map_or(Transparent, |c| SpriteCell::Opaque(TermChar::Bg(c)));
+    let mut img = Img::rect(scale.CARD_HEIGHT, scale.CARD_WIDTH, bg);
+    let (tl, tr, bl, br) = (img.top_left(), img.top_right(), img.bottom_left(), img.bottom_right());
+    img.set(tl, Transparent);
+    img.set(tr, Transparent);
+    img.set(bl, Transparent);
+    img.set(br, Transparent);
+    set_s_clear(&mut img, (0, 0).finto(), String::from(CARD_TL), edge_fg, edge_bg);
+    set_s_clear(&mut img, (0, scale.CARD_WIDTH-2).finto(), String::from(CARD_TR), edge_fg, edge_bg);
+    set_s_clear(&mut img, (scale.CARD_HEIGHT-2, 0).finto(), String::from(CARD_BL), edge_fg, edge_bg);
+    set_s_clear(&mut img, (scale.CARD_HEIGHT-2, scale.CARD_WIDTH-2).finto(), String::from(CARD_BR), edge_fg, edge_bg);
     for row in 2..(scale.CARD_HEIGHT-2) {
-        buf.set_cell((row, 0).finto(), Opaque(TermChar::new('┃', border_fg, border_bg)));
-        buf.set_cell((row, scale.CARD_WIDTH-1).finto(), Opaque(TermChar::new('┃', border_fg, border_bg)));
+        img.set((row, 0).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
+        img.set((row, scale.CARD_WIDTH-1).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
     };
 
     for col in 2..(scale.CARD_WIDTH-2) {
-        buf.set_cell((0, col).finto(), Opaque(TermChar::new('━', border_fg, border_bg)));
-        buf.set_cell((scale.CARD_HEIGHT-1, col).finto(), Opaque(TermChar::new('━', border_fg, border_bg)));
+        img.set((0, col).finto(), Opaque(TermChar::new('━', edge_fg, edge_bg)));
+        img.set((scale.CARD_HEIGHT-1, col).finto(), Opaque(TermChar::new('━', edge_fg, edge_bg)));
     };
-
-    Ok(buf)
+    img
 }
 
-//// how am i gonna handle groups of layers? like a card with a good outline on top of it.
-//// I could give the outline its own id, and just manually move them together, but that kinda sounds
-//// like a pain.
-//// Honestly, it kinda feels more reasonable to alter the framebuf structure so that it stores a
-//// stack of GROUPS of layers, rather than single layers, so I can go into the group and make
-//// modifications as needed.
-////
-//// Within each group, I can index by strings, that sounds easy.
-////
-//// And how do I index into the framebuf? Could also just do it by strings, now that I think about
-//// it... Yeah, that will be much better for debugging too. hash_card should really be
-//// stringify_card.
-
 pub fn make(scale: Scale) -> CardRepo {
-    let mut outline_thin = make_card_shape(scale, CARD_BORDER, TERM_BG, None).unwrap();
-    outline_thin.set_anchor((1, -1).finto());
-    outline_thin.set_id("outline".into());
-    // outline_thin.deactivate();
+    let mut outline_thin = card_base(scale, CARD_BORDER, TERM_BG, None);
+    // outline_thin.set_anchor((1, -1).finto());
 
-    let mut shadow = make_card_shape(scale, TERM_BG, TERM_BG, Some(TERM_BG)).unwrap();
-    shadow.set_anchor((1, 1).finto());
-    shadow.set_id("shadow".into());
-    shadow.deactivate();
+    let mut shadow = card_base(scale, TERM_BG, TERM_BG, Some(TERM_BG));
+    // shadow.set_anchor((1, 1).finto());
 
-    let mut outline_good = make_card_shape(scale, GOOD_SET, GOOD_SET, None).unwrap();
-    let mut outline_bad = make_card_shape(scale, BAD_SET, BAD_SET, None).unwrap();
-    outline_good.set_id("good".into());
-    outline_good.deactivate();
-    outline_bad.set_id("bad".into());
-    outline_bad.deactivate();
+    let mut outline_good = card_base(scale, GOOD_SET, GOOD_SET, None);
+    let mut outline_bad = card_base(scale, BAD_SET, BAD_SET, None);
 
-    let card_active = make_card_shape(scale, ACTIVE_BG, ACTIVE_BG, Some(ACTIVE_BG)).unwrap();
-    let card = make_card_shape(scale, CARD_BG, CARD_BG, Some(CARD_BG)).unwrap();
+    let card_active = card_base(scale, ACTIVE_BG, ACTIVE_BG, Some(ACTIVE_BG));
+    let card_inactive = card_base(scale, CARD_BG, CARD_BG, Some(CARD_BG));
 
-    let mut cards_active = stamp_shapes(scale, card_active.clone(), ACTIVE_BG);
-    let mut cards = stamp_shapes(scale, card.clone(), CARD_BG);
-    cards = cards.into_iter()
-        .map(
-            |(k, mut inactive)| {
-                let mut active = cards_active.get(&k).unwrap().clone();
-                active.set_anchor((1, -1).finto());
-                active.deactivate();
-                active.set_id("active".into());
-                inactive.set_id("inactive".into());
-                let mut mom = FrameTree::new_branch(
-                    vec![outline_bad.clone(), outline_good.clone(), active, inactive, outline_thin.clone(), shadow.clone()],
-                    k.into(),
-                    true, (0, 0).finto(), 0);
-                mom.activate();
-                (k, mom)
-            }
-        ).collect();
+    let mut deck_active = card_active.clone();
+    stamp_question(scale, &mut deck_active, TERM_BG, TERM_BG);
 
-    let deck_active = stamp_question(scale, card_active.clone(), TERM_BG, TERM_BG);
-    let mut deck = stamp_question(scale, card.clone(), TERM_BG, TERM_BG);
+    let mut deck_inactive = card_inactive.clone();
+    stamp_question(scale, &mut deck_inactive, TERM_BG, TERM_BG);
 
-    deck.shup_tree(outline_thin.clone());
-    deck.push_tree(deck_active.clone());
+    let mut cards_active = stamp_shapes(scale, &card_active, ACTIVE_BG);
+    let cards_inactive = stamp_shapes(scale, &card_inactive, CARD_BG);
+
+    let mut cards = HashMap::new();
+
+    // For each card, finalize the associated Imgs, then turn them into presprites and combine them
+    // into a SpriteForest. Keep track of Ids in the process, and produce IdManager simultaneously.
+    for (k, inactive) in cards_inactive.into_iter() {
+        let mut man = IdManager::default();
+        let mut sf = SpriteForest::default();
+        let mut active = sf.attach(cards_active.remove(&k).unwrap().into());
+        active.set_visible(false);
+
+        let mut inactive = sf.attach(inactive.into());
+        let mut border = sf.attach(outline_thin.clone().into());
+
+        // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
+        // Equivalently, at the top left corner of the floating outline of the inactive variant.
+        inactive.reanchor((-1, 1).finto());
+
+        let mut sf0 = SpriteForest::default();
+        sf0
+
+        sf0.push inactive...
+        sf0.push border...
+        merge sf sf0...
+        
+        // need to do some fancy stuff to offset the inactive card with the outline border.
+        // let (active_id, _, _) = sf.push_sprite(active);
+        let (inactive_id, _, _) = sf.push_sprite(inactive);
+        // man.insert("active".into(), active_id);
+        man.insert("inactive".into(), inactive_id);
+        cards.insert(k, (sf, man));
+    }
 
     CardRepo {
         cards,
-        deck,
+        deck: Default::default()
     }
 }
 
@@ -324,7 +352,7 @@ fn get_raw_color(c: Card) -> Color {
     }
 }
 
-fn get_raw_char(card: Card, ch: char, colr: Color, card_bg: Color) -> LayerCell {
+fn get_raw_char(card: Card, ch: char, colr: Color, card_bg: Color) -> SpriteCell {
     // Other striped options: '╋', '─'
     match (card.fill, ch) {
         (_, ' ') =>                 Opaque(TermChar::new(' ', card_bg, card_bg)),
@@ -336,38 +364,6 @@ fn get_raw_char(card: Card, ch: char, colr: Color, card_bg: Color) -> LayerCell 
     }
 }
 
-//// This is kinda a variant of set_s method, necessary cuz we need to do special stuff depending on
-//// shape contents
-pub fn set_shape_rel(
-    scale: Scale,
-    lay: &mut FrameTree,
-    card: Card,
-    mut pos: TermPos,
-    bg: Color,
-) -> Result<()> {
-
-    let shape = get_raw_shape(card, scale);
-    let colr = get_raw_color(card);
-
-    let start = pos;
-    let start_x = start.x();
-    let chars: Vec<char> = shape.chars().collect();
-
-    for i in 0..chars.len() {
-        if chars[i] == '\n' {
-            pos = pos + (1, 0).finto();
-            pos = pos.set_x(start_x);
-        } else if chars[i] == ' ' {
-            pos = pos + (0, 1).finto();
-        } else {
-            let c = get_raw_char(card, chars[i], colr, bg);
-            lay.set_cell(pos, c);
-            pos = pos + (0, 1).finto();
-        };
-    };
-
-    Ok(())
-}
 
 
 // //     pub fn over(&self, other: &Self) -> Self {

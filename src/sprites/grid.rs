@@ -46,7 +46,7 @@ impl<T: Copy> Grid<T> {
     }
 
     pub fn enumerate(&self) -> GridEnumerator<T> {
-        GridEnumerator { grid: self, iter: ((0, 0)..(self.height-1, self.width-1)).into() }
+        GridEnumerator { grid: self, iter: Bounds::mk((0, 0), (self.height-1, self.width-1)).into_iter()}
     }
 
     pub fn get(&self, (row_i, col_i): (usize, usize)) -> Result<T> {

@@ -14,15 +14,15 @@ use crate::pos::*;
 use crate::util::*;
 use crate::term_char::*;
 // use crate::sprites::*;
-use crate::sprites::pre_sprite::{PreSprite, PreSpriteBuilder};
-use crate::sprites::sprite_manager::SpriteManager;
+use crate::sprites::pre_sprite::PreSprite;
+use crate::sprites::sprite_forest::SpriteForest;
 use crate::sprites::img::Img;
 use crate::sprites::*;
 use crate::deck::*;
 use crate::Id;
 
-// mod card_repo;
-// use card_repo::CardRepo;
+mod card_repo;
+use card_repo::make;
 
 // static anim_dur: Duration = Duration::from_millis(500);
 
@@ -43,7 +43,7 @@ pub enum BackMsg {
     // Can I fix it easily? How do I know what got collided?
     // I think I need a better ID system yeah.
     // So what should an ID be? I think a struct of Option<Card> and Option<String>
-    Collisions(Option<Vec<Id>>)
+    Collisions(Option<Vec<Id<Self>>>)
 }
 
 // struct AnimationState {
@@ -364,56 +364,6 @@ pub fn animate(
     // GONNA NEED A BETTER SYSTEM FOR KEEPING TRACK OF WHICH KAYER IS WHICH
     // ALSO NEED TO RMEMEBER TO FIX UP LAYER DISPLAY SYSTEM
     
-    // let repo7 = CardRepo::new(SIZE_7);
-    // let repo9 = CardRepo::new(SIZE_9);
-
-    // let mut buf = FrameBuf::new(stdout, FrameTree::default()); 
-    // let mut deck = repo7.get_deck();
-    // let mut deck_active = repo7.get_outline_thin();
-    // let mut deck_active = repo7.get_deck_active();
-
-    // use crate::deck::*;
-    // use CardColor::*;
-    // use CardShape::*;
-    // use CardFill::*;
-    // use CardNumber::*;
-
-    // let color = Color1;
-    // let shape = Squiggle;
-    // let fill = Solid;
-    // let number = Three;
-    // let mut c0 = repo7.card(Card {color, shape, fill, number});
-
-    // let color = Color2;
-    // let shape = Oval;
-    // let fill = Striped;
-    // let number = Two;
-    // let mut c1 = repo7.card(Card {color, shape, fill, number});
-
-    // c0.set_anchor((10, 10).finto());
-    // buf.tree_mut().push_tree(c0);
-    // c1.set_anchor((20, 40).finto());
-    // buf.tree_mut().push_tree(c1);
-
-
-    // deck.set_anchor((10, 10).finto());
-    // deck_active.set_anchor((20, 20).finto());
-    // deck_active.set_anchor((20, 40).finto());
-    // deck_active.set_anchor((20, 40).finto());
-
-    // let mut deck_id = 0;
-    // let mut deck_active_id = 1;
-    // let mut card_ids: HashMap<(Card, bool), u64> = HashMap::new();
-
-    // deck_active.deactivate();
-    // deck.set_anchor((&GamePos::Deck, &SIZE_7).finto());
-    // deck_active.set_anchor((&GamePos::Deck, &SIZE_7).finto());
-
-    // buf.tree_mut().push_tree(deck);
-    // buf.tree_mut().push_tree(c1);
-    // buf.tree_mut().push_tree(c0);
-    // buf.tree_mut().push_tree(repo7.get_outline_thin());
-
     info!("animation loop starting");
 
     // Exits only due to error or quit message
@@ -429,15 +379,31 @@ pub fn animate(
     // scale to pixel graphics? 3d? gaming? i gotta try.
     // ok but focus. one thing at a time. ugh i need a todo file for this.
 
-    let fill = SpriteCell::Opaque(TermChar::Bg(Color::Red));
-    let img = Img::horiz(3, fill);
-    let mut sprite = PreSpriteBuilder::default()
-        .anchor((0, 0).finto())
-        .id("test".into())
-        .zs(vec![0])
-        .build(img);
-    let mut man = SpriteManager::default();
-    // man.push_sprite(sprite);
+    let cardrepo = make(SIZE_9);
+    let (mut card, idman) = cardrepo.card(
+        Card { color: CardColor::Color1, shape: CardShape::Oval, number: CardNumber::Three, fill: CardFill::Solid }
+    );
+    // info!("card: {:?}", card);
+    // panic!();
+
+    // let fill0 = SpriteCell::Opaque(TermChar::Bg(Color::Red));
+    // let fill1 = SpriteCell::Opaque(TermChar::Bg(Color::Green));
+    // let img0 = Img::rect(10, 20, fill0);
+    // let img1 = Img::rect(20, 10, fill1);
+    // let psprite0 = PreSprite::mk(img0, (0, 0).finto(), 1);
+    // let psprite1 = PreSprite::mk(img1, (5, 2).finto(), 0);
+    // let mut man = SpriteForest::default();
+    // let sprite0 = man.attach(psprite0);
+    // let sprite1 = man.attach(psprite1);
+    // man.push_sprite(sprite0);
+    // man.push_sprite(sprite1);
+
+
+    // something's real fucked with sprite1. I think the bouunds / dirty all calculations are
+    // wrong.
+    // Yeah, dirt definitely wrong cuz im seeing transparents in all green sprite.
+
+    // GOTTA DEBUG NEW SPRITE SYSTEM!! FLASHING, SPREAD OUT PIXELS... V WEIRD
 
     
     loop {
@@ -455,65 +421,69 @@ pub fn animate(
             }
         }
 
-        // man.write(&mut stdout);
-
         // SpriteManager should maybe spin up its own thread? Or no, that should be a different object, cuz we might have many sprite managers...
         // Actually, we could pretend that SpriteManager just writes straight to stdout, and even implement it that way at first, but later on
         // make a custom write object that sends writes to another thread to be written to terminal!
         
-        // match game_msg {
-        //     Err(RecvTimeoutError::Disconnected) | Ok(Msg::QuitMsg) => break,
-        //     Err(RecvTimeoutError::Timeout) => (),
-        //     Ok(Msg::Nop) => continue,
+        match game_msg {
+            Err(RecvTimeoutError::Disconnected) | Ok(Msg::QuitMsg) => break,
+            Err(RecvTimeoutError::Timeout) => (),
+            Ok(Msg::Nop) => continue,
+            Ok(Msg::ChangeMsg(cs)) => {
+            }
+        }
 
-        //     Ok(Msg::ChangeMsg(cs)) => {
-        //         let ChangeSet { changes, stamp: _ } = cs;
+        // man.write(&mut stdout);
+        card.write(&mut stdout);
 
-                // for change in changes {
-                //     match change {
-                //         // Reflow(c, _, dst) => {
-                //         //     info!("REFLOW");
-                //         //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                //         //     card_buf.set_anchor((&dst, &SIZE_7).finto());
-                //         // },
+            // Ok(Msg::ChangeMsg(cs)) => {
+            //     let ChangeSet { changes, stamp: _ } = cs;
+
+            //     for change in changes {
+            //         match change {
+            //             // Reflow(c, _, dst) => {
+            //             //     info!("REFLOW");
+            //             //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+            //             //     card_buf.set_anchor((&dst, &SIZE_7).finto());
+            //             // },
                        
-                //         GoodMove(c, _, dst) => {
-                //             info!("GOODMOVE");
-                //             show_good(buf.tree_mut(), c);
-                //             show_shadow(buf.tree_mut(), c);
-                //             hide_outline(buf.tree_mut(), c);
-                //             make_inactive(buf.tree_mut(), c);
+            //             GoodMove(c, _, dst) => {
+            //                 info!("GOODMOVE");
+            //                 show_good(buf.tree_mut(), c);
+            //                 show_shadow(buf.tree_mut(), c);
+            //                 hide_outline(buf.tree_mut(), c);
+            //                 make_inactive(buf.tree_mut(), c);
 
                             
-                //             let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-                //             card_buf.set_anchor((&dst, &SIZE_7).finto());
-                //         },
+            //                 let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+            //                 card_buf.set_anchor((&dst, &SIZE_7).finto());
+            //             },
                         
-                //         BadOutline(c, _) => {
-                //             info!("BADOUTLINE");
-                //             show_bad(buf.tree_mut(), c);
-                //             make_inactive(buf.tree_mut(), c);
-                //         },
-                //         Select(c, _) => {
-                //             info!("SELECT: {:?}", c);
-                //             make_active(buf.tree_mut(), c);
-                //         },
-                //         Deselect(c, _) => {
-                //             info!("DESELECT");
-                //             make_inactive(buf.tree_mut(), c);
-                //         },
+            //             BadOutline(c, _) => {
+            //                 info!("BADOUTLINE");
+            //                 show_bad(buf.tree_mut(), c);
+            //                 make_inactive(buf.tree_mut(), c);
+            //             },
+            //             Select(c, _) => {
+            //                 info!("SELECT: {:?}", c);
+            //                 make_active(buf.tree_mut(), c);
+            //             },
+            //             Deselect(c, _) => {
+            //                 info!("DESELECT");
+            //                 make_inactive(buf.tree_mut(), c);
+            //             },
 
-                //         // Fade(Card, DealtPos),
+            //             // Fade(Card, DealtPos),
                         
-                //         Deal(card, pos) => {
-                //             info!("DEAL");
-                //             let mut card_lay = repo7.card(card);
-                //             card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)));
-                //             buf.tree_mut().push_tree(card_lay);
-                //         },
-                //         _ => ()
-                    // }
-                // }
+            //             Deal(card, pos) => {
+            //                 info!("DEAL");
+            //                 let mut card_lay = repo7.card(card);
+            //                 card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)));
+            //                 buf.tree_mut().push_tree(card_lay);
+            //             },
+            //             _ => ()
+            //         }
+            //     }
             // }
         // }
 

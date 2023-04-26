@@ -238,6 +238,9 @@ fn main() -> Result<()> {
                 };
             }
             FrameResult::Click (cmsg) => {
+                // This doesn't make sense. Why was this here? What does FrameResult actually
+                // represent?
+                panic!();
                 click_snd.send(cmsg);
             }
         };

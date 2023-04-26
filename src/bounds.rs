@@ -1,9 +1,9 @@
-use std::ops::{Add, Range};
+use std::ops::{Add, RangeInclusive};
 use crate::pos::TermPos;
 use crate::util::FInto as _;
 use std::cmp::{min, max};
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct Bounds<T: Copy + Add<Output=T> + From<u8> + Ord> {
     y_min: T,
     y_max: T,
@@ -19,6 +19,10 @@ pub struct BoundsIter<T: Copy + Add<Output=T> + From<u8> + Ord> {
 }
 
 impl<T: Copy + Add<Output=T> + From<u8> + Ord> Bounds<T> {
+    pub fn mk((y_min, x_min): (T, T), (y_max, x_max): (T, T)) -> Self {
+        Self { y_min, y_max, x_min, x_max }
+    }
+
     pub fn shift(self, shift: (T, T)) -> Self {
         Self {
             y_min: self.y_min + shift.0,
@@ -37,12 +41,12 @@ impl<T: Copy + Add<Output=T> + From<u8> + Ord> Bounds<T> {
         }
     }
 
-    pub fn y_range(self) -> Range<T> {
-        self.y_min..(self.y_max + 1.into())
+    pub fn y_range(self) -> RangeInclusive<T> {
+        self.y_min..=self.y_max
     }
 
-    pub fn x_range(self) -> Range<T> {
-        self.x_min..(self.x_max + 1.into())
+    pub fn x_range(self) -> RangeInclusive<T> {
+        self.x_min..=self.x_max
     }
 }
 
@@ -73,59 +77,6 @@ impl<T: Copy + Add<Output=T> + From<u8> + Ord> Iterator for BoundsIter<T> {
         } else {
             self.x = self.x + 1.into();
             Some((self.y, self.x))
-        }
-    }
-}
-
-impl<T: Copy + Add<Output=T> + From<u8> + Ord> From<Range<(T, T)>> for Bounds<T> {
-    fn from(rng: Range<(T, T)>) -> Self {
-        let Range { start, end } = rng;
-        let (y_min, x_min) = start;
-        let (y_max, x_max) = end;
-        Self {
-            y_min,
-            y_max,
-            x_min,
-            x_max,
-        }
-    }
-}
-
-impl From<Range<TermPos>> for Bounds<i16> {
-    fn from(rng: Range<TermPos>) -> Self {
-        let Range { start, end } = rng;
-        let (y_min, x_min) = start.finto();
-        let (y_max, x_max) = end.finto();
-
-        Self {
-            y_min,
-            y_max,
-            x_min,
-            x_max,
-        }
-    }
-}
-
-impl<T: Copy + Add<Output=T> + From<u8> + Ord> From<Range<(T, T)>> for BoundsIter<T> {
-    fn from(rng: Range<(T, T)>) -> Self {
-        let Range { start, .. } = rng;
-        let (y_min, x_min) = start;
-        Self {
-            rng: rng.into(),
-            y: y_min,
-            x: x_min,
-        }
-    }
-}
-
-impl From<Range<TermPos>> for BoundsIter<i16> {
-    fn from(rng: Range<TermPos>) -> Self {
-        let Range { start, .. } = rng;
-        let (y_min, x_min) = start.finto();
-        Self {
-            rng: rng.into(),
-            y: y_min,
-            x: x_min,
         }
     }
 }
