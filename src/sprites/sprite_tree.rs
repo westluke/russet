@@ -6,6 +6,7 @@ use crate::bounds::Bounds;
 use super::sprite::Sprite;
 use super::sprite_traits::{SpriteTreeLike, SpriteTreeNode as STN};
 
+#[derive(Default, Debug, Clone)]
 pub struct SpriteTree {
     node: Option<STN>,
     children: Vec<Self>,

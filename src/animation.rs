@@ -15,7 +15,7 @@ use crate::util::*;
 use crate::term_char::*;
 // use crate::sprites::*;
 use crate::sprites::pre_sprite::PreSprite;
-use crate::sprites::sprite_forest::SpriteForest;
+use crate::sprites::sprite_manager::SpriteManager;
 use crate::sprites::img::Img;
 use crate::sprites::*;
 use crate::deck::*;

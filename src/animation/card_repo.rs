@@ -5,7 +5,7 @@ use crate::util::*;
 use crate::{Id, IdManager};
 
 use crate::sprites::{sprite::Sprite, pre_sprite::PreSprite};
-use crate::sprites::sprite_forest::SpriteForest;
+use crate::sprites::sprite_manager::SpriteManager;
 use crate::sprites::{sprite_anchor_tree::SanTree, sprite_onto_tree::SonTree, sprite_order_tree::SorTree};
 use crate::sprites::img::Img;
 use crate::sprites::SpriteCell::{self, *};
@@ -295,28 +295,27 @@ pub fn make(scale: Scale) -> CardRepo {
     // For each card, finalize the associated Imgs, then turn them into presprites and combine them
     // into a SpriteForest. Keep track of Ids in the process, and produce IdManager simultaneously.
     for (k, inactive) in cards_inactive.into_iter() {
-        let mut man = IdManager::default();
-        let mut sf = SpriteForest::default();
-        let mut active = sf.attach(cards_active.remove(&k).unwrap().into());
-        active.set_visible(false);
+        let mut id_man = IdManager::default();
+        let mut sprite_man = SpriteManager::default();
 
-        let mut inactive = sf.attach(inactive.into());
-        let mut border = sf.attach(outline_thin.clone().into());
+        let mut active_card = sprite_man.attach(cards_active.remove(&k).unwrap().into());
+        active_card.set_visible(false);
+
+        // Inactive card is above its own outline, and to the right.
+        let mut inactive_card = sprite_man.attach(inactive.into());
+        inactive_card.reanchor((-1, 1).finto());
+        inactive_card.reorder(1);
+
+        let mut inactive_border = sprite_man.attach(outline_thin.clone().into());
+
+        sprite_man.push(None, active);
+        let inactive_id = final_man.push_subtree(None);
+        sprite_man.push(inactive_id, inactive_card);
+        sprite_man.push(inactive_id, inactive_border);
 
         // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
         // Equivalently, at the top left corner of the floating outline of the inactive variant.
-        inactive.reanchor((-1, 1).finto());
 
-        let mut sf0 = SpriteForest::default();
-        sf0
-
-        sf0.push inactive...
-        sf0.push border...
-        merge sf sf0...
-        
-        // need to do some fancy stuff to offset the inactive card with the outline border.
-        // let (active_id, _, _) = sf.push_sprite(active);
-        let (inactive_id, _, _) = sf.push_sprite(inactive);
         // man.insert("active".into(), active_id);
         man.insert("inactive".into(), inactive_id);
         cards.insert(k, (sf, man));

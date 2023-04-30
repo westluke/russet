@@ -2,11 +2,11 @@ use std::rc::Rc;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::io::Write;
+use std::ops::{Deref, DerefMut};
+use crate::Result;
 
 use super::{sprite::Sprite, pre_sprite::PreSprite};
-use super::sprite_anchor_tree::SanTree;
-use super::sprite_onto_tree::SonTree;
-use super::sprite_order_tree::SorTree;
+use super::sprite_tree::SpriteTree;
 use super::sprite_traits::{*, Stn};
 use super::dirt::Dirt;
 // use super::line_update::LineUpdateBuilder;
@@ -54,22 +54,25 @@ use crate::util::FInto;
 // Ok, so this new type dynamically switches between the two? clones internally when it switches to complex
 // version, to avoid 3x space consumption. Could make alternate version later.
 
-pub struct SpriteManagerRefMut<'a> {
-}
+//
+//
+// Yeahhhhh, things should be done through a ref. Cuz we don't want to be messing with the top
+// level object, that's not what we're interested in! We want to be modifying the tree.
+// And messing wiht the top-level object feels like too much indirection.
+//
+// But can ignore that for now.
 
 #[derive(Default, Clone, Debug)]
 pub struct SpriteManager {
-    anchors: SanTree,
-    onto: SonTree,
-    order: SorTree,
+    pub tree: SpriteTree,
 
     // Resorted after every order manipulation
-    sprites: Vec<Stn>,
+    pub sprites: Vec<Stn>,
 
     // Inserted into sprites so they can dirty their backgrounds when they manipulate themselves.
     // I could also just have them return hashmaps to be merged into the main one?
     // This is easier for now tho.
-    dirt: Dirt
+    pub dirt: Dirt
 }
 
 // impl Display for SpriteForest {
@@ -84,7 +87,8 @@ pub struct SpriteManager {
 //     }
 // }
 
-impl From<PreSprite> for SpriteForest {
+
+impl From<PreSprite> for SpriteManager {
     fn from(pre: PreSprite) -> Self {
         let mut ret = Self::default();
         let post = ret.attach(pre);
@@ -103,7 +107,7 @@ impl From<PreSprite> for SpriteForest {
 // But mostly should be done through SpriteManager
 
 
-impl SpriteForest {
+impl SpriteManager {
         
     // pub fn merge(
     //     mut sm0: SpriteManager, mut sm1: SpriteManager,
@@ -112,19 +116,19 @@ impl SpriteForest {
     // }
 
     // This is actually somewhat delicate... cuz all the sprites in other have to have their dirts replaced to point at this one.
-    pub fn naive_merge(&mut self, other: Self) {
-        let Self { anchors, onto, order, mut sprites, dirt } = other;
-        for sprite in &mut sprites {
-            let mut sp = sprite.borrow_mut();
-            sp.redirt(&self.dirt);
-            sp.dirty_all();
-        }
-        self.anchors.add_tree(anchors, None);
-        self.onto.add_tree(onto, None);
-        self.order.add_tree(order, None);
-        self.sprites.append(&mut sprites);
-        self.dirt.merge(dirt);
-    }
+    // pub fn naive_merge(&mut self, other: Self) {
+    //     let Self { anchors, onto, order, mut sprites, dirt } = other;
+    //     for sprite in &mut sprites {
+    //         let mut sp = sprite.borrow_mut();
+    //         sp.redirt(&self.dirt);
+    //         sp.dirty_all();
+    //     }
+    //     self.anchors.add_tree(anchors, None);
+    //     self.onto.add_tree(onto, None);
+    //     self.order.add_tree(order, None);
+    //     self.sprites.append(&mut sprites);
+    //     self.dirt.merge(dirt);
+    // }
     
     pub fn attach(&mut self, sp: PreSprite) -> Sprite {
         let ret = Sprite::new(sp, self.dirt.clone());
@@ -132,37 +136,38 @@ impl SpriteForest {
         ret
     }
 
-    // Adds sprite to the top level of every tree
-    pub fn push_sprite(&mut self, sp: Sprite) -> (Id<SanTree>, Id<SonTree>, Id<SorTree>) {
-        let mut pre_ret: (Option<Id<_>>, Option<Id<_>>, Option<Id<_>>) = Default::default();
+    // Adds sprite to the top level
+    pub fn push_sprite(&mut self, sp: Sprite) -> Option<Id<SpriteTree>> {
         let stn = Rc::new(RefCell::new(sp));
         self.sprites.push(stn.clone());
-        pre_ret.0 = Some(self.anchors.push_sprite(stn.clone()));
-        pre_ret.1 = Some(self.onto.push_sprite(stn.clone()));
-        pre_ret.2 = Some(self.order.push_sprite(stn.clone()));
-        let ret = (pre_ret.0.unwrap(), pre_ret.1.unwrap(), pre_ret.2.unwrap());
-        ret
+        return self.tree.push(stn.clone());
     }
 
-    // Adds sprite as child of the same node in every tree
-    pub fn naive_insert_sprite(){}
+    // Should we have these modification functions? Or should it hand out smart pointer to modify
+    // SpriteTreeLike directly?
 
-    // Like naive_insert_sprite, but added sprite can have different parents in different trees.
-    pub fn insert_sprite(){}
+    pub fn insert_sprite(sp: Sprite, id: Option<Id<SpriteTree>>) -> crate::Result<()> {
+    }
 
-    pub fn get_tree(){}
+    // // Adds sprite as child of the same node in every tree
+    // pub fn naive_insert_sprite(){}
+
+    // // Like naive_insert_sprite, but added sprite can have different parents in different trees.
+    // pub fn insert_sprite(){}
+
+    // pub fn get_tree(){}
     
-    pub fn get_tree_mut(){}
+    // pub fn get_tree_mut(){}
 
-    pub fn clean(){}
+    // pub fn clean(){}
 
-    // pub fn add_sprite(
-    //     &mut self, sp: PreSprite,
-    //     anchor_parent: Option<Id>,
-    //     onto_parent: Option<Id>,
-    //     order_parent: Option<Id>
-    // ){
-    // }
+    // // pub fn add_sprite(
+    // //     &mut self, sp: PreSprite,
+    // //     anchor_parent: Option<Id>,
+    // //     onto_parent: Option<Id>,
+    // //     order_parent: Option<Id>
+    // // ){
+    // // }
     
     // fn get_cell(&self, p: TermPos) -> TermChar {
     //     if self.sprites.is_empty() {
@@ -255,3 +260,41 @@ impl SpriteForest {
         writer.flush();
     }
 }
+
+// pub struct TreeRefMut<'a> (&'a mut SpriteManager);
+// pub struct SpriteManagerRef<'a> (&'a SpriteManager);
+
+// Ok, so here's the tricky thing. As-is, all of the below functions would be accessible
+// to users. But they shouldn't be. children_mut, for example, would let users add subtrees
+// arbitrarily, breaking invariants. I could use this deref opportunity to make those
+// functions panic, but that's.... not a great option, to say the least. I would like to
+// instead make them compilation errors. But they are part of the signature of SpriteTreeLike,
+// which is the deref target, so I can't just make them disappear.  So... I need a private traits
+// pattern. What are my options for that again?
+//
+// private supertrait seems to be the best way.
+//
+//
+// Fuck all this, see sprite_traits notes. Just do inherent impl.
+//
+// Mmmmm, actually I COULD make functions like tree_mut by wrapping the tree in SpriteManagerRef
+// again. And pairing with the original SpriteManager. Should I do that? What exactly do I need?
+//
+// No this doesn't work either, cuz it would require storing 
+//
+// Ok, it DOES make sense to have a treeref, but it means either separating out the vec and tree,
+// or having the tree in a refcell instead.
+//
+// Alternatively, the simpler option: the sprite manager doesn't do that much automation for us,
+// we have to tell it when to resort the vec for example, its more just like a struct.
+// Let's do the second one for now.
+
+
+// impl<'a> TreeRefMut<'a> {
+//     pub fn insert_tree(&mut self, tr: SpriteTree, parent: Option<Id<SpriteTree>>) -> Result<()> {
+//         self.0.insert_tree(tr, parent)
+//     }
+//     // pub fn push_tree(&mut self, tr: Self) {
+//     // pub fn insert_sprite(&mut self, sp: Stn, parent: Option<Id<Self>>) -> Option<Id<Self>> {
+//     // pub fn push_sprite(&mut self, sp: Stn) -> Id<Self> {
+// }

@@ -14,6 +14,14 @@ impl<T> Default for Id<T> {
     }
 }
 
+impl<T> Copy for Id<T> {}
+
+impl<T> Clone for Id<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 impl<T> Display for Id<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), std::fmt::Error> {
         write!(f, "Id({:?}, {:?})", self.0, self.1)
@@ -26,11 +34,6 @@ impl<T> PartialEq for Id<T> {
     }
 }
 
-impl<T> Clone for Id<T> {
-    fn clone(&self) -> Self {
-        Self(self.0, self.1)
-    }
-}
 
 impl<T> Id<T> {
     pub fn from<S>(oth: Id<S>) -> Self {

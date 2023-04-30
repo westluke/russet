@@ -10,6 +10,7 @@ pub mod sprite_anchor_tree;
 pub mod sprite_order_tree;
 pub mod sprite_onto_tree;
 pub mod sprite_tree;
+pub mod sprite_manager;
 mod sprite_traits;
 mod dirt;
 
@@ -19,7 +20,7 @@ mod termable;
 pub mod img;
 pub mod pre_sprite;
 pub mod sprite;
-pub mod sprite_forest;
+// pub mod sprite_forest;
 
 // Basically more descriptive names for Some/None
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

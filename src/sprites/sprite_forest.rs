@@ -37,6 +37,19 @@ use crate::util::FInto;
 // other? Eh. All that matters for now is that I know this is possible, as long as SpriteManager
 // can work with anything that implements SpriteTreeLike. Don't need it for this project, so ignore
 // for now.
+//
+// Actually, now that I think about it, we want something even more from SpriteForestActual. We
+// want it to be SpriteTree, but at a certain depth it can transition to DeSync. How can that be
+// represented? 
+//
+// No this doesn't make sense. Think about it, you have sprites x and y, and you want x to be the
+// parent of y in one tree, and vice versa in another. How the hell do you know when to transition
+// into the split tree mode, that's confusing as hell. No, a tree is either split or it isn't, no
+// in-between.
+//
+// No wait, I COULD make that work. because everything below that point in the tree belongs to the
+// split trees, which are fully divided. It's just not a norma ltree anymore. Yeah I could totally
+// make that work.
 enum SpriteForestActual {
     Sync(SpriteTree),
     Desync {
