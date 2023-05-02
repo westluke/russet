@@ -4,8 +4,8 @@ use std::fmt::Debug;
 use crossterm::terminal;
 use log::{warn};
 
-mod err;
-mod config;
+pub mod err;
+pub mod config;
 
 pub use err::*;
 pub use config::*;

@@ -1,14 +1,14 @@
 use crate::deck::{Card, CardShape, CardColor, CardFill, CardNumber, all_cards};
 use crate::term_char::TermChar;
 use crate::pos::TermPos;
-use crate::util::*;
+use crate::util::{*, config::*};
 use crate::{Id, IdManager};
 
-use crate::sprites::{sprite::Sprite, pre_sprite::PreSprite};
+use crate::sprites::sprite::Sprite;
 use crate::sprites::sprite_manager::SpriteManager;
-use crate::sprites::{sprite_anchor_tree::SanTree, sprite_onto_tree::SonTree, sprite_order_tree::SorTree};
+use crate::sprites::sprite_tree::SpriteTree;
 use crate::sprites::img::Img;
-use crate::sprites::SpriteCell::{self, *};
+use crate::sprites::*;
 
 use std::hash::{Hash, Hasher};
 
@@ -48,9 +48,37 @@ use crossterm::style::Color;
 // get combined together, but we  never really go back in and modify trees, except in very very
 // special circumstances.
 
+// Wait, should these even be storing SpriteManagers then? Or just SpriteTrees?
+// In other words, do we want a monolithic spritemanager, or many composable spritemanagers?
+// The annoying thing about many composable spritemanagers is that its trickierr to reasno about,
+// and dirt merging is weird.
+// But how would dirt merging work with a monolithic one?
+// It would be pretty simple actually.
+// OK yeah fuck this, this just stores SpriteTrees, not the whole damn manager.
+//
+//
+// OK so now what? How does dirt work? Well, now we're adding whole trees, not just individual
+// sprites. Which means... ah yeah have to change how dirt works. Cuz trees operate either over
+// presprites or sprites, either choice has consequences.
+//
+// If over presprites, dirt is external.
+// If over sprites, where did the dirt come from?
+// Is it time to get rid of the whole "dirt registration" idea?
+// And just make presprites, sprites?
+// I kinda liked that idea though... could separate sprite manipulations from graphic
+// considerations.
+//
+// I think I should just make it optional on every sprite.
+// alternatives: tree is generic over sprites? Nahhhhhh.
+// perhaps best way: tree struct hands out spriteRef which bundles together sprite with dirt?
+// that or sprites just contain optional dirt.
+//
+// Sprites containing optional dirt is best I think. Cuz it also means we can separate dirts, like
+// for separate screens, which is pretty cool.
+
 pub struct CardRepo {
-    deck: (SpriteForest, IdManager<SanTree>),
-    cards: HashMap<Card, (SpriteForest, IdManager<SanTree>)>,
+    deck: (SpriteTree, IdManager<SpriteTree>),
+    cards: HashMap<Card, (SpriteTree, IdManager<SpriteTree>)>,
     // cards_active: HashMap<Card, FrameTree>,
     // outline_thin: FrameTree,
     // outline_good: FrameTree,
@@ -62,7 +90,7 @@ impl CardRepo {
         make(scale)
     }
 
-    pub fn card(&self, c: Card) -> (SpriteForest, IdManager<SanTree>) {
+    pub fn card(&self, c: Card) -> (SpriteTree, IdManager<SpriteTree>) {
         self.cards
             .get(&c)
             .unwrap()
@@ -76,7 +104,7 @@ impl CardRepo {
     //         .clone()
     // }
 
-    pub fn deck(&self) -> (SpriteForest, IdManager<SanTree>) {
+    pub fn deck(&self) -> (SpriteTree, IdManager<SpriteTree>) {
         self.deck.clone()
     }
 
@@ -301,24 +329,30 @@ pub fn make(scale: Scale) -> CardRepo {
         let mut active_card = sprite_man.attach(cards_active.remove(&k).unwrap().into());
         active_card.set_visible(false);
 
+        // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
+        // Equivalently, at the top left corner of the floating outline of the inactive variant.
+
         // Inactive card is above its own outline, and to the right.
         let mut inactive_card = sprite_man.attach(inactive.into());
         inactive_card.reanchor((-1, 1).finto());
         inactive_card.reorder(1);
 
         let mut inactive_border = sprite_man.attach(outline_thin.clone().into());
-
-        sprite_man.push(None, active);
-        let inactive_id = final_man.push_subtree(None);
-        sprite_man.push(inactive_id, inactive_card);
-        sprite_man.push(inactive_id, inactive_border);
-
-        // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
-        // Equivalently, at the top left corner of the floating outline of the inactive variant.
-
-        // man.insert("active".into(), active_id);
-        man.insert("inactive".into(), inactive_id);
-        cards.insert(k, (sf, man));
+        let mut inactive_tree = SpriteTree::new(None);
+        id_man.insert(
+            (k, "inactive_card").into(),
+            inactive_tree.push_sprite(new_stn(inactive_card))
+        );
+        id_man.insert(
+            (k, "inactive_border").into(),
+            inactive_tree.push_sprite(new_stn(inactive_border))
+        );
+        id_man.insert(
+            (k, "active").into(),
+            sprite_man.tree.push_sprite(new_stn(active_card))
+        );
+        sprite_man.tree.push_tree(inactive_tree);
+        cards.insert(k, (sprite_man, id_man));
     }
 
     CardRepo {
