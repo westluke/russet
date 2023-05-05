@@ -433,6 +433,7 @@ pub fn animate(
             Err(RecvTimeoutError::Timeout) => (),
             Ok(Msg::Nop) => continue,
             Ok(Msg::ChangeMsg(cs)) => {
+                info!("{:?}", cs);
             }
         }
 

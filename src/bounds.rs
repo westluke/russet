@@ -30,7 +30,7 @@ impl<T: Copy + Add<Output=T> + From<u8> + Ord> Bounds<T> {
         Self { y_min, y_max, x_min, x_max }
     }
 
-    pub fn empty(self) -> bool {
+    pub fn is_empty(self) -> bool {
         self.y_max <= self.y_min || self.x_max <= self.x_min
     }
 
@@ -66,7 +66,7 @@ impl<T: Copy + Add<Output=T> + From<u8> + Ord> IntoIterator for Bounds<T> {
     type IntoIter = BoundsIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        let next = if self.empty() { None } else { Some((self.x_min, self.y_min)) };
+        let next = if self.is_empty() { None } else { Some((self.x_min, self.y_min)) };
         BoundsIter {
             rng: self,
             next

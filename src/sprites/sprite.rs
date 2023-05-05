@@ -73,7 +73,7 @@ impl Sprite {
     pub fn bounds(&self) -> Bounds<i16> {
         Bounds::mk(
             self.anchor.finto(),
-            (self.anchor + (self.img.height()-1, self.img.width()-1).finto()).finto()
+            (self.anchor + (self.img.height(), self.img.width()).finto()).finto()
         )
     }
 

@@ -59,7 +59,7 @@ impl SpriteTree {
         if self.node.borrow().id() == id {
             Some(&self.node)
         } else {
-            for child in self.children {
+            for child in &self.children {
                 if let Some(sp) = child.find_node(id) {
                     return Some(sp);
                 }
@@ -72,7 +72,7 @@ impl SpriteTree {
         if self.id == id {
             Some(self)
         } else {
-            for child in self.children {
+            for child in &self.children {
                 if let Some(tr) = child.find_tree(id) {
                     return Some(tr)
                 }
@@ -85,7 +85,7 @@ impl SpriteTree {
         if self.id == id {
             Some(self)
         } else {
-            for child in self.children {
+            for child in &mut self.children {
                 if let Some(tr) = child.tree_mut(id) {
                     return Some(tr)
                 }
@@ -120,17 +120,19 @@ impl SpriteTree {
     // Should insert_tree be changed somehow? Like, should you really need to construct your own
     // tree to do this? Idk, feels off. It's fine for now though.
 
-    pub fn insert_tree(&mut self, tr: Self, parent: Option<Id<Self>>) -> Result<()> {
+    pub fn insert_tree(&mut self, mut tr: Self, parent: Option<Id<Self>>) -> Result<()> {
         if let Some(id) = parent {
             let parent_tr_opt = self.tree_mut(id);
             if let Some(parent_tr) = parent_tr_opt {
-                parent_tr.children_mut().push(tr);
+                tr.inherit(parent_tr);
+                parent_tr.children.push(tr);
                 Ok(())
             } else {
                 Err(SetError::new(SetErrorKind::IdNotFound, &format!("No tree found with id {}", id)))
             }
         } else {
-            self.children_mut().push(tr);
+            tr.inherit(self);
+            self.children.push(tr);
             Ok(())
         }
     }
@@ -140,9 +142,8 @@ impl SpriteTree {
     }
 
 
-    // Note: this is wrong, it should inherit position, visibility, clickability, and order.
     pub fn insert_sprite(&mut self, sp: Stn, parent: Option<Id<Self>>) -> Option<Id<Self>> {
-        let new_tr = Self::new(Some(sp));
+        let new_tr = Self::new(sp);
         let new_id = new_tr.id();
         match self.insert_tree(new_tr, parent) {
             Ok(_) => Some(new_id),
@@ -151,59 +152,75 @@ impl SpriteTree {
     }
 
     pub fn all_sprites(&self) -> Vec<Stn> {
-        let mut ret = Vec::new();
-        if let Some(stn) = self.node() {
-            ret.push(stn.clone())
-        }
-        for tr in self.children() {
+        let mut ret = vec![self.node.clone()];
+        for tr in &self.children {
             ret.append(&mut tr.all_sprites());
         }
-        // NOTE: could this cause panic, double borrow?
-        ret.dedup_by(|x, y| x.borrow().id() == y.borrow().id());
+
+        // NOTE: could this cause panic, double borrow? Would only happen if x = y, can that
+        // happen? Probably not.
+        ret.dedup_by(|x, y| {
+            let xid = x.borrow().id();
+            let yid = y.borrow().id();
+            xid == yid
+        });
         ret
     }
 
     pub fn register_dirt(&mut self, dirt: Option<&Dirt>) {
-        if let Some(ref mut sp) = self.node {
-            let dirt = dirt.map(Clone::clone);
-            let mut sp = sp.borrow_mut();
-            sp.set_dirt(dirt.clone());
-            sp.dirty_all();
-
-        }
         for tr in &mut self.children {
-            tr.register_dirt(dirt);
+            tr.register_dirt(dirt.clone());
         }
+
+        let dirt: Option<Dirt> = dirt.map(Clone::clone);
+
+        let mut sp = self.node.borrow_mut();
+        sp.set_dirt(dirt);
+        sp.dirty_all();
     }
 
     // Hierarchical sprite manipulation
 
-
     pub fn shift(&mut self, delta: TermPos) {
-        let n = self.node.borrow_mut();
-        n.reanchor(n.anchor() + delta);
+        let mut n = self.node.borrow_mut();
+
+        // Confusion on mut semantics - difference between stacked borrows and just ignoring borrow
+        // rules completely? Need to nail down difference between borrow no longer existing, and
+        // borrow being deactivated. Actual idea of "stacking"
+
+        let anchor = n.anchor();
+        n.reanchor(anchor + delta);
         for child in &mut self.children {
             child.shift(delta);
         }
     }
 
     pub fn reanchor(&mut self, pos: TermPos) {
-        let n = self.node.borrow();
-        let delta = pos - n.anchor();
+        let delta;
+        {   
+            // Block is necessary so that compiler knows n is dropped early - not sure why NLL
+            // didn't catch this? Maybe ask Jack
+            let n = self.node.borrow();
+            delta = pos - n.anchor();
+        };
         self.shift(delta);
     }
 
     pub fn shift_order(&mut self, delta: i16) {
-        let n = self.node.borrow_mut();
-        n.reorder(n.order() + delta);
+        let mut n = self.node.borrow_mut();
+        let order = n.order();
+        n.reorder(order + delta);
         for child in &mut self.children {
             child.shift_order(delta);
         }
     }
 
     pub fn reorder(&mut self, order: i16) {
-        let n = self.node.borrow();
-        let delta = order - n.order();
+        let delta;
+        {
+            let n = self.node.borrow();
+            delta = order - n.order();
+        };
         self.shift_order(delta);
     }
 
