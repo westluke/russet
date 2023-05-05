@@ -3,7 +3,7 @@ use std::cell::{RefCell, RefMut};
 use std::rc::Rc;
 
 use crate::pos::TermPos;
-use crate::util::*;
+use crate::util::{*, SetError as SE, SetErrorKind as SEK};
 use crate::Id;
 use crate::bounds::Bounds;
 
@@ -13,7 +13,7 @@ use super::img::Img;
 
 use log::info;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Sprite {
     img: Img,
     anchor: TermPos,
@@ -56,7 +56,7 @@ impl From<Img> for Sprite {
 impl Sprite {
     pub fn new(height: i16, width: i16) -> Self {
         Self {
-            img: Img::rect(height, width, SpriteCell::default()),
+            img: Img::rect(height.finto(), width.finto(), SpriteCell::default()),
             anchor: (0, 0).finto(),
             id: Id::default(),
             order: Default::default(),
@@ -79,7 +79,7 @@ impl Sprite {
 
     // Dirt management
 
-    pub fn redirt(&mut self, dirt: Option<Dirt>) {
+    pub fn set_dirt(&mut self, dirt: Option<Dirt>) {
         self.dirt = dirt
     }
 
@@ -93,13 +93,24 @@ impl Sprite {
     // Pixel accesses
 
     pub fn get_rel(&self, pos: TermPos) -> Result<SpriteCell> {
-        self.img.get(pos)
+        if pos.pos() {
+            self.img.get(pos.finto())
+        } else {
+            Err(SE::new(SEK::OutOfBounds, "negative coordinates for sprite pixel access"))
+        }
     }
 
     pub fn set_rel(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
-        self.img.set(pos, cel)
+        if pos.pos() {
+            self.img.set(pos.finto(), cel)
+        } else {
+            Err(SE::new(SEK::OutOfBounds, "negative coordinates for sprite pixel access"))
+        }
     }
 
+    // Ah. bounds checking has to happen here?
+    // What sorts of errors should be here? Should subzero errors be different from out of img
+    // bounds errors?
     pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
         self.get_rel(pos - self.anchor)
     }

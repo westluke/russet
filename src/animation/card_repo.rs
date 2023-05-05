@@ -199,7 +199,7 @@ fn set_s(img: &mut Img, mut pos: TermPos, s: String, fg: Color, bg: Color) {
 
         // otherwise, we set the cell to this character and advance one step to the right.
         } else {
-            img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+            img.set(pos.finto(), Opaque(TermChar::new(chars[i], fg, bg)));
             pos = pos + (0, 1).finto();
         };
     };
@@ -223,7 +223,7 @@ fn set_s_clear(img: &mut Img, mut pos: TermPos, s: String, fg: Color, bg: Color)
 
         // otherwise, we set the cell to this character and advance one step to the right.
         } else {
-            img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+            img.set(pos.finto(), Opaque(TermChar::new(chars[i], fg, bg)));
             pos = pos + (0, 1).finto();
         };
     };
@@ -260,7 +260,7 @@ pub fn set_shape(
         // chars are interpreted and set
         } else {
             let c = get_raw_char(card, chars[i], colr, bg);
-            img.set(pos, c);
+            img.set(pos.finto(), c);
             pos = pos + (0, 1).finto();
         };
     };
@@ -274,24 +274,24 @@ pub fn card_base(
     bg: Option<Color>
 ) -> Img {
     let bg = bg.map_or(Transparent, |c| SpriteCell::Opaque(TermChar::Bg(c)));
-    let mut img = Img::rect(scale.CARD_HEIGHT, scale.CARD_WIDTH, bg);
+    let mut img = Img::rect(scale.CARD_HEIGHT.finto(), scale.CARD_WIDTH.finto(), bg);
     let (tl, tr, bl, br) = (img.top_left(), img.top_right(), img.bottom_left(), img.bottom_right());
-    img.set(tl, Transparent);
-    img.set(tr, Transparent);
-    img.set(bl, Transparent);
-    img.set(br, Transparent);
+    img.set(tl.finto(), Transparent);
+    img.set(tr.finto(), Transparent);
+    img.set(bl.finto(), Transparent);
+    img.set(br.finto(), Transparent);
     set_s_clear(&mut img, (0, 0).finto(), String::from(CARD_TL), edge_fg, edge_bg);
     set_s_clear(&mut img, (0, scale.CARD_WIDTH-2).finto(), String::from(CARD_TR), edge_fg, edge_bg);
     set_s_clear(&mut img, (scale.CARD_HEIGHT-2, 0).finto(), String::from(CARD_BL), edge_fg, edge_bg);
     set_s_clear(&mut img, (scale.CARD_HEIGHT-2, scale.CARD_WIDTH-2).finto(), String::from(CARD_BR), edge_fg, edge_bg);
     for row in 2..(scale.CARD_HEIGHT-2) {
-        img.set((row, 0).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
-        img.set((row, scale.CARD_WIDTH-1).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
+        img.set((row.finto(), 0), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
+        img.set((row.finto(), (scale.CARD_WIDTH-1).finto()), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
     };
 
     for col in 2..(scale.CARD_WIDTH-2) {
-        img.set((0, col).finto(), Opaque(TermChar::new('━', edge_fg, edge_bg)));
-        img.set((scale.CARD_HEIGHT-1, col).finto(), Opaque(TermChar::new('━', edge_fg, edge_bg)));
+        img.set((0, col.finto()), Opaque(TermChar::new('━', edge_fg, edge_bg)));
+        img.set(((scale.CARD_HEIGHT-1).finto(), col.finto()), Opaque(TermChar::new('━', edge_fg, edge_bg)));
     };
     img
 }
@@ -324,35 +324,35 @@ pub fn make(scale: Scale) -> CardRepo {
     // into a SpriteForest. Keep track of Ids in the process, and produce IdManager simultaneously.
     for (k, inactive) in cards_inactive.into_iter() {
         let mut id_man = IdManager::default();
-        let mut sprite_man = SpriteManager::default();
+        let mut tree = SpriteTree::default();
+        let mut inactive_subtree = SpriteTree::default();
 
-        let mut active_card = sprite_man.attach(cards_active.remove(&k).unwrap().into());
+        let mut active_card: Sprite = cards_active.remove(&k).unwrap().into();
         active_card.set_visible(false);
+        id_man.insert(
+            (k, "active").into(),
+            tree.push_sprite(new_stn(active_card))
+        );
 
         // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
         // Equivalently, at the top left corner of the floating outline of the inactive variant.
 
         // Inactive card is above its own outline, and to the right.
-        let mut inactive_card = sprite_man.attach(inactive.into());
+        let mut inactive_card: Sprite = inactive.into();
+        let mut inactive_border: Sprite = outline_thin.clone().into();
         inactive_card.reanchor((-1, 1).finto());
         inactive_card.reorder(1);
 
-        let mut inactive_border = sprite_man.attach(outline_thin.clone().into());
-        let mut inactive_tree = SpriteTree::new(None);
         id_man.insert(
             (k, "inactive_card").into(),
-            inactive_tree.push_sprite(new_stn(inactive_card))
+            inactive_subtree.push_sprite(new_stn(inactive_card))
         );
         id_man.insert(
             (k, "inactive_border").into(),
-            inactive_tree.push_sprite(new_stn(inactive_border))
+            inactive_subtree.push_sprite(new_stn(inactive_border))
         );
-        id_man.insert(
-            (k, "active").into(),
-            sprite_man.tree.push_sprite(new_stn(active_card))
-        );
-        sprite_man.tree.push_tree(inactive_tree);
-        cards.insert(k, (sprite_man, id_man));
+        tree.push_tree(inactive_subtree);
+        cards.insert(k, (tree, id_man));
     }
 
     CardRepo {

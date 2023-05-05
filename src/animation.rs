@@ -14,7 +14,6 @@ use crate::pos::*;
 use crate::util::*;
 use crate::term_char::*;
 // use crate::sprites::*;
-use crate::sprites::pre_sprite::PreSprite;
 use crate::sprites::sprite_manager::SpriteManager;
 use crate::sprites::img::Img;
 use crate::sprites::*;
@@ -383,6 +382,10 @@ pub fn animate(
     let (mut card, idman) = cardrepo.card(
         Card { color: CardColor::Color1, shape: CardShape::Oval, number: CardNumber::Three, fill: CardFill::Solid }
     );
+    let mut man = SpriteManager::default();
+    man.tree = card;
+    man.tree.register_dirt(Some(&man.dirt));
+    man.sprites = man.tree.all_sprites();
     // info!("card: {:?}", card);
     // panic!();
 
@@ -434,7 +437,7 @@ pub fn animate(
         }
 
         // man.write(&mut stdout);
-        card.write(&mut stdout);
+        man.write(&mut stdout);
 
             // Ok(Msg::ChangeMsg(cs)) => {
             //     let ChangeSet { changes, stamp: _ } = cs;

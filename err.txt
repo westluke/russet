@@ -1,79 +1,23 @@
- Downloading crates ...
-  Downloaded clap v3.2.23
-  Downloaded thiserror-impl v1.0.38
-  Downloaded time v0.3.17
-  Downloaded syn v1.0.107
-  Downloaded time-macros v0.2.6
-  Downloaded time-core v0.1.0
-  Downloaded smallvec v1.10.0
-  Downloaded quote v1.0.23
-  Downloaded itoa v1.0.5
-  Downloaded libc v0.2.139
-  Downloaded unicode-ident v1.0.6
-  Downloaded getrandom v0.2.8
-  Downloaded parking_lot_core v0.9.5
-  Downloaded os_str_bytes v6.4.1
-  Downloaded lock_api v0.4.9
-  Downloaded indexmap v1.9.2
-  Downloaded once_cell v1.17.0
-  Downloaded ppv-lite86 v0.2.17
-  Downloaded glob v0.3.1
-  Downloaded mio v0.8.5
-  Downloaded aho-corasick v0.7.20
-  Downloaded rand_core v0.6.4
-  Downloaded proc-macro2 v1.0.49
-  Downloaded rustversion v1.0.11
-  Downloaded thiserror v1.0.38
-  Downloaded textwrap v0.16.0
-  Downloaded serde v1.0.152
-  Downloaded regex v1.7.1
-  Downloaded regex-syntax v0.6.28
-   Compiling libc v0.2.139
-   Compiling proc-macro2 v1.0.49
-   Compiling unicode-ident v1.0.6
-   Compiling quote v1.0.23
-   Compiling syn v1.0.107
-   Compiling parking_lot_core v0.9.5
-   Compiling time-core v0.1.0
-   Compiling lock_api v0.4.9
-   Compiling indexmap v1.9.2
-   Compiling smallvec v1.10.0
-   Compiling rustversion v1.0.11
-   Compiling thiserror v1.0.38
-   Compiling time-macros v0.2.6
-   Compiling aho-corasick v0.7.20
-   Compiling regex-syntax v0.6.28
-   Compiling ppv-lite86 v0.2.17
-   Compiling itoa v1.0.5
-   Compiling os_str_bytes v6.4.1
-   Compiling glob v0.3.1
-   Compiling textwrap v0.16.0
-   Compiling once_cell v1.17.0
-   Compiling clap_lex v0.2.4
-   Compiling signal-hook-registry v1.4.0
-   Compiling getrandom v0.2.8
-   Compiling mio v0.8.5
-   Compiling atty v0.2.14
-   Compiling signal-hook v0.3.14
-   Compiling rand_core v0.6.4
-   Compiling time v0.3.17
-   Compiling rand_chacha v0.3.1
-   Compiling signal-hook-mio v0.2.3
-   Compiling parking_lot v0.12.1
-   Compiling clap v3.2.23
-   Compiling rand v0.8.5
-   Compiling crossterm v0.25.0
-   Compiling regex v1.7.1
-   Compiling thiserror-impl v1.0.38
-   Compiling flexi_logger v0.23.3
-   Compiling set v0.1.0 (/home/luke/Documents/rust_projs/set)
+   Compiling set v0.1.0 (/home/luke/Documents/other/rust_projs/set)
+warning: unused import: `marker`
+ --> src/main.rs:1:29
+  |
+1 | use std::{io, thread, time, marker};
+  |                             ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `Display`, `Formatter`
+ --> src/main.rs:3:16
+  |
+3 | use std::fmt::{Display, Formatter};
+  |                ^^^^^^^  ^^^^^^^^^
+
 warning: unused imports: `Arc`, `Mutex`
  --> src/main.rs:5:17
   |
 5 | use std::sync::{Arc, Mutex, mpsc, mpsc::TryRecvError};
   |                 ^^^  ^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
 
 warning: unused imports: `Arc`, `Mutex`
  --> src/animation.rs:5:12
@@ -87,17 +31,23 @@ warning: unused import: `HashMap`
 6 | use collections::{HashMap};
   |                   ^^^^^^^
 
-warning: unused imports: `Hash`, `Hasher`
+warning: unused import: `Hash`
  --> src/animation.rs:7:17
   |
 7 | use std::hash::{Hash, Hasher};
-  |                 ^^^^  ^^^^^^
+  |                 ^^^^
 
-warning: unused import: `style`
- --> src/animation.rs:9:36
+warning: unused imports: `Color`, `self`
+ --> src/animation.rs:9:44
   |
-9 | use crossterm::{terminal, execute, style};
-  |                                    ^^^^^
+9 | use crossterm::{terminal, execute, style::{self, Color}};
+  |                                            ^^^^  ^^^^^
+
+warning: unused import: `ChangeAtom::*`
+  --> src/animation.rs:12:22
+   |
+12 | use crate::game::{*, ChangeAtom::*};
+   |                      ^^^^^^^^^^^^^
 
 warning: unused import: `crate::term_char::*`
   --> src/animation.rs:15:5
@@ -105,28 +55,40 @@ warning: unused import: `crate::term_char::*`
 15 | use crate::term_char::*;
    |     ^^^^^^^^^^^^^^^^^^^
 
-warning: unused imports: `*`, `self`
-  --> src/animation.rs:16:46
+warning: unused import: `crate::sprites::img::Img`
+  --> src/animation.rs:18:5
    |
-16 | use crate::frame_buf::{FrameBuf, LayerCell::{self, *}, FrameTree};
-   |                                              ^^^^  ^
+18 | use crate::sprites::img::Img;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `crate::Id`
- --> src/animation/card_repo.rs:5:5
+warning: unused import: `crate::sprites::*`
+  --> src/animation.rs:19:5
+   |
+19 | use crate::sprites::*;
+   |     ^^^^^^^^^^^^^^^^^
+
+warning: unused import: `Id`
+ --> src/animation/card_repo.rs:5:13
   |
-5 | use crate::Id;
-  |     ^^^^^^^^^
+5 | use crate::{Id, IdManager};
+  |             ^^
+
+warning: unused import: `crate::sprites::sprite_manager::SpriteManager`
+ --> src/animation/card_repo.rs:8:5
+  |
+8 | use crate::sprites::sprite_manager::SpriteManager;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused imports: `Hash`, `Hasher`
- --> src/animation/card_repo.rs:9:17
-  |
-9 | use std::hash::{Hash, Hasher};
-  |                 ^^^^  ^^^^^^
+  --> src/animation/card_repo.rs:13:17
+   |
+13 | use std::hash::{Hash, Hasher};
+   |                 ^^^^  ^^^^^^
 
 warning: unused import: `hash_map::DefaultHasher`
-  --> src/animation/card_repo.rs:11:33
+  --> src/animation/card_repo.rs:15:33
    |
-11 | use std::collections::{HashMap, hash_map::DefaultHasher};
+15 | use std::collections::{HashMap, hash_map::DefaultHasher};
    |                                 ^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused imports: `IndexMut`, `Index`
@@ -153,107 +115,113 @@ warning: unused import: `std::collections::HashSet`
 6 | use std::collections::HashSet;
   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `std::ops::BitOr`
- --> src/frame_buf.rs:3:5
+warning: unused import: `log::info`
+ --> src/sprites/termable.rs:4:5
   |
-3 | use std::ops::BitOr;
-  |     ^^^^^^^^^^^^^^^
+4 | use log::info;
+  |     ^^^^^^^^^
 
-warning: unused imports: `Color`, `ContentStyle`, `StyledContent`, `self`
- --> src/frame_buf.rs:5:24
+warning: unused import: `std::borrow::Borrow`
+ --> src/sprites/termable.rs:5:5
   |
-5 | use crossterm::style::{self, Color, ContentStyle, StyledContent, PrintStyledContent};
-  |                        ^^^^  ^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^
+5 | use std::borrow::Borrow;
+  |     ^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `execute`
- --> src/frame_buf.rs:6:24
+warning: unused imports: `FFrom`, `FInto`
+ --> src/sprites/termable.rs:6:19
   |
-6 | use crossterm::{queue, execute, cursor};
-  |                        ^^^^^^^
+6 | use crate::util::{FInto, FFrom};
+  |                   ^^^^^  ^^^^^
 
-warning: unused import: `crate::pos::*`
- --> src/frame_buf.rs:8:5
+warning: unused import: `Deref`
+ --> src/sprites/dirt.rs:1:16
   |
-8 | use crate::pos::*;
-  |     ^^^^^^^^^^^^^
+1 | use std::ops::{Deref};
+  |                ^^^^^
 
-warning: unused import: `crate::Id`
-  --> src/frame_buf.rs:11:5
-   |
-11 | use crate::Id;
-   |     ^^^^^^^^^
+warning: unused import: `HashSet`
+ --> src/sprites/dirt.rs:4:33
+  |
+4 | use std::collections::{HashMap, HashSet};
+  |                                 ^^^^^^^
 
-warning: unused imports: `error`, `info`, `warn`
-  --> src/frame_buf.rs:13:11
-   |
-13 | use log::{info, warn, error};
-   |           ^^^^  ^^^^  ^^^^^
+warning: unused imports: `hash_map::Iter as MapIter`, `hash_set::Iter as SetIter`
+ --> src/sprites/dirt.rs:5:24
+  |
+5 | use std::collections::{hash_map::Iter as MapIter, hash_set::Iter as SetIter};
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^^^  ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::slice::Iter as VecIter`
+ --> src/sprites/dirt.rs:6:5
+  |
+6 | use std::slice::Iter as VecIter;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 warning: unused imports: `IndexMut`, `Index`
- --> src/frame_buf/grid.rs:1:16
+ --> src/sprites/grid.rs:1:16
   |
 1 | use std::ops::{Index, IndexMut};
   |                ^^^^^  ^^^^^^^^
 
 warning: unused import: `std::iter::Map`
- --> src/frame_buf/grid.rs:2:5
+ --> src/sprites/grid.rs:2:5
   |
 2 | use std::iter::Map;
   |     ^^^^^^^^^^^^^^
 
-warning: unused imports: `*`, `self`
- --> src/frame_buf/line_update.rs:2:23
+warning: unused imports: `HashMap`, `HashSet`
+ --> src/sprites/sprite.rs:1:24
   |
-2 | use super::DirtyBit::{*, self};
-  |                       ^  ^^^^
+1 | use std::collections::{HashSet, HashMap};
+  |                        ^^^^^^^  ^^^^^^^
+
+warning: unused imports: `RefCell`, `RefMut`
+ --> src/sprites/sprite.rs:2:17
+  |
+2 | use std::cell::{RefCell, RefMut};
+  |                 ^^^^^^^  ^^^^^^
+
+warning: unused import: `std::rc::Rc`
+ --> src/sprites/sprite.rs:3:5
+  |
+3 | use std::rc::Rc;
+  |     ^^^^^^^^^^^
 
 warning: unused import: `log::info`
- --> src/frame_buf/termable.rs:3:5
-  |
-3 | use log::info;
-  |     ^^^^^^^^^
-
-warning: unused imports: `IndexMut`, `Index`
- --> src/frame_buf/frame_tree.rs:1:16
-  |
-1 | use std::ops::{Index, IndexMut};
-  |                ^^^^^  ^^^^^^^^
-
-warning: unused import: `hash_map::Keys`
- --> src/frame_buf/frame_tree.rs:2:42
-  |
-2 | use std::collections::{HashMap, HashSet, hash_map::Keys};
-  |                                          ^^^^^^^^^^^^^^
-
-warning: unused import: `iter::Copied`
- --> src/frame_buf/frame_tree.rs:4:5
-  |
-4 | use iter::Copied;
-  |     ^^^^^^^^^^^^
-
-warning: unused import: `std::ops::BitOr`
- --> src/frame_buf/frame_tree.rs:5:5
-  |
-5 | use std::ops::BitOr;
-  |     ^^^^^^^^^^^^^^^
-
-warning: unused import: `crate::deck::Card`
- --> src/frame_buf/frame_tree.rs:9:5
-  |
-9 | use crate::deck::Card;
-  |     ^^^^^^^^^^^^^^^^^
-
-warning: unused import: `crate::term_char::TermChar`
-  --> src/frame_buf/frame_tree.rs:10:5
+  --> src/sprites/sprite.rs:14:5
    |
-10 | use crate::term_char::TermChar;
-   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+14 | use log::info;
+   |     ^^^^^^^^^
 
-warning: unused import: `info`
-  --> src/frame_buf/frame_tree.rs:15:11
+warning: unused import: `std::rc::Rc`
+ --> src/sprites/sprite_manager.rs:1:5
+  |
+1 | use std::rc::Rc;
+  |     ^^^^^^^^^^^
+
+warning: unused import: `std::cell::RefCell`
+ --> src/sprites/sprite_manager.rs:2:5
+  |
+2 | use std::cell::RefCell;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `sprite::Sprite`
+ --> src/sprites/sprite_manager.rs:6:13
+  |
+6 | use super::{sprite::Sprite};
+  |             ^^^^^^^^^^^^^^
+
+warning: unused import: `crate::pos::TermPos`
+  --> src/sprites/sprite_manager.rs:12:5
    |
-15 | use log::{info};
-   |           ^^^^
+12 | use crate::pos::TermPos;
+   |     ^^^^^^^^^^^^^^^^^^^
+
+warning: unused imports: `ContentStyle`, `StyledContent`, `Stylize`
+  --> src/sprites/sprite_manager.rs:16:44
+   |
+16 | use crossterm::style::{PrintStyledContent, Stylize, StyledContent, ContentStyle};
+   |                                            ^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^^^^
 
 warning: unused imports: `ContentStyle`, `StyledContent`
  --> src/term_char.rs:1:37
@@ -267,23 +235,299 @@ warning: unused import: `std::fmt`
 2 | use std::fmt;
   |     ^^^^^^^^
 
-warning: unused import: `ChangeAtom::*`
-  --> src/main.rs:53:15
-   |
-53 | use game::{*, ChangeAtom::*};
-   |               ^^^^^^^^^^^^^
+warning: unused import: `crate::pos::TermPos`
+ --> src/bounds.rs:2:5
+  |
+2 | use crate::pos::TermPos;
+  |     ^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `frame_buf::*`
-  --> src/main.rs:55:5
-   |
-55 | use frame_buf::*;
-   |     ^^^^^^^^^^^^
+warning: unused import: `crate::util::FInto as _`
+ --> src/bounds.rs:3:5
+  |
+3 | use crate::util::FInto as _;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^
 
-warning: unused import: `pos::*`
-  --> src/main.rs:57:5
+warning: unused imports: `io`, `thread`, `time`
+ --> src/id.rs:1:11
+  |
+1 | use std::{io, thread, time, marker::PhantomData};
+  |           ^^  ^^^^^^  ^^^^
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:202:21
+    |
+202 |             img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+    |                 --- ^^^ expected tuple, found struct `TermPos`
+    |                 |
+    |                 arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:226:21
+    |
+226 |             img.set(pos, Opaque(TermChar::new(chars[i], fg, bg)));
+    |                 --- ^^^ expected tuple, found struct `TermPos`
+    |                 |
+    |                 arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:263:21
+    |
+263 |             img.set(pos, c);
+    |                 --- ^^^ expected tuple, found struct `TermPos`
+    |                 |
+    |                 arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: arguments to this function are incorrect
+   --> src/animation/card_repo.rs:277:19
+    |
+277 |     let mut img = Img::rect(scale.CARD_HEIGHT, scale.CARD_WIDTH, bg);
+    |                   ^^^^^^^^^ -----------------  ---------------- expected `usize`, found `i16`
+    |                             |
+    |                             expected `usize`, found `i16`
+    |
+note: associated function defined here
+   --> src/sprites/img.rs:33:12
+    |
+33  |     pub fn rect(height: usize, width: usize, px: SpriteCell) -> Self {
+    |            ^^^^ -------------  ------------  --------------
+help: you can convert an `i16` to a `usize` and panic if the converted value doesn't fit
+    |
+277 |     let mut img = Img::rect(scale.CARD_HEIGHT.try_into().unwrap(), scale.CARD_WIDTH, bg);
+    |                                              ++++++++++++++++++++
+help: you can convert an `i16` to a `usize` and panic if the converted value doesn't fit
+    |
+277 |     let mut img = Img::rect(scale.CARD_HEIGHT, scale.CARD_WIDTH.try_into().unwrap(), bg);
+    |                                                                ++++++++++++++++++++
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:279:13
+    |
+279 |     img.set(tl, Transparent);
+    |         --- ^^ expected tuple, found struct `TermPos`
+    |         |
+    |         arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:280:13
+    |
+280 |     img.set(tr, Transparent);
+    |         --- ^^ expected tuple, found struct `TermPos`
+    |         |
+    |         arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:281:13
+    |
+281 |     img.set(bl, Transparent);
+    |         --- ^^ expected tuple, found struct `TermPos`
+    |         |
+    |         arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0308]: mismatched types
+   --> src/animation/card_repo.rs:282:13
+    |
+282 |     img.set(br, Transparent);
+    |         --- ^^ expected tuple, found struct `TermPos`
+    |         |
+    |         arguments to this method are incorrect
+    |
+    = note: expected tuple `(usize, usize)`
+              found struct `pos::TermPos`
+note: associated function defined here
+   --> src/sprites/img.rs:41:12
+    |
+41  |     pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+    |            ^^^            -------------------
+
+error[E0277]: the trait bound `(usize, usize): From<(i16, {integer})>` is not satisfied
+   --> src/animation/card_repo.rs:288:26
+    |
+288 |         img.set((row, 0).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
+    |                          ^^^^^ the trait `From<(i16, {integer})>` is not implemented for `(usize, usize)`
+    |
+    = note: required for `(i16, {integer})` to implement `Into<(usize, usize)>`
+    = note: required for `(usize, usize)` to implement `TryFrom<(i16, {integer})>`
+note: required for `(usize, usize)` to implement `FFrom<(i16, {integer})>`
+   --> src/util.rs:29:12
+    |
+29  | impl<S, T> FFrom<S> for T
+    |            ^^^^^^^^     ^
+...
+32  |     <T as TryFrom<S>>::Error: Debug
+    |                               ----- unsatisfied trait bound introduced here
+note: required for `(i16, {integer})` to implement `util::FInto<(usize, usize)>`
+   --> src/util.rs:39:12
+    |
+39  | impl<S, T> FInto<T> for S where T: FFrom<S> {
+    |            ^^^^^^^^     ^          -------- unsatisfied trait bound introduced here
+
+error[E0277]: the trait bound `(usize, usize): From<(i16, i16)>` is not satisfied
+   --> src/animation/card_repo.rs:289:43
+    |
+289 |         img.set((row, scale.CARD_WIDTH-1).finto(), Opaque(TermChar::new('┃', edge_fg, edge_bg)));
+    |                                           ^^^^^ the trait `From<(i16, i16)>` is not implemented for `(usize, usize)`
+    |
+    = note: required for `(i16, i16)` to implement `Into<(usize, usize)>`
+    = note: required for `(usize, usize)` to implement `TryFrom<(i16, i16)>`
+note: required for `(usize, usize)` to implement `FFrom<(i16, i16)>`
+   --> src/util.rs:29:12
+    |
+29  | impl<S, T> FFrom<S> for T
+    |            ^^^^^^^^     ^
+...
+32  |     <T as TryFrom<S>>::Error: Debug
+    |                               ----- unsatisfied trait bound introduced here
+note: required for `(i16, i16)` to implement `util::FInto<(usize, usize)>`
+   --> src/util.rs:39:12
+    |
+39  | impl<S, T> FInto<T> for S where T: FFrom<S> {
+    |            ^^^^^^^^     ^          -------- unsatisfied trait bound introduced here
+
+error[E0277]: the trait bound `(usize, usize): From<({integer}, i16)>` is not satisfied
+   --> src/animation/card_repo.rs:293:26
+    |
+293 |         img.set((0, col).finto(), Opaque(TermChar::new('━', edge_fg, edge_bg)));
+    |                          ^^^^^ the trait `From<({integer}, i16)>` is not implemented for `(usize, usize)`
+    |
+    = note: required for `({integer}, i16)` to implement `Into<(usize, usize)>`
+    = note: required for `(usize, usize)` to implement `TryFrom<({integer}, i16)>`
+note: required for `(usize, usize)` to implement `FFrom<({integer}, i16)>`
+   --> src/util.rs:29:12
+    |
+29  | impl<S, T> FFrom<S> for T
+    |            ^^^^^^^^     ^
+...
+32  |     <T as TryFrom<S>>::Error: Debug
+    |                               ----- unsatisfied trait bound introduced here
+note: required for `({integer}, i16)` to implement `util::FInto<(usize, usize)>`
+   --> src/util.rs:39:12
+    |
+39  | impl<S, T> FInto<T> for S where T: FFrom<S> {
+    |            ^^^^^^^^     ^          -------- unsatisfied trait bound introduced here
+
+error[E0599]: no variant or associated item named `PanelOob` found for enum `SetErrorKind` in the current scope
+  --> src/sprites/grid.rs:56:39
    |
-57 | use pos::*;
-   |     ^^^^^^
+56 |             } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::get")) }
+   |                                       ^^^^^^^^ variant or associated item not found in `SetErrorKind`
+   |
+  ::: src/util/err.rs:7:1
+   |
+7  | pub enum SetErrorKind {
+   | --------------------- variant or associated item `PanelOob` not found for this enum
+
+error[E0599]: no variant or associated item named `PanelOob` found for enum `SetErrorKind` in the current scope
+  --> src/sprites/grid.rs:57:35
+   |
+57 |         } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::get")) }
+   |                                   ^^^^^^^^ variant or associated item not found in `SetErrorKind`
+   |
+  ::: src/util/err.rs:7:1
+   |
+7  | pub enum SetErrorKind {
+   | --------------------- variant or associated item `PanelOob` not found for this enum
+
+error[E0599]: no variant or associated item named `PanelOob` found for enum `SetErrorKind` in the current scope
+  --> src/sprites/grid.rs:66:39
+   |
+66 |             } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::set")) }
+   |                                       ^^^^^^^^ variant or associated item not found in `SetErrorKind`
+   |
+  ::: src/util/err.rs:7:1
+   |
+7  | pub enum SetErrorKind {
+   | --------------------- variant or associated item `PanelOob` not found for this enum
+
+error[E0599]: no variant or associated item named `PanelOob` found for enum `SetErrorKind` in the current scope
+  --> src/sprites/grid.rs:67:35
+   |
+67 |         } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::set")) }
+   |                                   ^^^^^^^^ variant or associated item not found in `SetErrorKind`
+   |
+  ::: src/util/err.rs:7:1
+   |
+7  | pub enum SetErrorKind {
+   | --------------------- variant or associated item `PanelOob` not found for this enum
+
+error[E0308]: arguments to this function are incorrect
+  --> src/sprites/sprite.rs:59:18
+   |
+59 |             img: Img::rect(height, width, SpriteCell::default()),
+   |                  ^^^^^^^^^ ------  ----- expected `usize`, found `i16`
+   |                            |
+   |                            expected `usize`, found `i16`
+   |
+note: associated function defined here
+  --> src/sprites/img.rs:33:12
+   |
+33 |     pub fn rect(height: usize, width: usize, px: SpriteCell) -> Self {
+   |            ^^^^ -------------  ------------  --------------
+help: you can convert an `i16` to a `usize` and panic if the converted value doesn't fit
+   |
+59 |             img: Img::rect(height.try_into().unwrap(), width, SpriteCell::default()),
+   |                                  ++++++++++++++++++++
+help: you can convert an `i16` to a `usize` and panic if the converted value doesn't fit
+   |
+59 |             img: Img::rect(height, width.try_into().unwrap(), SpriteCell::default()),
+   |                                         ++++++++++++++++++++
+
+warning: unreachable statement
+   --> src/main.rs:244:17
+    |
+243 |                 panic!();
+    |                 -------- any code following this expression is unreachable
+244 |                 click_snd.send(cmsg);
+    |                 ^^^^^^^^^^^^^^^^^^^^^ unreachable statement
+    |
+    = note: `#[warn(unreachable_code)]` on by default
 
 warning: unused import: `io::Write`
  --> src/animation.rs:3:5
@@ -291,465 +535,13 @@ warning: unused import: `io::Write`
 3 | use io::Write;
   |     ^^^^^^^^^
 
-warning: unused variable: `start`
-   --> src/animation.rs:358:13
-    |
-358 |     let mut start = Instant::now();
-    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_start`
-    |
-    = note: `#[warn(unused_variables)]` on by default
+warning: unused import: `Hasher`
+ --> src/animation.rs:7:23
+  |
+7 | use std::hash::{Hash, Hasher};
+  |                       ^^^^^^
 
-warning: unused variable: `repo9`
-   --> src/animation.rs:364:9
-    |
-364 |     let repo9 = CardRepo::new(SIZE_9);
-    |         ^^^^^ help: if this is intentional, prefix it with an underscore: `_repo9`
-
-warning: unused variable: `dst`
-   --> src/animation.rs:459:40
-    |
-459 |                         GoodMove(c, _, dst) => {
-    |                                        ^^^ help: if this is intentional, prefix it with an underscore: `_dst`
-
-warning: unused variable: `err`
-  --> src/util/err.rs:50:13
-   |
-50 |     fn from(err: SendError<T>) -> Self {
-   |             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
-
-warning: unused variable: `err`
-  --> src/util/err.rs:56:13
-   |
-56 |     fn from(err: TryRecvError) -> Self {
-   |             ^^^ help: if this is intentional, prefix it with an underscore: `_err`
-
-warning: unused variable: `err`
-  --> src/util/err.rs:62:14
-   |
-62 |      fn from(err: FlexiLoggerError) -> Self {
-   |              ^^^ help: if this is intentional, prefix it with an underscore: `_err`
-
-warning: unused variable: `res`
-   --> src/frame_buf/frame_tree.rs:460:21
-    |
-460 |                 let res = frame.set(pos - self.anchor, cel).unwrap();
-    |                     ^^^ help: if this is intentional, prefix it with an underscore: `_res`
-
-warning: unused variable: `pos`
-  --> src/layout.rs:89:24
-   |
-89 |             .filter(|&(pos, c)| c == None)
-   |                        ^^^ help: if this is intentional, prefix it with an underscore: `_pos`
-
-warning: unused variable: `c`
-  --> src/layout.rs:90:25
-   |
-90 |             .map(|(pos, c)| pos)
-   |                         ^ help: if this is intentional, prefix it with an underscore: `_c`
-
-warning: unused variable: `c`
-  --> src/layout.rs:99:25
-   |
-99 |             .map(|(pos, c)| pos)
-   |                         ^ help: if this is intentional, prefix it with an underscore: `_c`
-
-warning: unused variable: `y`
-   --> src/main.rs:228:16
-    |
-228 |         Resize(y, x) => FrameResult::Quit,
-    |                ^ help: if this is intentional, prefix it with an underscore: `_y`
-
-warning: unused variable: `x`
-   --> src/main.rs:228:19
-    |
-228 |         Resize(y, x) => FrameResult::Quit,
-    |                   ^ help: if this is intentional, prefix it with an underscore: `_x`
-
-warning: unused variable: `state`
-   --> src/main.rs:200:23
-    |
-200 | fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) -> FrameResult {
-    |                       ^^^^^ help: if this is intentional, prefix it with an underscore: `_state`
-
-warning: variable does not need to be mutable
-  --> src/animation/card_repo.rs:80:9
-   |
-80 |     let mut shape_spacing = if card.shape == CardShape::Squiggle && card.number == CardNumber::Three {
-   |         ----^^^^^^^^^^^^^
-   |         |
-   |         help: remove this `mut`
-   |
-   = note: `#[warn(unused_mut)]` on by default
-
-warning: variable does not need to be mutable
-   --> src/animation/card_repo.rs:272:9
-    |
-272 |     let mut cards_active = stamp_shapes(scale, card_active.clone(), ACTIVE_BG);
-    |         ----^^^^^^^^^^^^
-    |         |
-    |         help: remove this `mut`
-
-warning: variable does not need to be mutable
-   --> src/animation.rs:355:10
-    |
-355 |     let (mut width, mut height) = TS.update();
-    |          ----^^^^^
-    |          |
-    |          help: remove this `mut`
-
-warning: variable does not need to be mutable
-   --> src/animation.rs:355:21
-    |
-355 |     let (mut width, mut height) = TS.update();
-    |                     ----^^^^^^
-    |                     |
-    |                     help: remove this `mut`
-
-warning: variable does not need to be mutable
-   --> src/animation.rs:358:9
-    |
-358 |     let mut start = Instant::now();
-    |         ----^^^^^
-    |         |
-    |         help: remove this `mut`
-
-warning: variable does not need to be mutable
-  --> src/frame_buf/termable.rs:49:28
-   |
-49 |     pub fn push(&mut self, mut tc: TermChar) -> bool {
-   |                            ----^^
-   |                            |
-   |                            help: remove this `mut`
-
-warning: variable does not need to be mutable
-   --> src/frame_buf.rs:134:26
-    |
-134 |         dirt.retain(|&k, mut v| {
-    |                          ----^
-    |                          |
-    |                          help: remove this `mut`
-
-warning: variant `Nop` is never constructed
-  --> src/animation.rs:30:5
-   |
-28 | pub enum Msg {
-   |          --- variant in this enum
-29 |     QuitMsg,
-30 |     Nop,
-   |     ^^^
-   |
-   = note: `#[warn(dead_code)]` on by default
-
-warning: function `sleep_until` is never used
-   --> src/animation.rs:174:8
-    |
-174 | pub fn sleep_until(i: Instant) {
-    |        ^^^^^^^^^^^
-
-warning: function `show_outline` is never used
-   --> src/animation.rs:280:4
-    |
-280 | fn show_outline(ft: &mut FrameTree, card: Card) {
-    |    ^^^^^^^^^^^^
-
-warning: function `hide_shadow` is never used
-   --> src/animation.rs:292:4
-    |
-292 | fn hide_shadow(ft: &mut FrameTree, card: Card) {
-    |    ^^^^^^^^^^^
-
-warning: function `hide_good` is never used
-   --> src/animation.rs:300:4
-    |
-300 | fn hide_good(ft: &mut FrameTree, card: Card) {
-    |    ^^^^^^^^^
-
-warning: function `hide_bad` is never used
-   --> src/animation.rs:308:4
-    |
-308 | fn hide_bad(ft: &mut FrameTree, card: Card) {
-    |    ^^^^^^^^
-
-warning: field `deck` is never read
-  --> src/animation/card_repo.rs:26:5
-   |
-25 | pub struct CardRepo {
-   |            -------- field in this struct
-26 |     deck: FrameTree,
-   |     ^^^^
-
-warning: function `set_s` is never used
-   --> src/animation/card_repo.rs:140:4
-    |
-140 | fn set_s(tree: &mut FrameTree, mut pos: TermPos, s: String, fg: Color, bg: Color) -> Result<()> {
-    |    ^^^^^
-
-warning: function `get_bg` is never used
-   --> src/animation/card_repo.rs:311:4
-    |
-311 | fn get_bg(c:Card, bg: Color) -> Color {
-    |    ^^^^^^
-
-warning: associated function `deck` is never used
-  --> src/animation/card_repo.rs:54:12
-   |
-54 |     pub fn deck(&self) -> FrameTree {
-   |            ^^^^
-
-warning: function `find_set` is never used
-  --> src/game.rs:22:4
-   |
-22 | fn find_set(lay:Layout) -> Option<[DealtPos; 3]> {
-   |    ^^^^^^^^
-
-warning: variant `Fade` is never constructed
-  --> src/game.rs:56:5
-   |
-50 | pub enum ChangeAtom {
-   |          ---------- variant in this enum
-...
-56 |     Fade(Card, DealtPos),
-   |     ^^^^
-   |
-   = note: `ChangeAtom` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
-
-warning: associated function `has_changes` is never used
-   --> src/game.rs:130:12
-    |
-130 |     pub fn has_changes(&self) -> bool {
-    |            ^^^^^^^^^^^
-
-warning: associated function `last_set_found` is never used
-   --> src/game.rs:218:12
-    |
-218 |     pub fn last_set_found(&self) -> Option<(Card, Card, Card)> {
-    |            ^^^^^^^^^^^^^^
-
-warning: constant `QUESTION_BG` is never used
-  --> src/util/config.rs:70:11
-   |
-70 | pub const QUESTION_BG: Color = Color::White;
-   |           ^^^^^^^^^^^
-
-warning: constant `SHADOW` is never used
-  --> src/util/config.rs:74:11
-   |
-74 | pub const SHADOW: Color = Color::Black;
-   |           ^^^^^^
-
-warning: constant `PIPE_BR` is never used
-  --> src/util/config.rs:88:11
-   |
-88 | pub const PIPE_BR: &'static str = "┛";
-   |           ^^^^^^^
-
-warning: constant `PIPE_BL` is never used
-  --> src/util/config.rs:89:11
-   |
-89 | pub const PIPE_BL: &'static str = "┗";
-   |           ^^^^^^^
-
-warning: constant `PIPE_TL` is never used
-  --> src/util/config.rs:90:11
-   |
-90 | pub const PIPE_TL: &'static str = "┏";
-   |           ^^^^^^^
-
-warning: constant `PIPE_TR` is never used
-  --> src/util/config.rs:91:11
-   |
-91 | pub const PIPE_TR: &'static str = "┓";
-   |           ^^^^^^^
-
-warning: associated function `is_empty` is never used
-   --> src/deck.rs:139:8
-    |
-139 |     fn is_empty(&self) -> bool {
-    |        ^^^^^^^^
-
-warning: associated function `peek_n` is never used
-   --> src/deck.rs:143:8
-    |
-143 |     fn peek_n(&self, n:usize) -> &[Card] {
-    |        ^^^^^^
-
-warning: associated function `take3` is never used
-   --> src/deck.rs:153:8
-    |
-153 |     fn take3(&mut self) -> Option<(Card, Card, Card)> {
-    |        ^^^^^
-
-warning: associated function `enumerate` is never used
-  --> src/frame_buf/grid.rs:26:12
-   |
-26 |     pub fn enumerate(&self) -> impl Iterator<Item=(TermPos, T)> + '_ {
-   |            ^^^^^^^^^
-
-warning: associated function `n` is never used
-   --> src/frame_buf/termable.rs:109:8
-    |
-109 |     fn n(&self) -> usize {
-    |        ^
-
-warning: field `zmark` is never read
-  --> src/frame_buf/frame_tree.rs:37:5
-   |
-31 | pub struct FrameTree {
-   |            --------- field in this struct
-...
-37 |     zmark: i32
-   |     ^^^^^
-   |
-   = note: `FrameTree` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
-
-warning: associated function `iter` is never used
-  --> src/layout.rs:46:8
-   |
-46 |     fn iter (&self) -> impl Iterator<Item=&Option<Card>> {
-   |        ^^^^
-
-warning: associated function `count` is never used
-  --> src/layout.rs:81:8
-   |
-81 |     fn count (&self) -> u16 {
-   |        ^^^^^
-
-warning: associated function `extra3` is never used
-   --> src/layout.rs:151:8
-    |
-151 |     fn extra3(&mut self, deck: &mut Deck) -> Vec<(GamePos, GamePos, Card)> {
-    |        ^^^^^^
-
-warning: associated function `style_cmd` is never used
-  --> src/term_char.rs:58:8
-   |
-58 |     fn style_cmd(&self) -> style::Colors {
-   |        ^^^^^^^^^
-
-warning: associated function `matches` is never used
-  --> src/term_char.rs:65:8
-   |
-65 |     fn matches(&self, fg0: Color, bg0: Color) -> bool {
-   |        ^^^^^^^
-
-warning: unused `std::result::Result` that must be used
-   --> src/main.rs:256:9
-    |
-256 |         game_snd.send(Msg::ChangeMsg(chng));
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: `#[warn(unused_must_use)]` on by default
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/main.rs:270:21
-    |
-270 |                     game_snd.send(msg);
-    |                     ^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/main.rs:274:17
-    |
-274 |                 click_snd.send(cmsg);
-    |                 ^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/main.rs:283:25
-    |
-283 |                         game_snd.send(msg);
-    |                         ^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/main.rs:286:47
-    |
-286 |                 FrameResult::Click(cmsg) => { click_snd.send(cmsg); }
-    |                                               ^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/animation.rs:437:17
-    |
-437 | /                 back_snd.send(
-438 | |                     BackMsg::Collisions(buf.tree().collide(pos))
-439 | |                 );
-    | |__________________^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/animation.rs:548:5
-    |
-548 |     back_snd.send(BackMsg::QuitMsg);
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/animation/card_repo.rs:108:9
-    |
-108 |         set_shape_rel(scale, &mut card_lay, card, (drop, offset + shape_pos + spacing).finto(), bg);
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/animation/card_repo.rs:125:5
-    |
-125 |     set_s_clear(&mut card_lay, (drop, offset).finto(), String::from(scale.RAW_QUESTION), fg, bg);
-    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: unused `std::result::Result` that must be used
-   --> src/frame_buf.rs:155:13
-    |
-155 |             queue!(self.under, cursor::MoveTo(0, row.finto()));
-    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-    = note: this warning originates in the macro `queue` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-warning: unused `std::result::Result` that must be used
-   --> src/frame_buf.rs:158:17
-    |
-158 | /                 queue!(
-159 | |                     self.under,
-160 | |                     cursor::MoveToColumn(col.finto()),
-161 | |                     PrintStyledContent(styled)
-162 | |                 );
-    | |_________________^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-    = note: this warning originates in the macro `queue` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-warning: unused `std::result::Result` that must be used
-   --> src/frame_buf.rs:167:9
-    |
-167 |         self.under.flush();
-    |         ^^^^^^^^^^^^^^^^^^^
-    |
-    = note: this `Result` may be an `Err` variant, which should be handled
-
-warning: `set` (bin "set") generated 100 warnings
-    Finished dev [unoptimized + debuginfo] target(s) in 9.96s
-     Running `target/debug/set`
-thread '<unnamed>' panicked at 'assertion failed: width > 0 && height > 0', src/animation.rs:356:5
-stack backtrace:
-   0: rust_begin_unwind
-             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/std/src/panicking.rs:584:5
-   1: core::panicking::panic_fmt
-             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:142:14
-   2: core::panicking::panic
-             at /rustc/897e37553bba8b42751c67658967889d11ecd120/library/core/src/panicking.rs:48:5
-   3: set::animation::animate
-             at ./src/animation.rs:356:5
-   4: set::main::{{closure}}
-             at ./src/main.rs:252:9
-note: Some details are omitted, run with `RUST_BACKTRACE=full` for a verbose backtrace.
+Some errors have detailed explanations: E0277, E0308, E0599.
+For more information about an error, try `rustc --explain E0277`.
+warning: `set` (bin "set") generated 45 warnings
+error: could not compile `set` due to 16 previous errors; 45 warnings emitted

@@ -77,26 +77,30 @@ impl TermPos {
     //     );
     // }
 
-    pub fn chk(self) -> Self {
-        let (h, w) = TS.dims();
+    // pub fn chk(self) -> Self {
+    //     let (h, w) = TS.dims();
 
-        debug_assert!(
-            0 <= self.y &&
-            self.y < h &&
-            0 <= self.x &&
-            self.x < w
-        );
+    //     debug_assert!(
+    //         0 <= self.y &&
+    //         self.y < h &&
+    //         0 <= self.x &&
+    //         self.x < w
+    //     );
 
-        self
-    }
+    //     self
+    // }
 
-    pub fn onscreen(self) -> bool {
-        let (h, w) = TS.dims();
+    // pub fn onscreen(self) -> bool {
+    //     let (h, w) = TS.dims();
 
-        0 <= self.y &&
-        self.y < h &&
-        0 <= self.x &&
-        self.x < w
+    //     0 <= self.y &&
+    //     self.y < h &&
+    //     0 <= self.x &&
+    //     self.x < w
+    // }
+
+    pub fn pos(self) -> bool {
+        self.y >= 0 && self.x >= 0
     }
 
     pub fn new(y:i16, x:i16) -> Self {

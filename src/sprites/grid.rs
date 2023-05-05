@@ -4,7 +4,7 @@ use crate::bounds::{Bounds, BoundsIter};
 
 use crate::util::{*, SetErrorKind as SEK, SetError as SE};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Grid<T: Copy> {
     grid: Vec<Vec<T>>,
     height: usize,
@@ -20,11 +20,11 @@ impl<'a, T: Copy> Iterator for GridEnumerator<'a, T> {
     type Item = ((usize, usize), T);
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((y, x)) = self.iter.next() {
-            if let Ok(t) = self.grid.get((y, x)) {
-                Some(((y, x), t))
-            } else {
-                None
-            }
+            Some((
+                (y, x),
+                self.grid.get((y, x))
+                    .expect("shouldn't be possible for object to produce invalid iterator over itself")
+            ))
         } else {
             None
         }
@@ -33,7 +33,6 @@ impl<'a, T: Copy> Iterator for GridEnumerator<'a, T> {
 
 impl<T: Copy> Grid<T> {
     pub fn new(height: usize, width: usize, fill: T) -> Self {
-        debug_assert!(height >= 1 && width >= 1);
         Self{ grid: vec![vec![fill; width]; height], height, width }
     }
 
@@ -46,15 +45,15 @@ impl<T: Copy> Grid<T> {
     }
 
     pub fn enumerate(&self) -> GridEnumerator<T> {
-        GridEnumerator { grid: self, iter: Bounds::mk((0, 0), (self.height-1, self.width-1)).into_iter()}
+        GridEnumerator { grid: self, iter: Bounds::mk((0, 0), (self.height, self.width)).into_iter()}
     }
 
     pub fn get(&self, (row_i, col_i): (usize, usize)) -> Result<T> {
         if let Some(row) = self.grid.get(row_i) {
             if let Some(cell) = row.get(col_i) {
                 Ok(*cell)
-            } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::get")) }
-        } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::get")) }
+            } else { Err(SE::new(SEK::OutOfBounds, "column index too big")) }
+        } else { Err(SE::new(SEK::OutOfBounds, "row index too big")) }
     }
 
     pub fn set(&mut self, (row_i, col_i): (usize, usize), cel: T) -> Result<T> {
@@ -63,8 +62,8 @@ impl<T: Copy> Grid<T> {
                 let ret = *cell;
                 *cell = cel;
                 Ok(ret)
-            } else { Err(SE::new(SEK::PanelOob, "column index out of bounds in Grid::set")) }
-        } else { Err(SE::new(SEK::PanelOob, "row index out of bounds in Grid::set")) }
+            } else { Err(SE::new(SEK::OutOfBounds, "column index too big")) }
+        } else { Err(SE::new(SEK::OutOfBounds, "row index out too big")) }
     }
 
     // fn resize(&mut self, height: usize, width: usize, fill: T){

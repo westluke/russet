@@ -20,15 +20,15 @@ impl Dirt {
     //     iter
     // }
 
-    pub fn merge(&mut self, mut other: Self) {
-        for (&k, v) in other.borrow_mut().iter() {
-            let ent = self.borrow_mut()
-                .entry(k)
-                .or_default();
-            ent.extend(v);
-            ent.sort();
-        }
-    }
+    // pub fn merge(&mut self, mut other: Self) {
+    //     for (&k, v) in other.borrow_mut().iter() {
+    //         let ent = self.borrow_mut()
+    //             .entry(k)
+    //             .or_default();
+    //         ent.extend(v);
+    //         ent.sort();
+    //     }
+    // }
 
     pub fn borrow(&self) -> Ref<HashMap<i16, Vec<i16>>> {
         self.0.borrow()
@@ -37,8 +37,6 @@ impl Dirt {
     pub fn borrow_mut(&self) -> RefMut<HashMap<i16, Vec<i16>>> {
         self.0.borrow_mut()
     }
-
-    // {{
 
     pub fn set_dirty(&self, p: TermPos) {
         let mut rf = self.0.borrow_mut();

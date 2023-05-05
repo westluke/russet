@@ -13,7 +13,7 @@ pub enum SetErrorKind {
     ThreadComm,
     Logging,
     Conversion,
-    PanelOob,
+    OutOfBounds,
     IdNotFound,
 }
 
@@ -22,6 +22,14 @@ pub struct SetError {
     pub kind: SetErrorKind,
     pub msg: String
 }
+
+impl From<SetErrorKind> for SetError {
+    fn from(sek: SetErrorKind) -> Self {
+        Self::new(sek, "")
+    }
+}
+
+// What to call it? Just Oob?
 
 impl SetError {
     pub fn new(kind: SetErrorKind, msg: &str) -> Self {

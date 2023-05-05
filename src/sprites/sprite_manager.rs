@@ -3,11 +3,13 @@ use std::cell::RefCell;
 use std::io::Write;
 use std::cmp::Ordering;
 
-use super::{sprite::Sprite, pre_sprite::PreSprite};
+use super::{sprite::Sprite};
 use super::sprite_tree::SpriteTree;
 use super::dirt::Dirt;
 use super::{SpriteCell::*, Stn};
 use super::termable::Termable;
+
+use crate::pos::TermPos;
 
 use crossterm::queue;
 use crossterm::cursor;
@@ -16,7 +18,7 @@ use crossterm::style::{PrintStyledContent, Stylize, StyledContent, ContentStyle}
 use log::info;
 
 use crate::term_char::TermChar;
-use crate::util::FInto;
+use crate::util::*;
 
 // This is a VERY leaky abstraction, not worth the effort of making it automatic.
 
@@ -31,26 +33,28 @@ pub struct SpriteManager {
     pub dirt: Dirt
 }
 
-impl From<PreSprite> for SpriteManager {
-    fn from(pre: PreSprite) -> Self {
-        let mut ret = Self::default();
-        let post = ret.attach(pre);
-        ret.sprites.push(Rc::new(RefCell::new(post)));
-        ret
-    }
-}
+// impl From<PreSprite> for SpriteManager {
+//     fn from(pre: PreSprite) -> Self {
+//         let mut ret = Self::default();
+//         let post = ret.attach(pre);
+//         ret.sprites.push(Rc::new(RefCell::new(post)));
+//         ret
+//     }
+// }
 
 impl SpriteManager {
-        
-    pub fn attach(&mut self, sp: PreSprite) -> Sprite {
-        let ret = Sprite::new(sp, self.dirt.clone());
-        ret.dirty_all();
-        ret
-    }
 
-    pub fn refresh_sprites(&mut self) {
-        self.sprites = self.tree.all_sprites();
-    }
+    // pub fn set_tree(&mut self, tree: SpriteTree) {
+    //     self.tree = tree
+    // }
+
+    // pub fn get_tree_mut(&mut self) -> &mut SpriteTree {
+    //     &mut self.tree
+    // }
+        
+    // pub fn refresh_sprites(&mut self) {
+    //     self.sprites = self.tree.all_sprites();
+    // }
 
     pub fn sort(&mut self) {
         self.sprites.sort_by(|x, y| {
@@ -71,78 +75,68 @@ impl SpriteManager {
     pub fn write(&mut self, writer: &mut impl Write) {
 
         let rf = self.dirt.borrow();
+        info!("{:?}", self.dirt);
 
         for (&y, line) in rf.iter() {
-
-            // Don't abstract until you need to! It was no longer clear that I really needed
-            // LineUpdate.
-
-            let mut term = Termable::default();
-            let mut start: i16 = 0;
-            let mut last: i16 = -1;
-
-
-            // TODO: check to make sure that the relevant pixels are in bounds!
-
-            for &x in line {
-                info!("y: {}, x: {}", y, x);
-
-                // We write the default background color if we don't hit anything opaque
-                let mut char_to_write = TermChar::default();
-
-                for sprite in &self.sprites {
-                    let cel = sprite.borrow_mut()
-                        .get((y, x).finto())
-                        .unwrap_or(Transparent);
-                    info!("cel: {:?}", cel);
-
-                    if let Opaque(tc) = cel {
-                        char_to_write = tc;
-                        break;
-                    }
-                }
-
-                // info!("char: {:?}", char_to_write);
-                
-                // If there was a jump, then don't push onto current, push onto new term.
-                // If there wasn't a jump, push onto current term - if that fails, push onto new
-                // term. In either case, current term is non-empty by end of if.
-                if (x != last + 1) || !term.push(char_to_write) {
-                    // info!("term: {:?}", term);
-                    // info!("printing at: {}, {}", y, start);
-                    // info!("term displayed: |{}|", term);
-                    queue!(
-                        writer,
-                        cursor::MoveTo(start.finto(), y.finto()),
-                        PrintStyledContent(term.finalize())
-                    );
-                    term = Termable::default();
-                    term.push(char_to_write);
-                    start = x;
-                }
-
-                last = x;
-            }
-
-            info!("term: {:?}", term);
-
-            queue!(
-                writer,
-                cursor::MoveTo(start.finto(), y.finto()),
-                PrintStyledContent(term.finalize())
-            );
-
-            // queue!(
-            //     writer,
-            //     cursor::MoveTo(0, y.finto()),
-            //     PrintStyledContent(StyledContent::new(
-            //         ContentStyle::new(),
-            //         "wtfdood"
-            //     ))
-            // );
+            if y < 0 || TS.height() <= y { continue; };
+            write_line(writer, &self.sprites, y, line);
         }
 
-        // // queue!(writer, cursor::MoveTo(0, 0), PrintStyledContent("heyo".stylize()));
         writer.flush();
     }
+}
+
+fn queue_term(writer: &mut impl Write, term: Termable, y: u16, x: u16) {
+    queue!(
+        writer,
+        cursor::MoveTo(x, y),
+        PrintStyledContent(term.finalize())
+    );
+}
+
+fn write_line(writer: &mut impl Write, sprites: &Vec<Stn>, y: i16, line: &Vec<i16>) {
+
+    let mut term = Termable::default();
+    let mut start: i16 = 0;
+    let mut last: i16 = -1;
+    let mut at_least_one = false;
+
+    for &x in line {
+        if x < 0 { continue; };
+        if TS.width() <= x { break; };
+
+        at_least_one = true;
+
+        // We write the default background color if we don't hit anything opaque
+        let mut char_to_write = TermChar::default();
+
+        for sprite in sprites {
+            // fail here
+            // info!("(y, x): {:?}", (y, x));
+            let cel = sprite.borrow_mut()
+                .get((y, x).finto())
+                .unwrap_or(Transparent);
+
+            if let Opaque(tc) = cel {
+                char_to_write = tc;
+                break;
+            }
+        }
+
+        // If there was a jump, or if pushing onto the current termable fails,
+        // then write the old termable and start a new one. In either case, termable is
+        // non-empty by end.
+        
+        if (x != last + 1) || !term.push(char_to_write) {
+            queue_term(writer, term, y.finto(), start.finto());
+            term = Termable::default();
+            term.push(char_to_write);
+            start = x;
+        }
+
+        last = x;
+    }
+
+    // Push the last term, if non-empty.
+    if at_least_one { queue_term(writer, term, y.finto(), start.finto()); };
 }

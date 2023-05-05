@@ -14,32 +14,32 @@ use crate::util::FInto as _;
 //
 // Ugh no, cuz i16 can make sense in a TermPos, it can't make sense here.
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Img(Grid<SpriteCell>);
 
 impl Img {
-    pub fn horiz(len: i16, px: SpriteCell) -> Self {
-        Self (Grid::new(1, len.finto(), px))
+    pub fn horiz(len: usize, px: SpriteCell) -> Self {
+        Self (Grid::new(1, len, px))
     }
 
-    pub fn vert(len: i16, px: SpriteCell) -> Self {
-        Self (Grid::new(len.finto(), 1, px))
+    pub fn vert(len: usize, px: SpriteCell) -> Self {
+        Self (Grid::new(len, 1, px))
     }
 
-    pub fn square(side_len: i16, px: SpriteCell) -> Self {
-        Self (Grid::new(side_len.finto(), side_len.finto(), px))
+    pub fn square(side_len: usize, px: SpriteCell) -> Self {
+        Self (Grid::new(side_len, side_len, px))
     }
 
-    pub fn rect(height: i16, width: i16, px: SpriteCell) -> Self {
-        Self (Grid::new(height.finto(), width.finto(), px))
+    pub fn rect(height: usize, width: usize, px: SpriteCell) -> Self {
+        Self (Grid::new(height, width, px))
     }
 
-    pub fn get(&self, pos: TermPos) -> Result<SpriteCell> {
-        self.0.get(pos.finto())
+    pub fn get(&self, pos: (usize, usize)) -> Result<SpriteCell> {
+        self.0.get(pos)
     }
 
-    pub fn set(&mut self, pos: TermPos, cel: SpriteCell) -> Result<SpriteCell> {
-        self.0.set(pos.finto(), cel)
+    pub fn set(&mut self, pos: (usize, usize), cel: SpriteCell) -> Result<SpriteCell> {
+        self.0.set(pos, cel)
     }
 
     // pub fn set_string(&mut self, 
