@@ -2,6 +2,8 @@ use std::cell::{RefCell, Ref, RefMut};
 use std::rc::Rc;
 
 pub use SpriteCell::*;
+pub use Visibility::*;
+pub use Clickability::*;
 
 use crate::term_char::TermChar;
 use crate::util::config::*;
@@ -23,6 +25,20 @@ pub mod sprite_manager;
 pub enum SpriteCell {
     Opaque(TermChar),
     Transparent,
+}
+
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
+pub enum Visibility {
+    #[default]
+    Visible,
+    Invisible
+}
+
+#[derive(Copy, Clone, Default, Debug, PartialEq, Eq)]
+pub enum Clickability {
+    #[default]
+    Clickable,
+    Unclickable
 }
 
 impl Default for SpriteCell {

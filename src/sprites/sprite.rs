@@ -7,7 +7,7 @@ use crate::util::{*, SetError as SE, SetErrorKind as SEK};
 use crate::Id;
 use crate::bounds::Bounds;
 
-use super::SpriteCell;
+use super::*;
 use super::dirt::Dirt;
 use super::img::Img;
 
@@ -20,8 +20,8 @@ pub struct Sprite {
     id: Id<Self>,
     order: i16,
 
-    visible: bool,
-    clickable: bool,
+    visible: Visibility,
+    clickable: Clickability,
     dirt: Option<Dirt>,
 }
 
@@ -32,8 +32,8 @@ impl Clone for Sprite {
             anchor: self.anchor,
             id: Id::default(),
             order: self.order,
-            visible: true,
-            clickable: true,
+            visible: self.visible,
+            clickable: self.clickable,
             dirt: self.dirt.clone()
         }
     }
@@ -46,8 +46,8 @@ impl From<Img> for Sprite {
             anchor: Default::default(),
             id: Default::default(),
             order: Default::default(),
-            visible: true,
-            clickable: true,
+            visible: Visible,
+            clickable: Clickable,
             dirt: None
         }
     }
@@ -60,13 +60,13 @@ impl Sprite {
             anchor: (0, 0).finto(),
             id: Id::default(),
             order: Default::default(),
-            visible: true,
-            clickable: true,
+            visible: Visible,
+            clickable: Clickable,
             dirt: None
         }
     }
 
-    pub fn mk(img: Img, anchor: TermPos, order: i16, visible: bool, clickable: bool, dirt: Option<Dirt>) -> Self {
+    pub fn mk(img: Img, anchor: TermPos, order: i16, visible: Visibility, clickable: Clickability, dirt: Option<Dirt>) -> Self {
         Self { img, anchor, id: Id::default(), order, visible, clickable, dirt}
     }
 
@@ -94,7 +94,9 @@ impl Sprite {
 
     pub fn get_rel(&self, pos: TermPos) -> Result<SpriteCell> {
         if pos.pos() {
-            self.img.get(pos.finto())
+            if self.visible == Visible { self.img.get(pos.finto()) }
+            else { Ok(Transparent) }
+            // self.img.get(pos.finto())
         } else {
             Err(SE::new(SEK::OutOfBounds, "negative coordinates for sprite pixel access"))
         }
@@ -141,21 +143,19 @@ impl Sprite {
         self.id.clone()
     }
 
-    pub fn visible(&self) -> bool {
+    pub fn visible(&self) -> Visibility {
         self.visible
     }
 
-    pub fn set_visible(&mut self, v: bool) {
+    pub fn set_visible(&mut self, v: Visibility) {
         self.visible = v
     }
 
-    pub fn clickable(&self) -> bool {
+    pub fn clickable(&self) -> Clickability {
         self.clickable
     }
 
-    pub fn set_clickable(&mut self, c: bool) {
+    pub fn set_clickable(&mut self, c: Clickability) {
         self.clickable = c
     }
 }
-
-

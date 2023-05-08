@@ -1,16 +1,23 @@
 use std::{io, thread, time, marker::PhantomData};
 use std::fmt::{Display, Formatter};
-use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use uuid::Uuid;
+use bimap::{BiMap, Overwritten};
 
 use crate::deck::*;
 
-#[derive(Hash, Debug, Eq)]
+#[derive(Debug)]
 pub struct Id<T>(Uuid, PhantomData<T>);
 
 impl<T> Default for Id<T> {
     fn default() -> Self {
         Self(Uuid::new_v4(), Default::default())
+    }
+}
+
+impl<T> Hash for Id<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
@@ -34,6 +41,8 @@ impl<T> PartialEq for Id<T> {
     }
 }
 
+impl<T> Eq for Id<T> {}
+
 
 impl<T> Id<T> {
     pub fn from<S>(oth: Id<S>) -> Self {
@@ -47,8 +56,8 @@ impl<T> Id<T> {
 
 #[derive(Hash, Default, Debug, Clone, PartialEq, Eq)]
 pub struct IdKey {
-    card: Option<Card>,
-    name: Option<String>
+    pub card: Option<Card>,
+    pub name: Option<String>
 }
 
 impl From<String> for IdKey {
@@ -81,33 +90,28 @@ impl From<(Card, &str)> for IdKey {
     }
 }
 
-impl IdKey {
-    pub fn card(&self) -> Option<Card> {
-        self.card
-    }
-
-    pub fn name(&self) -> Option<&String> {
-        self.name.as_ref()
-    }
-
-    pub fn set_card(&mut self, c: Option<Card>) {
-        self.card = c
-    }
-
-    pub fn set_name(&mut self, s: Option<String>) {
-        self.name = s
-    }
-}
-
-#[derive(Default, Debug, Clone)]
-pub struct IdManager<T> {
-    ids: HashMap<IdKey, Id<T>>
-}
+#[derive(Default, Clone)]
+pub struct IdManager<T> (BiMap<IdKey, Id<T>>);
 
 impl<T> IdManager<T> {
-    pub fn insert(&mut self, idkey: IdKey, id: Id<T>) -> Option<Id<T>> {
-        self.ids.insert(idkey, id)
+    pub fn absorb(&mut self, other: IdManager<T>) {
+        for (l, r) in other.0 {
+            self.insert(l, r);
+        }
     }
+
+    pub fn insert(&mut self, idkey: IdKey, id: Id<T>) -> Overwritten<IdKey, Id<T>> {
+        self.0.insert(idkey, id)
+    }
+
+    pub fn by_id(&self, id: Id<T>) -> Option<&IdKey> {
+        self.0.get_by_right(&id)
+    }
+
+    pub fn by_idkey(&self, idkey: IdKey) -> Option<Id<T>> {
+        self.0.get_by_left(&idkey).copied()
+    }
+
     // pub fn get;
     // pub fn remove;
     // pub fn merge;
@@ -115,89 +119,3 @@ impl<T> IdManager<T> {
     // pub fn len;
     // pub fn keys;
 }
-
-// #[derive(Clone, Hash, Debug, Eq)]
-// pub struct Id {
-//     uuid: Uuid,
-//     card: Option<Card>,
-//     name: Option<String>,
-//     // _marker: marker::PhantomData
-// }
-
-// impl Default for Id {
-//     fn default() -> Self {
-//         Self {
-//             uuid: Uuid::new_v4(),
-//             card: Default::default(),
-//             name: Default::default(),
-//             // _marker: Default::default()
-//         }
-//     }
-// }
-
-// impl PartialEq for Id {
-//     fn eq(&self, other: &Id) -> bool {
-//         self.uuid == other.uuid &&
-//         self.card == other.card &&
-//         self.name == other.name
-//     }
-// }
-
-// impl Display for Id {
-//     fn fmt(&self, fmt: &mut Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-//         write!(fmt, "Id({}", self.uuid)?;
-
-//         if let Some(c) = self.card {
-//             write!(fmt, ", {}", c)?;
-//         }
-
-//         if let Some(n) = self.name.clone() {
-//             write!(fmt, ", {}", n)?;
-//         };
-
-//         write!(fmt, ")")
-//     }
-// }
-
-// impl From<Card> for Id {
-//     fn from(c: Card) -> Self {
-//         Self {
-//             uuid: Uuid::new_v4(),
-//             card: Some(c),
-//             name: None,
-//             // _marker: Default::default()
-//         }
-//     }
-// }
-
-// // impl From<String> for Id {
-// //     fn from(s: String) -> Self {
-// //         Self {
-// //             uuid: Uuid::new_v4(),
-// //             card: None,
-// //             name: Some(s)
-// //         }
-// //     }
-// // }
-
-// impl From<&str> for Id {
-//     fn from(s: &str) -> Self {
-//         Self {
-//             uuid: Uuid::new_v4(),
-//             card: None,
-//             name: Some(s.into()),
-//             // _marker: Default::default()
-//         }
-//     }
-// }
-
-// // impl<T, S> From<&Id<S>> for Id {
-// //     fn from(id: &Id<S>) -> Self {
-// //         Self {
-// //             uuid: id.uuid,
-// //             card: id.card,
-// //             name: id.name.clone(),
-// //             // _marker: Default::default()
-// //         }
-// //     }
-// // }

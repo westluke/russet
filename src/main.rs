@@ -31,6 +31,11 @@ use flexi_logger::{FileSpec, Logger, WriteMode};
 
 
 
+// main handles input, sends msgs to animation containing all the information animation needs to
+// render. animation handles, well, ongoing animations and writing to screen.
+//
+// Eventually, will have third thread, taking care of doing the actual low-level writing to
+// terminal and waiting for those to complete.
 
 
 
@@ -57,6 +62,7 @@ use game::*;
 use animation::*;
 use util::*;
 pub use id::*;
+pub use pos::TermPos;
 
 
 // use pos::*;
@@ -121,47 +127,47 @@ pub use id::*;
                 // };
             // },
 
-enum FrameResult {
+// Result of interpreting input
+enum InputResult {
     Quit,
     Nop,
     Msgs(Vec<Msg>),
-    Click(ClickMsg)
+    Click(TermPos)
 }
 
-fn handle_key_event(kc: KeyCode) -> FrameResult {
+// Result of interpreting collision reported by animation thread.
+enum BackMsgResult {
+    Quit,
+    Nop,
+    Msgs(Vec<Msg>)
+}
+
+fn handle_key_event(kc: KeyCode) -> InputResult {
     match kc {
-        KeyCode::Backspace | KeyCode::Delete => FrameResult::Quit,
-        _ => FrameResult::Nop
+        KeyCode::Backspace | KeyCode::Delete => InputResult::Quit,
+        _ => InputResult::Nop
     }
 }
 
-fn handle_back_msg(state: &mut GameState, msg: std::result::Result<BackMsg, TryRecvError>) -> FrameResult {
+fn handle_back_msg(state: &mut GameState, msg: std::result::Result<BackMsg, TryRecvError>) -> BackMsgResult {
     match msg {
         Err(TryRecvError::Disconnected)
-        | Ok(BackMsg::QuitMsg) => return FrameResult::Quit,
-        Err(TryRecvError::Empty) => return FrameResult::Nop,
-        Ok(BackMsg::Collisions(None)) => return FrameResult::Nop,
-        Ok(BackMsg::Collisions(Some(v))) => {
-            // info!("HANDLING COLLISIONS IN MAIN");
-            // info!("Collision IDs
-            for id in v {
-                // info!("ID: {}", id);
-                // TODO: FIX THIS
-                if let 0 = 0 {
-                // if let Some(c) = id.card {
-                    // state.select(c);
-                    let csets = state.changes();
-                    let msgs = csets.into_iter().map(|c| Msg::ChangeMsg(c)).collect();
-                    return FrameResult::Msgs(msgs);
-                }
-            };
-            return FrameResult::Nop;
-        }
+        | Ok(BackMsg::QuitMsg) => return BackMsgResult::Quit,
+        Err(TryRecvError::Empty) => return BackMsgResult::Nop,
+        Ok(BackMsg::Collisions(mut cards)) => 
+            if let Some(c) = cards.pop() {
+                state.select(c);
+                let csets = state.changes();
+                let msgs = csets.into_iter().map(|c| Msg::ChangeMsg(c)).collect();
+                BackMsgResult::Msgs(msgs)
+            } else {
+                BackMsgResult::Nop
+            }
     }
 }
 
-fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) -> FrameResult {
-    use FrameResult::*;
+fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) -> InputResult {
+    use InputResult::*;
     use Event::*;
 
     if let Err(_) = input { return Quit; };
@@ -185,25 +191,21 @@ fn handle_input_frame(state: &mut GameState, input: crossterm::Result<Event>) ->
             }
         ) => {
             // info!("CLICK DETECTED!!");
-            Click(ClickMsg((row, column).finto()))
+            Click((row, column).finto())
         }
 
-        Resize(y, x) => FrameResult::Quit,
-
-        _ => FrameResult::Nop
+        Resize(y, x) => Quit,
+        _ => Nop
     };
 }
 
 fn main() -> Result<()> {
 
-    // let id0: Id<i8> = Default::default();
-    // let id1: Id<u8> = Default::default();
-
     env::set_var("RUST_BACKTRACE", "1");
 
-    let (game_snd, game_rcv) = mpsc::channel::<animation::Msg>();
-    let (click_snd, click_rcv) = mpsc::channel::<animation::ClickMsg>();
-    let (back_snd, back_rcv) = mpsc::channel::<animation::BackMsg>();
+    let (snd, anim_rcv) = mpsc::channel::<animation::Msg>();
+    let (click_snd, click_rcv) = mpsc::channel::<TermPos>();
+    let (anim_snd, rcv) = mpsc::channel::<animation::BackMsg>();
 
     terminal::enable_raw_mode()?;
     execute!(io::stdout(), event::EnableMouseCapture)?;
@@ -216,11 +218,11 @@ fn main() -> Result<()> {
     let mut gs = GameState::default();
 
     let handle = thread::spawn(|| {
-        animation::animate(game_rcv, click_rcv, back_snd)
+        animation::animate(anim_rcv, click_rcv, anim_snd)
     });
 
     for chng in gs.changes() {
-        game_snd.send(Msg::ChangeMsg(chng));
+        snd.send(Msg::ChangeMsg(chng));
     }
 
     // idea: to avoid excessive buffering on holding keydown, 
@@ -229,31 +231,25 @@ fn main() -> Result<()> {
     // Also, I think maybe screen size changes should be detected HERE, rather than in animation.
 
     loop {
-        match handle_back_msg(&mut gs, back_rcv.try_recv()) {
-            FrameResult::Quit => break,
-            FrameResult::Nop => (),
-            FrameResult::Msgs (msgs) => {
+        match handle_back_msg(&mut gs, rcv.try_recv()) {
+            BackMsgResult::Quit => break,
+            BackMsgResult::Nop => (),
+            BackMsgResult::Msgs (msgs) => {
                 for msg in msgs {
-                    game_snd.send(msg);
+                    snd.send(msg);
                 };
-            }
-            FrameResult::Click (cmsg) => {
-                // This doesn't make sense. Why was this here? What does FrameResult actually
-                // represent?
-                panic!();
-                click_snd.send(cmsg);
             }
         };
 
         if poll(Duration::from_millis(10))? {
             match handle_input_frame(&mut gs, read()) {
-                FrameResult::Quit => break,
-                FrameResult::Msgs(msgs) => {
+                InputResult::Quit => break,
+                InputResult::Msgs(msgs) => {
                     for msg in msgs {
-                        game_snd.send(msg);
+                        snd.send(msg);
                     }
                 }
-                FrameResult::Click(cmsg) => { click_snd.send(cmsg); }
+                InputResult::Click(cmsg) => { click_snd.send(cmsg); }
                 _ => ()
             }
         }
@@ -261,7 +257,7 @@ fn main() -> Result<()> {
 
     terminal::disable_raw_mode()?;
 
-    if let Err(x) = game_snd.send(Msg::QuitMsg){
+    if let Err(x) = snd.send(Msg::QuitMsg){
         info!("Failed to send Quit message to animation thread, err: {:?}", x);
     }
 

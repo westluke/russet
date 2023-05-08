@@ -52,9 +52,9 @@ impl SpriteManager {
     //     &mut self.tree
     // }
         
-    // pub fn refresh_sprites(&mut self) {
-    //     self.sprites = self.tree.all_sprites();
-    // }
+    pub fn refresh_sprites(&mut self) {
+        self.sprites = self.tree.all_sprites();
+    }
 
     pub fn sort(&mut self) {
         self.sprites.sort_by(|x, y| {
@@ -74,14 +74,16 @@ impl SpriteManager {
     // object communicating writes to a separate thread, which ACTUALLY writes them to terminal.
     pub fn write(&mut self, writer: &mut impl Write) {
 
-        let rf = self.dirt.borrow();
-        info!("{:?}", self.dirt);
+        {   
+            let rf = self.dirt.borrow();
 
-        for (&y, line) in rf.iter() {
-            if y < 0 || TS.height() <= y { continue; };
-            write_line(writer, &self.sprites, y, line);
-        }
+            for (&y, line) in rf.iter() {
+                if y < 0 || TS.height() <= y { continue; };
+                write_line(writer, &self.sprites, y, line);
+            }
+        };
 
+        self.dirt.clear();
         writer.flush();
     }
 }
@@ -111,8 +113,6 @@ fn write_line(writer: &mut impl Write, sprites: &Vec<Stn>, y: i16, line: &Vec<i1
         let mut char_to_write = TermChar::default();
 
         for sprite in sprites {
-            // fail here
-            // info!("(y, x): {:?}", (y, x));
             let cel = sprite.borrow_mut()
                 .get((y, x).finto())
                 .unwrap_or(Transparent);

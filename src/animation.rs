@@ -1,29 +1,23 @@
-use std::{thread, io, time, sync, collections};
+use std::{thread, io, time, sync};
 
-use io::Write;
 use time::{Instant, Duration};
-use sync::{Arc, Mutex, mpsc::{self, TryRecvError, RecvTimeoutError}};
-use collections::{HashMap};
-use std::hash::{Hash, Hasher};
+use sync::{mpsc::{self, TryRecvError, RecvTimeoutError}};
 
-use crossterm::{terminal, execute, style::{self, Color}};
+use crossterm::{terminal, execute};
 use log::{info};
 
 use crate::game::{*, ChangeAtom::*};
 use crate::pos::*;
 use crate::util::*;
-use crate::term_char::*;
-// use crate::sprites::*;
+use crate::sprites::sprite_tree::{*, InheritanceType::*};
 use crate::sprites::sprite_manager::SpriteManager;
-use crate::sprites::img::Img;
-use crate::sprites::*;
-use crate::deck::*;
-use crate::Id;
+use crate::sprites::sprite::Sprite;
+use crate::id::*;
+use crate::deck::Card;
 
 mod card_repo;
-use card_repo::make;
+use card_repo::{make, EmbodiedCard, EmbodiedDeck};
 
-// static anim_dur: Duration = Duration::from_millis(500);
 
 // Sent from main thread to animation thread
 // ChangeSet and main don't determine animation parameters, this module does
@@ -34,15 +28,14 @@ pub enum Msg {
     ChangeMsg(ChangeSet)
 }
 
-pub struct ClickMsg(pub TermPos);
-
 pub enum BackMsg {
     QuitMsg,
+
     // hm ok actually this id system is kinda gross for collisions.
     // Can I fix it easily? How do I know what got collided?
     // I think I need a better ID system yeah.
     // So what should an ID be? I think a struct of Option<Card> and Option<String>
-    Collisions(Option<Vec<Id<Self>>>)
+    Collisions(Vec<Card>)
 }
 
 // struct AnimationState {
@@ -336,13 +329,13 @@ pub fn sleep_until(i: Instant) {
 
 
 pub fn animate(
-    game_rcv: mpsc::Receiver<Msg>,
-    click_rcv: mpsc::Receiver<ClickMsg>,
-    back_snd: mpsc::Sender<BackMsg>
+    rcv: mpsc::Receiver<Msg>,
+    click_rcv: mpsc::Receiver<TermPos>,
+    snd: mpsc::Sender<BackMsg>
 ) -> Result<()> {
 
     // lock standard out to avoid lock thrashing. Already converted to raw mouse terminal by main
-    let mut stdout = io::stdout();//.lock();
+    let mut stdout = io::stdout().lock();
 
     // Swap to alternate screen, clear it (this might just be a scrolled-down version of the
     // main screen, but it's fine bc scroll is disabled in raw mode)
@@ -360,67 +353,34 @@ pub fn animate(
 
     let mut start = Instant::now();
 
-    // GONNA NEED A BETTER SYSTEM FOR KEEPING TRACK OF WHICH KAYER IS WHICH
-    // ALSO NEED TO RMEMEBER TO FIX UP LAYER DISPLAY SYSTEM
-    
     info!("animation loop starting");
 
-    // Exits only due to error or quit message
-    // What should this behavior be like?
-    // Obviously if we quit because of a quitmsg, we should complete the rest of the exit
-    // procedure. But what about an error? 
-    //
-    // How do I enforce ordering on layers?
-    // well, ordering works by place in the tree.
-    // so that suggests i should just manage the tree more carefully.
-    //
-    // Ok well now I'm really curious. How well does my algorithm (with witnesses)
-    // scale to pixel graphics? 3d? gaming? i gotta try.
-    // ok but focus. one thing at a time. ugh i need a todo file for this.
-
-    let cardrepo = make(SIZE_9);
-    let (mut card, idman) = cardrepo.card(
-        Card { color: CardColor::Color1, shape: CardShape::Oval, number: CardNumber::Three, fill: CardFill::Solid }
-    );
+    let repo9 = make(SIZE_9);
+    let repo7 = make(SIZE_7);
     let mut man = SpriteManager::default();
-    man.tree = card;
-    man.tree.register_dirt(Some(&man.dirt));
-    man.sprites = man.tree.all_sprites();
-    // info!("card: {:?}", card);
-    // panic!();
+    let mut tree_ids: IdManager<SpriteTree> = Default::default();
+    let mut sprite_ids: IdManager<Sprite> = Default::default();
 
-    // let fill0 = SpriteCell::Opaque(TermChar::Bg(Color::Red));
-    // let fill1 = SpriteCell::Opaque(TermChar::Bg(Color::Green));
-    // let img0 = Img::rect(10, 20, fill0);
-    // let img1 = Img::rect(20, 10, fill1);
-    // let psprite0 = PreSprite::mk(img0, (0, 0).finto(), 1);
-    // let psprite1 = PreSprite::mk(img1, (5, 2).finto(), 0);
-    // let mut man = SpriteForest::default();
-    // let sprite0 = man.attach(psprite0);
-    // let sprite1 = man.attach(psprite1);
-    // man.push_sprite(sprite0);
-    // man.push_sprite(sprite1);
-
-
-    // something's real fucked with sprite1. I think the bouunds / dirty all calculations are
-    // wrong.
-    // Yeah, dirt definitely wrong cuz im seeing transparents in all green sprite.
-
-    // GOTTA DEBUG NEW SPRITE SYSTEM!! FLASHING, SPREAD OUT PIXELS... V WEIRD
-
-    
     loop {
-        let game_msg = game_rcv.recv_timeout(Duration::from_millis(10));
+        let game_msg = rcv.recv_timeout(Duration::from_millis(10));
         let click_msg = click_rcv.try_recv();
 
         match click_msg {
             Err(TryRecvError::Disconnected) => break,
             Err(TryRecvError::Empty) => (),
-            Ok(ClickMsg(pos)) => {
-                info!("CLICK MSG RECEIVED");
-                // back_snd.send(
-                //     BackMsg::Collisions(buf.tree().collide(pos))
-                // );
+            Ok(pos) => {
+                info!("CLICK REGISTERED IN ANIMATION THREAD");
+                let mut cards: Vec<Card> = man.tree
+                    .collide(pos)
+                    .into_iter()
+                    .filter_map(|id| sprite_ids.by_id(id).map(|idk| idk.card).flatten())
+                    .collect();
+                cards.dedup();
+                info!("cards clicked: {:?}", cards);
+
+                snd.send(
+                    BackMsg::Collisions(cards)
+                );
             }
         }
 
@@ -433,71 +393,68 @@ pub fn animate(
             Err(RecvTimeoutError::Timeout) => (),
             Ok(Msg::Nop) => continue,
             Ok(Msg::ChangeMsg(cs)) => {
-                info!("{:?}", cs);
+                let ChangeSet { changes, stamp: _ } = cs;
+                info!("changeset: {:?}", changes);
+                for change in changes {
+                    match change {
+                        // Reflow(c, _, dst) => {
+                        //     info!("REFLOW");
+                        //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                        //     card_buf.set_anchor((&dst, &SIZE_7).finto());
+                        // },
+                       
+                        // GoodMove(c, _, dst) => {
+                        //     info!("GOODMOVE");
+                        //     show_good(buf.tree_mut(), c);
+                        //     show_shadow(buf.tree_mut(), c);
+                        //     hide_outline(buf.tree_mut(), c);
+                        //     make_inactive(buf.tree_mut(), c);
+
+                            
+                        //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
+                        //     card_buf.set_anchor((&dst, &SIZE_7).finto());
+                        // },
+                        
+                        // BadOutline(c, _) => {
+                        //     info!("BADOUTLINE");
+                        //     show_bad(buf.tree_mut(), c);
+                        //     make_inactive(buf.tree_mut(), c);
+                        // },
+                        // Select(c, _) => {
+                        //     info!("SELECT: {:?}", c);
+                        //     make_active(buf.tree_mut(), c);
+                        // },
+                        // Deselect(c, _) => {
+                        //     info!("DESELECT");
+                        //     make_inactive(buf.tree_mut(), c);
+                        // },
+
+                        // Fade(Card, DealtPos),
+                        
+                        Deal(card, pos) => {
+                            info!("DEAL");
+                            let EmbodiedCard {mut tree, tree_ids: _tree_ids, sprite_ids: _sprite_ids, ..}= repo7.card(card);
+                            tree.reanchor(TermPos::from((&pos, &SIZE_7)), Children);
+                            tree.register_dirt(Some(&man.dirt));
+                            tree_ids.absorb(_tree_ids);
+                            sprite_ids.absorb(_sprite_ids);
+
+                            man.tree.push_tree(tree, Inheritances {anchor: Children, order: Children, ..INHERIT_NONE} );
+                            man.refresh_sprites();
+                        },
+                        _ => ()
+                    }
+                }
             }
         }
 
-        // man.write(&mut stdout);
         man.write(&mut stdout);
-
-            // Ok(Msg::ChangeMsg(cs)) => {
-            //     let ChangeSet { changes, stamp: _ } = cs;
-
-            //     for change in changes {
-            //         match change {
-            //             // Reflow(c, _, dst) => {
-            //             //     info!("REFLOW");
-            //             //     let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-            //             //     card_buf.set_anchor((&dst, &SIZE_7).finto());
-            //             // },
-                       
-            //             GoodMove(c, _, dst) => {
-            //                 info!("GOODMOVE");
-            //                 show_good(buf.tree_mut(), c);
-            //                 show_shadow(buf.tree_mut(), c);
-            //                 hide_outline(buf.tree_mut(), c);
-            //                 make_inactive(buf.tree_mut(), c);
-
-                            
-            //                 let card_buf = buf.tree_mut().find_mut(&(c.into())).unwrap();
-            //                 card_buf.set_anchor((&dst, &SIZE_7).finto());
-            //             },
-                        
-            //             BadOutline(c, _) => {
-            //                 info!("BADOUTLINE");
-            //                 show_bad(buf.tree_mut(), c);
-            //                 make_inactive(buf.tree_mut(), c);
-            //             },
-            //             Select(c, _) => {
-            //                 info!("SELECT: {:?}", c);
-            //                 make_active(buf.tree_mut(), c);
-            //             },
-            //             Deselect(c, _) => {
-            //                 info!("DESELECT");
-            //                 make_inactive(buf.tree_mut(), c);
-            //             },
-
-            //             // Fade(Card, DealtPos),
-                        
-            //             Deal(card, pos) => {
-            //                 info!("DEAL");
-            //                 let mut card_lay = repo7.card(card);
-            //                 card_lay.set_anchor(TermPos::from((&pos, &SIZE_7)));
-            //                 buf.tree_mut().push_tree(card_lay);
-            //             },
-            //             _ => ()
-            //         }
-            //     }
-            // }
-        // }
-
-        // buf.flush();
     }
 
     info!("animation loop over");
 
     // Necessary if we exited loop due to error, rather than forward quitmsg
-    back_snd.send(BackMsg::QuitMsg);
+    snd.send(BackMsg::QuitMsg);
 
     // Create a new instance, let original stdout get dropped (and therefore unlocked)
     // thanks to Non-Lexical Lifetimes

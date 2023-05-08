@@ -5,84 +5,32 @@ use crate::util::{*, config::*};
 use crate::{Id, IdManager};
 
 use crate::sprites::sprite::Sprite;
-use crate::sprites::sprite_manager::SpriteManager;
-use crate::sprites::sprite_tree::SpriteTree;
+use crate::sprites::sprite_tree::*;
 use crate::sprites::img::Img;
 use crate::sprites::*;
-
-use std::hash::{Hash, Hasher};
 
 use std::collections::{HashMap, hash_map::DefaultHasher};
 
 use crossterm::style::Color;
 
-// fn hash_card(c: Card, active: bool) -> u64 {
-//     let mut hasher = DefaultHasher::new();
-//     c.hash(&mut hasher);
-//     active.hash(&mut hasher);
-//     hasher.finish()
-// }
+#[derive(Clone)]
+pub struct EmbodiedCard {
+    pub handle: Card,
+    pub tree: SpriteTree,
+    pub tree_ids: IdManager<SpriteTree>,
+    pub sprite_ids: IdManager<Sprite>
+}
 
-
-// GIVE EVERY CARD EVERY LAYER IT WILL EVER Need, WITH DESCRIPTIVE IDs AND TURNED INACTIVE
-
-
-// Should SpriteForests contain IdManagers?
-// Idk if that makes much sense.
-// Maybe later, the integration would be complicated.
-// What we COULD do, though, is tags.
-// What should get tagged, the tree or the sprite?
-// Hmm. Trees are cheap and ephemeral. I think it makes more sense to tag the Sprite.
-// Ugh but, no, that doesn't make much sense. I want to be able to disable whole trees at a time,
-// and those trees might not have a sprite at root.
-//
-// So the trees should be tagged, either by adding a field or possibly incorporating them
-// into the id manager? Could also maybe have SpriteForest keep track of their tags?
-// I just don't like the idea of tagging trees internally. Just IdManagers then.
-//
-// Divyam and Zack say: type those Ids!
-// So: how do I manage them?
-// Could use multiple IdManagers. Could use dynamic typing of some sort, but I don't like that.
-// Perhaps the most appropriate thing would be using tuples for the values of the hashmap,
-// three-tuples, one spot for each tree. and try to work under the assumption that the trees may
-// get combined together, but we  never really go back in and modify trees, except in very very
-// special circumstances.
-
-// Wait, should these even be storing SpriteManagers then? Or just SpriteTrees?
-// In other words, do we want a monolithic spritemanager, or many composable spritemanagers?
-// The annoying thing about many composable spritemanagers is that its trickierr to reasno about,
-// and dirt merging is weird.
-// But how would dirt merging work with a monolithic one?
-// It would be pretty simple actually.
-// OK yeah fuck this, this just stores SpriteTrees, not the whole damn manager.
-//
-//
-// OK so now what? How does dirt work? Well, now we're adding whole trees, not just individual
-// sprites. Which means... ah yeah have to change how dirt works. Cuz trees operate either over
-// presprites or sprites, either choice has consequences.
-//
-// If over presprites, dirt is external.
-// If over sprites, where did the dirt come from?
-// Is it time to get rid of the whole "dirt registration" idea?
-// And just make presprites, sprites?
-// I kinda liked that idea though... could separate sprite manipulations from graphic
-// considerations.
-//
-// I think I should just make it optional on every sprite.
-// alternatives: tree is generic over sprites? Nahhhhhh.
-// perhaps best way: tree struct hands out spriteRef which bundles together sprite with dirt?
-// that or sprites just contain optional dirt.
-//
-// Sprites containing optional dirt is best I think. Cuz it also means we can separate dirts, like
-// for separate screens, which is pretty cool.
+#[derive(Clone, Default)]
+pub struct EmbodiedDeck {
+    pub tree: SpriteTree,
+    pub tree_ids: IdManager<SpriteTree>,
+    pub sprite_ids: IdManager<Sprite>
+}
 
 pub struct CardRepo {
-    deck: (SpriteTree, IdManager<SpriteTree>),
-    cards: HashMap<Card, (SpriteTree, IdManager<SpriteTree>)>,
-    // cards_active: HashMap<Card, FrameTree>,
-    // outline_thin: FrameTree,
-    // outline_good: FrameTree,
-    // outline_bad: FrameTree
+    deck: EmbodiedDeck,
+    cards: HashMap<Card, EmbodiedCard>
 }
 
 impl CardRepo {
@@ -90,7 +38,7 @@ impl CardRepo {
         make(scale)
     }
 
-    pub fn card(&self, c: Card) -> (SpriteTree, IdManager<SpriteTree>) {
+    pub fn card(&self, c: Card) -> EmbodiedCard {
         self.cards
             .get(&c)
             .unwrap()
@@ -104,7 +52,7 @@ impl CardRepo {
     //         .clone()
     // }
 
-    pub fn deck(&self) -> (SpriteTree, IdManager<SpriteTree>) {
+    pub fn deck(&self) -> EmbodiedDeck {
         self.deck.clone()
     }
 
@@ -322,16 +270,17 @@ pub fn make(scale: Scale) -> CardRepo {
 
     // For each card, finalize the associated Imgs, then turn them into presprites and combine them
     // into a SpriteForest. Keep track of Ids in the process, and produce IdManager simultaneously.
-    for (k, inactive) in cards_inactive.into_iter() {
-        let mut id_man = IdManager::default();
+    for (handle, inactive) in cards_inactive.into_iter() {
+        let mut tree_ids: IdManager<SpriteTree> = IdManager::default();
+        let mut sprite_ids: IdManager<Sprite> = IdManager::default();
         let mut tree = SpriteTree::default();
-        let mut inactive_subtree = SpriteTree::default();
 
-        let mut active_card: Sprite = cards_active.remove(&k).unwrap().into();
-        active_card.set_visible(false);
-        id_man.insert(
-            (k, "active").into(),
-            tree.push_sprite(new_stn(active_card))
+        let mut active_card: Sprite = cards_active.remove(&handle).unwrap().into();
+        active_card.set_visible(Invisible);
+        sprite_ids.insert((handle, "active").into(), active_card.id());
+        tree_ids.insert(
+            (handle, "active").into(),
+            tree.push_sprite(new_stn(active_card), INHERIT_NONE)
         );
 
         // Cards are anchored at the top left corner of the ACTIVE/YELLOW variant.
@@ -339,20 +288,25 @@ pub fn make(scale: Scale) -> CardRepo {
 
         // Inactive card is above its own outline, and to the right.
         let mut inactive_card: Sprite = inactive.into();
-        let mut inactive_border: Sprite = outline_thin.clone().into();
+        let inactive_border: Sprite = outline_thin.clone().into();
         inactive_card.reanchor((-1, 1).finto());
         inactive_card.reorder(1);
+        sprite_ids.insert((handle, "inactive_card").into(), inactive_card.id());
+        sprite_ids.insert((handle, "inactive_border").into(), inactive_border.id());
 
-        id_man.insert(
-            (k, "inactive_card").into(),
-            inactive_subtree.push_sprite(new_stn(inactive_card))
+        let mut inactive_subtree = SpriteTree::default();
+        tree_ids.insert((handle, "inactive").into(), inactive_subtree.id());
+
+        tree_ids.insert(
+            (handle, "inactive_card").into(),
+            inactive_subtree.push_sprite(new_stn(inactive_card), INHERIT_NONE)
         );
-        id_man.insert(
-            (k, "inactive_border").into(),
-            inactive_subtree.push_sprite(new_stn(inactive_border))
+        tree_ids.insert(
+            (handle, "inactive_border").into(),
+            inactive_subtree.push_sprite(new_stn(inactive_border), INHERIT_NONE)
         );
-        tree.push_tree(inactive_subtree);
-        cards.insert(k, (tree, id_man));
+        tree.push_tree(inactive_subtree, INHERIT_NONE);
+        cards.insert(handle, EmbodiedCard {handle, tree, tree_ids, sprite_ids});
     }
 
     CardRepo {
@@ -396,34 +350,3 @@ fn get_raw_char(card: Card, ch: char, colr: Color, card_bg: Color) -> SpriteCell
         _ =>                        panic!("Unrecognized character in get_raw_char")
     }
 }
-
-
-
-// //     pub fn over(&self, other: &Self) -> Self {
-// //         let mut corners = self.corners();
-// //         corners.append(&mut other.corners());
-// //         let (tl, br) = TermPos::bounding_box(corners);
-
-// //         // result is just as wide as necessary to cover both input layers
-// //         let mut lay = Self::new_by_bounds(String::new(), tl, br, Transparent);
-
-// //         // For each position in this new layer...
-// //         for pos in tl.range_to(br) {
-// //             let ch: LayerCell = match (self.covers(pos), other.covers(pos)) {
-// //                 // if self is opaque at this position, use the self cell. Otherwise, use other.
-// //                 (true, true) =>
-// //                     if let cel @ Opaque(_) = self.get_c(pos) {
-// //                         cel
-// //                     } else {
-// //                         other.get_c(pos)
-// //                     },
-// //                 (true, false) => self.get_c(pos),
-// //                 (false, true) => other.get_c(pos),
-// //                 (false, false) => Transparent
-// //             };
-
-// //             lay.set_c(pos, ch);
-// //         };
-
-// //         lay
-// //     }

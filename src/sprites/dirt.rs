@@ -49,6 +49,9 @@ impl Dirt {
         }
     }
 
+
+    // DEFAULT MAKES VISIBLE FALSE
+
     pub fn dirty_all(&self, bnd: Bounds<i16>) {
         let mut rf = self.0.borrow_mut();
         for y in bnd.y_range() {
@@ -62,6 +65,10 @@ impl Dirt {
 
             // Alternatively, consider using partition_point for each individual insert
         }
+    }
+
+    pub fn clear(&self) {
+        self.0.borrow_mut().clear()
     }
 }
 

@@ -59,6 +59,11 @@ impl<T: Copy + Add<Output=T> + From<u8> + Ord> Bounds<T> {
     pub fn x_range(self) -> Range<T> {
         self.x_min..self.x_max
     }
+
+    pub fn contains(self, (y, x): (T, T)) -> bool {
+        self.y_min <= y && y < self.y_max &&
+        self.x_min <= x && x < self.x_max
+    }
 }
 
 impl<T: Copy + Add<Output=T> + From<u8> + Ord> IntoIterator for Bounds<T> {
